@@ -1,0 +1,31 @@
+# Standard: Git wählt selbst
+* text=auto
+
+# Shell-Scripte MÜSSEN LF haben, damit sie auf Debian laufen.
+*.sh text eol=lf
+install.sh text eol=lf
+eierverkauf-helper.sh text eol=lf
+
+# Python und Web-Sources: LF
+*.py text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.json text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.md text eol=lf
+
+# PowerShell darf CRLF behalten
+*.ps1 text eol=crlf
+
+# Binärdateien
+*.png binary
+*.jpg binary
+*.ico binary
+*.svg text eol=lf
+*.db binary
+*.xlsx binary
+*.pdf binary

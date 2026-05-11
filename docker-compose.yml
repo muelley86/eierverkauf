@@ -1,0 +1,31 @@
+# ===========================================================================
+# Eierverkauf-App — Docker Compose
+#
+#   docker compose up --build       # Build + Start, Logs im Vordergrund
+#   docker compose up -d            # Im Hintergrund
+#   docker compose logs -f          # Logs verfolgen
+#   docker compose down             # Stoppen, Container entfernen (Daten bleiben)
+#   docker compose down -v          # Inklusive Volumes (alle Daten löschen)
+# ===========================================================================
+services:
+  eierverkauf:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: eierverkauf
+    restart: unless-stopped
+    ports:
+      - "8050:8050"
+    volumes:
+      - ./data:/opt/eierverkauf/data
+      - ./uploads:/opt/eierverkauf/uploads
+      - ./backups:/opt/eierverkauf/backups
+    environment:
+      # SQLite-DB liegt auf dem Host-Volume, persistiert zwischen Starts.
+      EIERVERKAUF_DB: /opt/eierverkauf/data/eierverkauf.db
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8050/api/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s

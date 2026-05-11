@@ -1,4 +1,4 @@
-# ===========================================================================
+﻿# ===========================================================================
 # Eierverkauf — Lokales Setup (Windows / PowerShell)
 #
 # Einmalig ausführen, um Python-venv und Node-Abhängigkeiten einzurichten.

@@ -57,11 +57,13 @@ if (Test-Path $VenvDir) {
 }
 
 # --- pip + Requirements ----------------------------------------------------
-$PipExe = Join-Path $VenvDir "Scripts\pip.exe"
+# Wichtig: pip wird via 'python -m pip' aktualisiert, weil pip.exe sich auf
+# Windows nicht selbst überschreiben kann (Datei ist während des Laufs gesperrt).
+$VenvPython = Join-Path $VenvDir "Scripts\python.exe"
 Write-Info "Aktualisiere pip…"
-& $PipExe install --upgrade pip --quiet
+& $VenvPython -m pip install --upgrade pip --quiet
 Write-Info "Installiere Python-Abhängigkeiten…"
-& $PipExe install -r (Join-Path $RepoRoot "requirements.txt")
+& $VenvPython -m pip install -r (Join-Path $RepoRoot "requirements.txt")
 Write-Ok "Python-Abhängigkeiten installiert"
 
 # --- npm install -----------------------------------------------------------

@@ -54,9 +54,11 @@ else
 fi
 
 info "Aktualisiere pip…"
-.venv/bin/pip install --upgrade pip --quiet
+# 'python -m pip' statt 'pip' — auf Windows zwingend (pip.exe ist gesperrt),
+# auf Unix unproblematisch. Vereinheitlicht das Verhalten.
+.venv/bin/python -m pip install --upgrade pip --quiet
 info "Installiere Python-Abhängigkeiten…"
-.venv/bin/pip install -r requirements.txt
+.venv/bin/python -m pip install -r requirements.txt
 ok "Python-Abhängigkeiten installiert"
 
 # --- npm install -----------------------------------------------------------

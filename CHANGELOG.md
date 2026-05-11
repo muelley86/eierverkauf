@@ -7,6 +7,22 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-05-11
+
+### Behoben
+- **`dev-setup.ps1` / `dev-start.ps1`** brachen unter PowerShell 5.1 mit
+  Parser-Fehler `Die Zeichenfolge hat kein Abschlusszeichen` ab.
+  Ursache: Dateien waren UTF-8 *ohne* BOM, PowerShell 5.1 interpretiert
+  diese aber als Windows-1252 und zerschießt damit deutsche Umlaute (`ä` →
+  `Ã¤`), wodurch die String-Terminierung bricht. Beide Scripts haben jetzt
+  ein UTF-8-BOM (`EF BB BF`) am Dateianfang. Siehe README §Troubleshooting.
+- **pip-Upgrade in `dev-setup.ps1`** schlug mit
+  `ERROR: To modify pip, please run …` fehl. Auf Windows ist `pip.exe`
+  während der Ausführung gesperrt und kann sich nicht selbst überschreiben.
+  Lösung: pip wird jetzt über `python -m pip install --upgrade pip`
+  aktualisiert (läuft `python.exe`, ersetzt `pip.exe`). `dev-setup.sh`
+  nutzt der Konsistenz halber dieselbe Form.
+
 ## [1.0.0] - 2026-05-11
 
 ### Hinzugefügt
@@ -34,5 +50,6 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
   - Dev-Setup-Scripts für Windows (`dev-setup.ps1`, `dev-start.ps1`) und macOS/Linux.
   - Docker Compose für vollständige Integrationstests inkl. PDF-Export.
 
-[Unreleased]: https://example.com/eierverkauf/compare/v1.0.0...HEAD
+[Unreleased]: https://example.com/eierverkauf/compare/v1.0.1...HEAD
+[1.0.1]: https://example.com/eierverkauf/compare/v1.0.0...v1.0.1
 [1.0.0]: https://example.com/eierverkauf/releases/tag/v1.0.0

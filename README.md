@@ -315,6 +315,40 @@ sudo systemctl start eierverkauf
 ### CSV-Import zählt 0 Zeilen importiert
 Wahrscheinlich Duplikatschutz aktiv — alle Zeilen waren bereits importiert (siehe `zeilen_uebersprungen` im Importprotokoll). Bei tatsächlich neuen Daten Spaltenstruktur und Encoding der CSV prüfen.
 
+### PowerShell-Fehler "Die Zeichenfolge hat kein Abschlusszeichen"
+PowerShell 5.1 (Windows-Standard) liest `.ps1`-Dateien **ohne UTF-8-BOM als
+Windows-1252**. Deutsche Umlaute werden dabei zerschossen (`ä` → `Ã¤`), was
+String-Terminierungen zerstört.
+
+Die mitgelieferten Scripts haben bereits ein BOM. Falls Sie ein eigenes
+`.ps1`-Script mit Umlauten schreiben und denselben Fehler sehen, BOM
+nachträglich einfügen:
+
+```powershell
+$f = '.\mein-script.ps1'
+$bom = New-Object System.Text.UTF8Encoding($true)
+$t   = [System.IO.File]::ReadAllText($f, (New-Object System.Text.UTF8Encoding($false)))
+[System.IO.File]::WriteAllText($f, $t, $bom)
+```
+
+Alternativ in VS Code: unten rechts in der Statusleiste auf das Encoding
+klicken → **„Save with Encoding"** → **UTF-8 with BOM**.
+
+### pip-Upgrade-Fehler: "To modify pip, please run the following command…"
+Auf Windows ist `pip.exe` während der Ausführung gesperrt und kann sich
+nicht selbst überschreiben. Korrekter Aufruf:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+```
+
+Statt:
+```powershell
+.\.venv\Scripts\pip.exe install --upgrade pip     # FEHLT auf Windows
+```
+
+`dev-setup.ps1` ab v1.0.1 verwendet bereits `python -m pip`.
+
 ---
 
 ## Lizenz / Kontakt

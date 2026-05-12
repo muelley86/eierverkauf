@@ -44,6 +44,18 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        // Eigene Tokens, direkt nutzbar als bg-yolk, text-sage usw.
+        yolk: "#D69826",
+        sage: "#5A7F4F",
+        brick: "#B5532C",
+        surface: "#FAF5E6",
+        ink: "#1A1610",
+        rule: "#E4D9BB",
+      },
+      fontFamily: {
+        display: ["'Manrope'", "system-ui", "sans-serif"],
+        body:    ["'Manrope'", "system-ui", "sans-serif"],
+        mono:    ["'JetBrains Mono'", "ui-monospace", "monospace"],
       },
       borderRadius: {
         lg: "var(--radius)",

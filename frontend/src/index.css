@@ -1,38 +1,100 @@
+/* ============================================================
+   Eierverkauf — Variante A "Warm Editorial"
+   Schriftarten werden über @fontsource in main.tsx geladen (offline-fähig).
+   ============================================================ */
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-    --radius: 0.5rem;
+    /* HSL-Tokens für shadcn-Kompatibilität (warm editorial) */
+    --background: 41 49% 90%;          /* #F4ECD7 Eierschale */
+    --foreground: 30 22% 8%;           /* #1A1610 Tinte */
+    --card: 42 53% 94%;                /* #FAF5E6 Karten */
+    --card-foreground: 30 22% 8%;
+    --popover: 42 53% 94%;
+    --popover-foreground: 30 22% 8%;
+    --primary: 36 71% 49%;             /* #D69826 Dotter */
+    --primary-foreground: 30 22% 8%;
+    --secondary: 41 49% 86%;
+    --secondary-foreground: 30 22% 8%;
+    --muted: 41 38% 84%;
+    --muted-foreground: 38 14% 38%;    /* #6F6552 */
+    --accent: 109 23% 40%;             /* #5A7F4F Salbei */
+    --accent-foreground: 42 53% 94%;
+    --destructive: 18 60% 44%;         /* #B5532C Brick */
+    --destructive-foreground: 42 53% 94%;
+    --border: 42 39% 81%;              /* #E4D9BB */
+    --input: 42 39% 81%;
+    --ring: 36 71% 49%;
+    --radius: 0.875rem;
+
+    /* Eigene Tokens */
+    --yolk: #D69826;
+    --sage: #5A7F4F;
+    --brick: #B5532C;
+    --bg: #F4ECD7;
+    --surface: #FAF5E6;
+    --ink: #1A1610;
+    --ink-30: #B5A98C;
+    --muted-warm: #6F6552;
+    --rule: #E4D9BB;
+
+    --font-display: 'Manrope', system-ui, sans-serif;
+    --font-body:    'Manrope', system-ui, sans-serif;
+    --font-mono:    'JetBrains Mono', ui-monospace, monospace;
   }
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
+  * { @apply border-border; }
   body {
     @apply bg-background text-foreground;
-    font-family: ui-sans-serif, system-ui, sans-serif;
+    font-family: var(--font-body);
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3, .display {
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  .mono, .tabular-num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+}
+
+/* ----- Wiederverwendbare Komponentenklassen ----- */
+@layer components {
+  .eyebrow {
+    @apply text-[10px] uppercase tracking-[0.12em] text-muted-foreground font-medium;
+  }
+  .card-title-serif {
+    font-family: var(--font-display);
+    font-weight: 600;
+    @apply text-2xl md:text-3xl leading-tight;
+  }
+  .kpi-value {
+    font-family: var(--font-display);
+    font-weight: 600;
+    @apply leading-none;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.03em;
+  }
+  .delta-up {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs;
+    background: rgba(90,127,79,0.14);
+    color: var(--sage);
+    font-family: var(--font-mono);
+  }
+  .delta-down {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs;
+    background: rgba(181,83,44,0.14);
+    color: var(--brick);
+    font-family: var(--font-mono);
+  }
+  .nav-rail {
+    @apply absolute left-[-18px] top-2 bottom-2 w-[3px] rounded-sm;
+    background: var(--yolk);
   }
 }

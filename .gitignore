@@ -9,6 +9,13 @@ venv/
 # Node
 node_modules/
 frontend/dist/
+frontend/*.tsbuildinfo
+# vite.config.ts → unbeabsichtigter tsc-Emit (lokales Build-Artefakt)
+frontend/vite.config.js
+frontend/vite.config.d.ts
+
+# Claude Code Workspace
+.claude/
 
 # Daten & Uploads (laufzeitbedingt)
 data/*.db

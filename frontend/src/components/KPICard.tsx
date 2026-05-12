@@ -1,26 +1,151 @@
 import { ReactNode } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Area, AreaChart, Line, ResponsiveContainer } from "recharts";
+import { cn } from "@/lib/utils";
 
 interface KPICardProps {
   titel: string;
   wert: ReactNode;
   hinweis?: string;
-  icon?: ReactNode;
+  delta?: { wert: string; richtung: "up" | "down" | "flat" };
+  variant?: "hero" | "default";
+  /** Farbton der großen Wert-Zahl. */
+  wertFarbe?: "ink" | "yolk" | "sage";
+  /** Daten-Array für eine kleine Sparkline (Index = X, value = Y). */
+  sparkline?: number[];
+  /** Strich-/Flächenfarbe der Sparkline. Default richtet sich nach `wertFarbe`. */
+  sparklineFarbe?: string;
+  className?: string;
 }
 
-export function KPICard({ titel, wert, hinweis, icon }: KPICardProps) {
+const FARB_KLASSEN: Record<NonNullable<KPICardProps["wertFarbe"]>, string> = {
+  ink: "text-ink",
+  yolk: "text-yolk",
+  sage: "text-sage",
+};
+
+const FARB_HEX: Record<NonNullable<KPICardProps["wertFarbe"]>, string> = {
+  ink: "#1A1610",
+  yolk: "#D69826",
+  sage: "#5A7F4F",
+};
+
+/** Mini-Area-Chart ohne Achsen — reines visuelles Verlaufssignal. */
+function Sparkline({ data, color }: { data: number[]; color: string }) {
+  const series = data.map((wert, i) => ({ i, wert }));
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center justify-between text-sm font-medium text-muted-foreground">
-          {titel}
-          {icon}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="text-3xl font-bold text-slate-800 tabular-nums">{wert}</div>
-        {hinweis && <p className="mt-1 text-xs text-muted-foreground">{hinweis}</p>}
-      </CardContent>
-    </Card>
+    <ResponsiveContainer width="100%" height="100%">
+      <AreaChart data={series} margin={{ top: 4, right: 0, left: 0, bottom: 4 }}>
+        <defs>
+          <linearGradient id={`spark-${color.replace("#", "")}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity={0.35} />
+            <stop offset="100%" stopColor={color} stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <Area
+          type="monotone"
+          dataKey="wert"
+          stroke="none"
+          fill={`url(#spark-${color.replace("#", "")})`}
+          isAnimationActive={false}
+        />
+        <Line
+          type="monotone"
+          dataKey="wert"
+          stroke={color}
+          strokeWidth={1.5}
+          dot={false}
+          isAnimationActive={false}
+        />
+      </AreaChart>
+    </ResponsiveContainer>
+  );
+}
+
+export function KPICard({
+  titel,
+  wert,
+  hinweis,
+  delta,
+  variant = "default",
+  wertFarbe = "ink",
+  sparkline,
+  sparklineFarbe,
+  className,
+}: KPICardProps) {
+  const isHero = variant === "hero";
+  const farbeHex = sparklineFarbe ?? FARB_HEX[wertFarbe];
+
+  // Hero-Variante: großer Wert links, Sparkline schwebt in der rechten unteren Ecke.
+  if (isHero) {
+    return (
+      <div
+        className={cn(
+          "relative rounded-xl border border-rule bg-surface p-8 flex flex-col md:col-span-2 lg:col-span-2 overflow-hidden",
+          className,
+        )}
+      >
+        <span className="eyebrow">{titel}</span>
+        <div
+          className={cn(
+            "mt-6 kpi-value leading-none text-[88px] md:text-[112px]",
+            FARB_KLASSEN[wertFarbe],
+          )}
+        >
+          {wert}
+        </div>
+        <div className="mt-6 flex items-center gap-3">
+          {delta && (
+            <span className={delta.richtung === "down" ? "delta-down" : "delta-up"}>
+              {delta.richtung === "down" ? "▾" : "▴"} {delta.wert}
+            </span>
+          )}
+          {hinweis && <span className="text-xs text-muted-foreground">{hinweis}</span>}
+        </div>
+        {sparkline && sparkline.length > 1 && (
+          <div
+            className="absolute bottom-6 right-6 h-14 w-48 pointer-events-none opacity-80"
+            aria-hidden="true"
+          >
+            <Sparkline data={sparkline} color={farbeHex} />
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Default-Variante: Wert + Delta links, Sparkline (falls vorhanden) absolut in der rechten unteren Ecke.
+  return (
+    <div
+      className={cn(
+        "relative rounded-xl border border-rule bg-surface p-6 flex flex-col gap-3 overflow-hidden",
+        className,
+      )}
+    >
+      <span className="eyebrow">{titel}</span>
+      <div className={cn("kpi-value text-5xl md:text-6xl", FARB_KLASSEN[wertFarbe])}>
+        {wert}
+      </div>
+      {delta && (
+        <span
+          className={cn(
+            "self-start",
+            delta.richtung === "down" ? "delta-down" : "delta-up",
+          )}
+        >
+          {delta.richtung === "down" ? "▾" : "▴"} {delta.wert}
+        </span>
+      )}
+      {hinweis && (
+        <p className="text-sm text-muted-foreground leading-snug">{hinweis}</p>
+      )}
+      {sparkline && sparkline.length > 1 && (
+        <div
+          className="absolute bottom-4 right-4 h-10 w-28 pointer-events-none opacity-80"
+          aria-hidden="true"
+        >
+          <Sparkline data={sparkline} color={farbeHex} />
+        </div>
+      )}
+    </div>
   );
 }

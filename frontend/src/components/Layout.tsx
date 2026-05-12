@@ -1,22 +1,14 @@
 import { NavLink, Outlet } from "react-router-dom";
 import {
   BarChart3,
-  CalendarRange,
-  Egg,
+  Diamond,
   LayoutDashboard,
   ListOrdered,
   Package,
   Upload,
-  Users,
 } from "lucide-react";
 import { ReactNode } from "react";
 import { cn } from "@/lib/utils";
-import { useZeitraum } from "@/context/ZeitraumContext";
-import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { formatDatum } from "@/lib/formatierung";
 
 interface NavItem {
   to: string;
@@ -24,62 +16,41 @@ interface NavItem {
   icon: ReactNode;
 }
 
+// Reihenfolge & Beschriftungen exakt wie im Mockup („Übersicht" statt
+// „Dashboard"; keine Nummerierung).
 const NAV_ITEMS: NavItem[] = [
-  { to: "/", label: "Dashboard", icon: <LayoutDashboard className="h-4 w-4" /> },
-  { to: "/import", label: "Import", icon: <Upload className="h-4 w-4" /> },
-  { to: "/kunden", label: "Kunden", icon: <Users className="h-4 w-4" /> },
+  { to: "/", label: "Übersicht", icon: <LayoutDashboard className="h-4 w-4" /> },
+  { to: "/kunden", label: "Kunden", icon: <Diamond className="h-4 w-4" /> },
   { to: "/artikel", label: "Artikel", icon: <Package className="h-4 w-4" /> },
   { to: "/ranking", label: "Ranking", icon: <ListOrdered className="h-4 w-4" /> },
   { to: "/jahresvergleich", label: "Jahresvergleich", icon: <BarChart3 className="h-4 w-4" /> },
+  { to: "/import", label: "Import", icon: <Upload className="h-4 w-4" /> },
 ];
 
-function ZeitraumFilter() {
-  const z = useZeitraum();
+/** Logo-Mark: kleiner Yolk-Kreis mit Highlight (Mockup-Stil). */
+function YolkDot({ className = "" }: { className?: string }) {
   return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button variant="outline" className="gap-2">
-          <CalendarRange className="h-4 w-4" />
-          {formatDatum(z.von)} – {formatDatum(z.bis)}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-80 space-y-3" align="end">
-        <div className="space-y-2">
-          <Label htmlFor="von">Von</Label>
-          <Input id="von" type="date" value={z.von} onChange={(e) => z.setVon(e.target.value)} />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="bis">Bis</Label>
-          <Input id="bis" type="date" value={z.bis} onChange={(e) => z.setBis(e.target.value)} />
-        </div>
-        <div className="grid grid-cols-2 gap-2 pt-2">
-          <Button size="sm" variant="secondary" onClick={z.dieserMonat}>
-            Dieser Monat
-          </Button>
-          <Button size="sm" variant="secondary" onClick={z.diesesQuartal}>
-            Quartal
-          </Button>
-          <Button size="sm" variant="secondary" onClick={z.diesesJahr}>
-            Dieses Jahr
-          </Button>
-          <Button size="sm" variant="secondary" onClick={z.letztesJahr}>
-            Letztes Jahr
-          </Button>
-        </div>
-      </PopoverContent>
-    </Popover>
+    <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
+      <circle cx="12" cy="12" r="10" fill="#D69826" />
+      <ellipse cx="9" cy="9" rx="2.5" ry="3" fill="#F4ECD7" opacity="0.55" />
+    </svg>
   );
 }
 
 export function Layout() {
   return (
-    <div className="flex min-h-screen bg-muted/30">
-      <aside className="w-60 shrink-0 border-r bg-card">
-        <div className="flex items-center gap-2 px-5 py-4 border-b">
-          <Egg className="h-6 w-6 text-amber-500" />
-          <span className="font-semibold">Eierverkauf</span>
+    <div className="flex min-h-screen bg-background">
+      {/* Sidebar */}
+      <aside className="hidden md:flex w-[240px] shrink-0 flex-col border-r border-rule">
+        <div className="flex items-center gap-3 px-6 pt-8 pb-10">
+          <YolkDot className="h-6 w-6" />
+          <div className="leading-tight">
+            <div className="font-display italic text-2xl text-ink">Kerba</div>
+            <div className="eyebrow">Bio-Ei GbR</div>
+          </div>
         </div>
-        <nav className="p-3 space-y-1">
+
+        <nav className="px-3 pb-6 space-y-0.5">
           {NAV_ITEMS.map((item) => (
             <NavLink
               key={item.to}
@@ -87,28 +58,31 @@ export function Layout() {
               end={item.to === "/"}
               className={({ isActive }) =>
                 cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition",
+                  "relative flex items-center gap-3 rounded-md px-4 py-2.5 text-sm transition",
                   isActive
-                    ? "bg-primary text-primary-foreground"
-                    : "hover:bg-accent hover:text-accent-foreground text-muted-foreground",
+                    ? "bg-yolk/10 text-ink font-medium"
+                    : "text-muted-foreground hover:bg-yolk/5 hover:text-ink",
                 )
               }
             >
-              {item.icon}
-              {item.label}
+              {({ isActive }) => (
+                <>
+                  {isActive && (
+                    <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-sm bg-yolk" />
+                  )}
+                  <span className="shrink-0">{item.icon}</span>
+                  <span className="flex-1">{item.label}</span>
+                </>
+              )}
             </NavLink>
           ))}
         </nav>
       </aside>
-      <div className="flex-1 flex flex-col">
-        <header className="flex items-center justify-between border-b bg-card px-6 py-3">
-          <h1 className="text-lg font-semibold text-slate-800">Kerba Bio-Ei GbR — Auswertung</h1>
-          <ZeitraumFilter />
-        </header>
-        <main className="flex-1 p-6 overflow-y-auto">
-          <Outlet />
-        </main>
-      </div>
+
+      {/* Main — kein globaler Top-Header; jede Seite startet mit <PageHeader>. */}
+      <main className="flex-1 px-6 md:px-10 py-8 overflow-y-auto min-w-0">
+        <Outlet />
+      </main>
     </div>
   );
 }

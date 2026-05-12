@@ -4,24 +4,14 @@ import { FileRejection, useDropzone } from "react-dropzone";
 import { AlertTriangle, FileSpreadsheet, Info, Trash2, UploadCloud } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { PageHeader, Panel } from "@/components/PageHeader";
 import {
-  deleteImport,
-  getImportHistorie,
-  ImportErgebnis,
-  ImportProtokollEintrag,
-  uploadImport,
-  uploadVorschau,
-  VorschauResponse,
+  deleteImport, getImportHistorie, ImportErgebnis, ImportProtokollEintrag,
+  uploadImport, uploadVorschau, VorschauResponse,
 } from "@/api/client";
 
 export default function Import() {
@@ -40,9 +30,7 @@ export default function Import() {
     }
   }, []);
 
-  useEffect(() => {
-    void ladeHistorie();
-  }, [ladeHistorie]);
+  useEffect(() => { void ladeHistorie(); }, [ladeHistorie]);
 
   const onDrop = useCallback(async (files: File[]) => {
     const file = files[0];
@@ -52,24 +40,18 @@ export default function Import() {
     setImportiert(false);
     setLoading(true);
     try {
-      const v = await uploadVorschau(file);
-      setVorschau(v);
+      setVorschau(await uploadVorschau(file));
     } catch (e) {
       toast.error("Vorschau fehlgeschlagen", { description: String(e) });
       setVorschau(null);
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   }, []);
 
-  // Windows liefert für .csv häufig MIME `application/vnd.ms-excel` (oder
-  // gar nichts), nicht `text/csv`. Wir lehnen sonst stillschweigend ab.
   const onDropRejected = useCallback((rejections: FileRejection[]) => {
     const erste = rejections[0];
     if (!erste) return;
-    const grund = erste.errors[0]?.message ?? "Datei wurde nicht akzeptiert.";
     toast.error("Datei abgelehnt", {
-      description: `${erste.file.name}: ${grund}`,
+      description: `${erste.file.name}: ${erste.errors[0]?.message ?? "nicht akzeptiert."}`,
     });
   }, []);
 
@@ -81,24 +63,17 @@ export default function Import() {
       setProtokoll(ergebnis);
       setImportiert(true);
       if (ergebnis.zeilen_importiert === 0) {
-        toast.warning(
-          `Keine Zeile importiert (${ergebnis.zeilen_fehlerhaft} fehlerhaft, ` +
-          `${ergebnis.zeilen_uebersprungen} Duplikate)`,
-        );
+        toast.warning(`Keine Zeile importiert (${ergebnis.zeilen_fehlerhaft} fehlerhaft, ${ergebnis.zeilen_uebersprungen} Duplikate)`);
       } else {
         toast.success(
           `Import abgeschlossen: ${ergebnis.zeilen_importiert} Zeilen` +
-          (ergebnis.zeilen_fehlerhaft > 0
-            ? ` — ${ergebnis.zeilen_fehlerhaft} fehlerhaft`
-            : ""),
+            (ergebnis.zeilen_fehlerhaft > 0 ? ` — ${ergebnis.zeilen_fehlerhaft} fehlerhaft` : ""),
         );
       }
       await ladeHistorie();
     } catch (e) {
       toast.error("Import fehlgeschlagen", { description: String(e) });
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
   const loeschen = async (id: number) => {
@@ -113,11 +88,7 @@ export default function Import() {
   };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    onDropRejected,
-    // Mehrere MIME-Varianten + Extension-Fallback. Windows liefert für
-    // .csv-Dateien teilweise `application/vnd.ms-excel`, manche Browser
-    // gar keinen MIME-Type.
+    onDrop, onDropRejected,
     accept: {
       "text/csv": [".csv"],
       "text/plain": [".csv"],
@@ -128,122 +99,103 @@ export default function Import() {
   });
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>CSV-Datei importieren</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div
-            {...getRootProps()}
-            className={`flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-10 transition ${
-              isDragActive ? "border-primary bg-primary/5" : "border-muted-foreground/30"
-            }`}
-          >
-            <input {...getInputProps()} />
-            <UploadCloud className="h-10 w-10 text-muted-foreground" />
-            <p className="mt-2 text-sm">
-              {isDragActive
-                ? "CSV hier loslassen…"
-                : "CSV-Datei hierher ziehen oder klicken zum Auswählen"}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Semikolon-getrennt, UTF-8-BOM. Kopfzeile wird automatisch erkannt.
-            </p>
-          </div>
-          {datei && (
-            <div className="mt-4 flex items-center justify-between rounded-md border bg-muted/30 p-3">
-              <div className="flex items-center gap-2 text-sm">
-                <FileSpreadsheet className="h-4 w-4 text-blue-600" />
-                {datei.name} <Badge variant="outline">{(datei.size / 1024).toFixed(1)} KB</Badge>
-              </div>
-              <Button onClick={importieren} disabled={loading || importiert}>
-                {importiert ? "Importiert" : loading ? "Verarbeite…" : "Importieren"}
-              </Button>
+    <div className="space-y-8 max-w-[1400px]">
+      <PageHeader
+        eyebrow="Import"
+        title="Neue CSV einlesen"
+        subtitle="Semikolon-getrennt, UTF-8-BOM. Kopfzeile wird automatisch erkannt."
+      />
+
+      <Panel eyebrow="Upload" title="Datei wählen">
+        <div
+          {...getRootProps()}
+          className={`flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-12 transition cursor-pointer ${
+            isDragActive ? "border-yolk bg-yolk/5" : "border-rule hover:border-yolk/40 hover:bg-yolk/5"
+          }`}
+        >
+          <input {...getInputProps()} />
+          <UploadCloud className={`h-10 w-10 mb-3 ${isDragActive ? "text-yolk" : "text-muted-foreground"}`} />
+          <p className="font-display text-xl text-ink">
+            {isDragActive ? "Loslassen zum Hochladen…" : "Datei hierher ziehen"}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">oder klicken zum Auswählen</p>
+        </div>
+        {datei && (
+          <div className="mt-5 flex items-center justify-between rounded-lg border border-rule bg-background/40 px-4 py-3">
+            <div className="flex items-center gap-3 text-sm">
+              <FileSpreadsheet className="h-4 w-4 text-yolk" />
+              <span className="font-mono">{datei.name}</span>
+              <Badge variant="outline" className="border-rule font-mono text-[10px]">
+                {(datei.size / 1024).toFixed(1)} KB
+              </Badge>
             </div>
-          )}
-        </CardContent>
-      </Card>
+            <Button onClick={importieren} disabled={loading || importiert} className="bg-yolk text-ink hover:bg-yolk/90">
+              {importiert ? "Importiert" : loading ? "Verarbeite…" : "Importieren"}
+            </Button>
+          </div>
+        )}
+      </Panel>
 
       {vorschau && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Vorschau (erste {vorschau.anzahl} Zeilen)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    {Object.keys(vorschau.zeilen[0] ?? {}).map((k) => (
-                      <TableHead key={k}>{k}</TableHead>
+        <Panel eyebrow="Vorschau" title={`Erste ${vorschau.anzahl} Zeilen`}>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-rule">
+                  {Object.keys(vorschau.zeilen[0] ?? {}).map((k) => (
+                    <TableHead key={k} className="font-mono text-[10px] uppercase tracking-[0.12em]">{k}</TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {vorschau.zeilen.map((zeile, idx) => (
+                  <TableRow key={idx} className="border-rule">
+                    {Object.keys(zeile).map((k) => (
+                      <TableCell key={k} className="font-mono text-xs">{String(zeile[k] ?? "")}</TableCell>
                     ))}
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {vorschau.zeilen.map((zeile, idx) => (
-                    <TableRow key={idx}>
-                      {Object.keys(zeile).map((k) => (
-                        <TableCell key={k}>{String(zeile[k] ?? "")}</TableCell>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </Panel>
       )}
 
       {protokoll && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Importprotokoll</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <Panel eyebrow="Protokoll" title="Ergebnis">
+          <div className="space-y-5">
             {protokoll.header_warnungen?.length > 0 && (
-              <div className="rounded-md border border-amber-500/40 bg-amber-50 p-3 dark:bg-amber-950/30">
-                <div className="mb-2 flex items-center gap-2 text-sm font-medium text-amber-700 dark:text-amber-400">
-                  <Info className="h-4 w-4" />
+              <div className="rounded-lg border border-yolk/40 bg-yolk/10 p-4">
+                <div className="mb-2 flex items-center gap-2 text-sm font-medium text-ink">
+                  <Info className="h-4 w-4 text-yolk" />
                   Header-Warnungen
                 </div>
-                <ul className="space-y-1 text-xs text-amber-800 dark:text-amber-300">
-                  {protokoll.header_warnungen.map((w, i) => (
-                    <li key={i}>• {w}</li>
-                  ))}
+                <ul className="space-y-1 text-xs text-muted-foreground font-mono">
+                  {protokoll.header_warnungen.map((w, i) => <li key={i}>• {w}</li>)}
                 </ul>
               </div>
             )}
 
-            <dl className="grid grid-cols-2 gap-y-1 text-sm">
-              <dt className="text-muted-foreground">Datei</dt>
+            <dl className="grid grid-cols-1 md:grid-cols-2 gap-y-2 text-sm">
+              <dt className="eyebrow self-center">Datei</dt>
               <dd>
-                <Link
-                  to={`/import/${protokoll.import_id}`}
-                  className="text-blue-600 underline-offset-2 hover:underline"
-                >
+                <Link to={`/import/${protokoll.import_id}`} className="text-yolk hover:underline font-mono">
                   {protokoll.dateiname}
                 </Link>
               </dd>
-              <dt className="text-muted-foreground">Datumsbereich</dt>
-              <dd>{protokoll.datumsbereich}</dd>
-              <dt className="text-muted-foreground">Importiert</dt>
-              <dd>
-                <Badge variant="success">{protokoll.zeilen_importiert}</Badge>
-              </dd>
-              <dt className="text-muted-foreground">Übersprungen (Duplikate)</dt>
-              <dd>
-                <Badge variant="warning">{protokoll.zeilen_uebersprungen}</Badge>
-              </dd>
-              <dt className="text-muted-foreground">Fehlerhaft</dt>
-              <dd>
-                <Badge variant="destructive">{protokoll.zeilen_fehlerhaft}</Badge>
-              </dd>
+              <dt className="eyebrow self-center">Datumsbereich</dt>
+              <dd className="font-mono text-xs">{protokoll.datumsbereich}</dd>
+              <dt className="eyebrow self-center">Importiert</dt>
+              <dd><Badge variant="success">{protokoll.zeilen_importiert}</Badge></dd>
+              <dt className="eyebrow self-center">Übersprungen</dt>
+              <dd><Badge variant="warning">{protokoll.zeilen_uebersprungen}</Badge></dd>
+              <dt className="eyebrow self-center">Fehlerhaft</dt>
+              <dd><Badge variant="destructive">{protokoll.zeilen_fehlerhaft}</Badge></dd>
             </dl>
 
             {protokoll.fehler_details.length > 0 && (
-              <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3">
-                <div className="mb-2 flex items-center gap-2 text-sm font-medium text-destructive">
+              <div className="rounded-lg border border-brick/30 bg-brick/5 p-4">
+                <div className="mb-2 flex items-center gap-2 text-sm font-medium text-brick">
                   <AlertTriangle className="h-4 w-4" />
                   Fehlerprotokoll
                   {protokoll.zeilen_fehlerhaft > protokoll.fehler_details.length && (
@@ -253,67 +205,59 @@ export default function Import() {
                   )}
                 </div>
                 <ul className="space-y-1 font-mono text-xs">
-                  {protokoll.fehler_details.map((zeile, idx) => (
-                    <li key={idx}>{zeile}</li>
-                  ))}
+                  {protokoll.fehler_details.map((z, i) => <li key={i}>{z}</li>)}
                 </ul>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </Panel>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Importhistorie</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Datum</TableHead>
-                <TableHead>Datei</TableHead>
-                <TableHead>Zeitraum</TableHead>
-                <TableHead>Importiert</TableHead>
-                <TableHead>Übersprungen</TableHead>
-                <TableHead>Fehlerhaft</TableHead>
-                <TableHead className="w-12" />
+      <Panel eyebrow="Historie" title="Frühere Importe">
+        <Table>
+          <TableHeader>
+            <TableRow className="border-rule">
+              <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Datum</TableHead>
+              <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Datei</TableHead>
+              <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Zeitraum</TableHead>
+              <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Importiert</TableHead>
+              <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Übersprungen</TableHead>
+              <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Fehlerhaft</TableHead>
+              <TableHead className="w-12" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {historie.map((h) => (
+              <TableRow key={h.id} className="border-rule">
+                <TableCell className="font-mono text-xs">{h.import_datum}</TableCell>
+                <TableCell>
+                  <Link to={`/import/${h.id}`} className="text-yolk hover:underline font-mono">
+                    {h.dateiname}
+                  </Link>
+                </TableCell>
+                <TableCell className="font-mono text-xs text-muted-foreground">{h.datumsbereich ?? "—"}</TableCell>
+                <TableCell className="font-mono tabular-nums">{h.zeilen_importiert}</TableCell>
+                <TableCell className="font-mono tabular-nums text-muted-foreground">{h.zeilen_uebersprungen}</TableCell>
+                <TableCell className={`font-mono tabular-nums ${h.zeilen_fehlerhaft > 0 ? "text-brick" : "text-muted-foreground"}`}>
+                  {h.zeilen_fehlerhaft}
+                </TableCell>
+                <TableCell>
+                  <Button variant="ghost" size="icon" onClick={() => loeschen(h.id)}>
+                    <Trash2 className="h-4 w-4 text-brick" />
+                  </Button>
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {historie.map((h) => (
-                <TableRow key={h.id}>
-                  <TableCell>{h.import_datum}</TableCell>
-                  <TableCell>
-                    <Link
-                      to={`/import/${h.id}`}
-                      className="text-blue-600 underline-offset-2 hover:underline"
-                    >
-                      {h.dateiname}
-                    </Link>
-                  </TableCell>
-                  <TableCell>{h.datumsbereich ?? "—"}</TableCell>
-                  <TableCell>{h.zeilen_importiert}</TableCell>
-                  <TableCell>{h.zeilen_uebersprungen}</TableCell>
-                  <TableCell>{h.zeilen_fehlerhaft}</TableCell>
-                  <TableCell>
-                    <Button variant="ghost" size="icon" onClick={() => loeschen(h.id)}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {historie.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground">
-                    Noch keine Importe.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+            ))}
+            {historie.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center text-muted-foreground py-12">
+                  Noch keine Importe.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </Panel>
     </div>
   );
 }

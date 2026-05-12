@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ColumnDef } from "@tanstack/react-table";
 import { toast } from "sonner";
 import { DataTable } from "@/components/DataTable";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader, Panel } from "@/components/PageHeader";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useZeitraum } from "@/context/ZeitraumContext";
 import { ArtikelZeile, getArtikel } from "@/api/client";
@@ -33,37 +33,57 @@ export default function Artikel() {
 
   const columns = useMemo<ColumnDef<ArtikelZeile>[]>(
     () => [
-      { accessorKey: "artikel_code", header: "Artikel" },
+      {
+        accessorKey: "artikel_code",
+        header: "Artikel",
+        cell: (i) => <span className="font-mono text-xs">{i.getValue<string>()}</span>,
+      },
       {
         accessorKey: "menge",
         header: "Menge",
-        cell: (i) => <span className="tabular-nums">{formatZahl(i.getValue<number>(), 2)}</span>,
+        sortingFn: "basic",
+        cell: (i) => (
+          <span className="font-mono tabular-nums">{formatZahl(i.getValue<number>(), 2)}</span>
+        ),
       },
       {
         accessorKey: "eier",
         header: "Eier",
-        cell: (i) => <span className="tabular-nums">{formatZahl(i.getValue<number>())}</span>,
+        sortingFn: "basic",
+        cell: (i) => (
+          <span className="font-mono tabular-nums">{formatZahl(i.getValue<number>())}</span>
+        ),
       },
       {
         accessorKey: "umsatz",
         header: "Umsatz",
-        cell: (i) => <span className="tabular-nums">{formatEuro(i.getValue<number>())}</span>,
+        sortingFn: "basic",
+        cell: (i) => (
+          <span className="font-mono tabular-nums">{formatEuro(i.getValue<number>())}</span>
+        ),
       },
       {
         accessorKey: "positionen",
         header: "Positionen",
-        cell: (i) => <span className="tabular-nums">{formatZahl(i.getValue<number>())}</span>,
+        sortingFn: "basic",
+        cell: (i) => (
+          <span className="font-mono tabular-nums text-muted-foreground">
+            {formatZahl(i.getValue<number>())}
+          </span>
+        ),
       },
     ],
     [],
   );
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Artikelübersicht</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <div className="space-y-8 max-w-[1400px]">
+      <PageHeader
+        eyebrow="Artikel"
+        title="Was verkauft wurde"
+        subtitle={`${daten.length} Artikel im gewählten Zeitraum.`}
+      />
+      <Panel eyebrow="Tabelle" title="Vollständige Liste">
         {loading ? (
           <Skeleton className="h-96" />
         ) : (
@@ -75,7 +95,7 @@ export default function Artikel() {
             onRowClick={(z) => navigate(`/artikel/${encodeURIComponent(z.artikel_code)}`)}
           />
         )}
-      </CardContent>
-    </Card>
+      </Panel>
+    </div>
   );
 }

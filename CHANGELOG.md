@@ -7,6 +7,63 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-05-12
+
+### Hinzugefügt
+- **Komplettes UI-Redesign „Warm Editorial".** Neue Sidebar mit Kerba-Logo,
+  großzügige Editorial-Typographie (Manrope-Display in 88–112 px für KPIs),
+  warme Erdfarben-Palette (Yolk, Sage, Brick, Surface, Rule). Konsistente
+  `PageHeader`- und `Panel`-Komponenten über alle Seiten hinweg.
+- **Dashboard mit Hero-KPI.** Die Kennzahl „Eier · Stück" füllt eine 8/12-Hero-Karte,
+  rechts daneben Umsatz + Kunden + Positionen kompakt. Jede Hauptkarte zeigt
+  eine dezente Sparkline aus dem Monatsverlauf in der rechten unteren Ecke.
+- **Vorjahresvergleich auf dem Dashboard.** Backend liefert in `/api/dashboard`
+  neu `vorjahres_kpis` (Eier/Umsatz/Kunden/Positionen für denselben Zeitraum
+  ein Jahr zurück), das Frontend zeigt für jede KPI eine Delta-Pille
+  („+12,5 % vs. Vorjahr") in Sage oder Brick.
+- **Aktivitäts-Panel** auf dem Dashboard mit den letzten Imports und Klick
+  auf das Import-Detail.
+- **Globale Zeitraum-Pille** (`ZeitraumFilter`-Komponente) im Header jeder
+  Auswertungsseite — erkennt automatisch Quick-Range-Labels wie „Dieser Monat",
+  „Letztes Jahr" oder „Eigener Zeitraum" zusätzlich zum Datumsbereich.
+- **Dezenter Excel-Export-Knopf** (Download-Icon) im PageHeader für Seiten,
+  die einen Direktexport haben.
+
+### Geändert
+- **Jahresvergleich-Diagramm:** Zwei nebeneinanderstehende Balken pro Monat
+  (Vorjahr grau, aktuelles Jahr in Yolk) statt Bar + Linie. Achsenlinien und
+  Tick-Striche entfernt für ruhigeres Bild.
+- **Jahresvergleich-Tabelle:** Reduziert auf die wesentlichen Spalten
+  `Monat · Vorjahr · Aktuelles Jahr · Δ Stück · Δ %`. Die Umsatz-Spalten
+  sind raus — Umsatz-Detail ist auf der Detail-Ansicht des jeweiligen
+  Kunden/Artikels besser aufgehoben.
+- **Schriftarten umgestellt** von Geist + Instrument Serif auf
+  **Manrope** (Display + Body) und **JetBrains Mono** (Mono). Beides offline
+  via `@fontsource`, kein CDN-Roundtrip im Browser.
+- **Navigation aufgeräumt:** Nummerierung („01 Übersicht / 02 Kunden …")
+  entfernt, klare deutsche Labels, Sage-Indikator markiert die aktive Seite.
+
+### Behoben
+- **Numerische Spaltensortierung in Tabellen.** In den Übersichten Artikel,
+  Kunden und Ranking sortierten Klicks auf die Spaltenköpfe `Menge`, `Eier`,
+  `Umsatz` und `Positionen` lexikographisch statt numerisch (Reihenfolge
+  `1, 10, 100, 2, 20` statt `1, 2, 10, 20, 100`). Ursache: TanStack Table
+  v8 wählte für die Zahlenspalten beim Auto-Detect den
+  `alphanumeric`-Sortierer. Fix: explizit `sortingFn: "basic"` an den
+  betroffenen Spaltendefinitionen — JS-Number-Vergleich, kein
+  String-Cast-Pfad mehr.
+
+### Hinweise zum Update
+- **Kein Schema-Change.** Datenbank bleibt unverändert; die normale
+  `eierverkauf update`-Routine genügt (mit dem üblichen automatischen
+  Pre-Update-Backup).
+- **`vorjahres_kpis` ist im API-Schema additiv** (nullable). Bestehende
+  Frontend-Builds gegen `/api/dashboard` brechen nicht; ältere Frontends
+  ignorieren das neue Feld einfach.
+- **Erstes Laden nach Update** dauert pro Browser einmalig etwas länger,
+  weil die neuen Manrope-Woff2-Dateien aus dem `dist/`-Asset-Ordner
+  ausgeliefert werden (~14 kB je Schnitt). Danach Browser-Cache.
+
 ## [1.0.5] - 2026-05-12
 
 ### Behoben

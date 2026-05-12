@@ -35,6 +35,8 @@ export interface ArtikelTop {
 
 export interface DashboardResponse {
   kpis: DashboardKPIs;
+  /** KPIs für denselben Zeitraum ein Jahr zurück; null wenn ohne Filter. */
+  vorjahres_kpis: DashboardKPIs | null;
   top5_kunden: KundeTop[];
   top5_artikel: ArtikelTop[];
 }

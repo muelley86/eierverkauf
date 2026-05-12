@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ColumnDef } from "@tanstack/react-table";
 import { toast } from "sonner";
 import { DataTable } from "@/components/DataTable";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader, Panel } from "@/components/PageHeader";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useZeitraum } from "@/context/ZeitraumContext";
 import { getKunden, KundenZeile } from "@/api/client";
@@ -33,38 +33,67 @@ export default function Kunden() {
 
   const columns = useMemo<ColumnDef<KundenZeile>[]>(
     () => [
-      { accessorKey: "kundennummer", header: "Kundennr.", cell: (i) => i.getValue<string>() },
-      { accessorKey: "kundenname", header: "Name" },
+      {
+        accessorKey: "kundennummer",
+        header: "Nr.",
+        cell: (i) => (
+          <span className="font-mono text-xs text-muted-foreground">
+            {i.getValue<string>()}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "kundenname",
+        header: "Name",
+        cell: (i) => <span className="text-ink">{i.getValue<string>()}</span>,
+      },
       {
         accessorKey: "eier",
         header: "Eier",
-        cell: (i) => <span className="tabular-nums">{formatZahl(i.getValue<number>())}</span>,
+        sortingFn: "basic",
+        cell: (i) => (
+          <span className="font-mono tabular-nums">{formatZahl(i.getValue<number>())}</span>
+        ),
       },
       {
         accessorKey: "umsatz",
         header: "Umsatz",
-        cell: (i) => <span className="tabular-nums">{formatEuro(i.getValue<number>())}</span>,
+        sortingFn: "basic",
+        cell: (i) => (
+          <span className="font-mono tabular-nums">{formatEuro(i.getValue<number>())}</span>
+        ),
       },
       {
         accessorKey: "positionen",
         header: "Positionen",
-        cell: (i) => <span className="tabular-nums">{formatZahl(i.getValue<number>())}</span>,
+        sortingFn: "basic",
+        cell: (i) => (
+          <span className="font-mono tabular-nums text-muted-foreground">
+            {formatZahl(i.getValue<number>())}
+          </span>
+        ),
       },
       {
         accessorKey: "letzter_kauf",
         header: "Letzter Kauf",
-        cell: (i) => formatDatum(i.getValue<string | null>()),
+        cell: (i) => (
+          <span className="font-mono text-xs text-muted-foreground">
+            {formatDatum(i.getValue<string | null>())}
+          </span>
+        ),
       },
     ],
     [],
   );
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Kundenübersicht</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <div className="space-y-8 max-w-[1400px]">
+      <PageHeader
+        eyebrow="Kunden"
+        title="Wer hat bestellt"
+        subtitle={`${daten.length} Kunden im gewählten Zeitraum.`}
+      />
+      <Panel eyebrow="Tabelle" title="Vollständige Liste">
         {loading ? (
           <Skeleton className="h-96" />
         ) : (
@@ -76,7 +105,7 @@ export default function Kunden() {
             onRowClick={(z) => navigate(`/kunden/${encodeURIComponent(z.kundennummer)}`)}
           />
         )}
-      </CardContent>
-    </Card>
+      </Panel>
+    </div>
   );
 }

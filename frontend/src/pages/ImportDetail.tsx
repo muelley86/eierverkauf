@@ -1,36 +1,14 @@
-/**
- * Detail-Seite eines Imports — zeigt alle persistierten Protokoll-Zeilen
- * (fehlerhaft + übersprungen) mit CSV-Zeilennummer, Grund und Rohdaten.
- * Erlaubt nachträgliche Diagnose, auch nach Seitenwechsel/Refresh.
- *
- * Aufruf: ``/import/:id``  (id aus react-router-params)
- */
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import { AlertTriangle, ArrowLeft, FileSpreadsheet } from "lucide-react";
+import { useParams } from "react-router-dom";
+import { AlertTriangle, FileSpreadsheet } from "lucide-react";
 import { toast } from "sonner";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PageHeader, Panel } from "@/components/PageHeader";
 import { getImportDetail, ImportDetail as ImportDetailDaten } from "@/api/client";
 
 export default function ImportDetail() {
@@ -43,17 +21,13 @@ export default function ImportDetail() {
     setLoading(true);
     getImportDetail(Number(id))
       .then(setDetail)
-      .catch((e) =>
-        toast.error("Importdetails konnten nicht geladen werden", {
-          description: String(e),
-        }),
-      )
+      .catch((e) => toast.error("Importdetails konnten nicht geladen werden", { description: String(e) }))
       .finally(() => setLoading(false));
   }, [id]);
 
   if (loading) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-4 max-w-[1400px]">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-32" />
         <Skeleton className="h-64" />
@@ -63,13 +37,9 @@ export default function ImportDetail() {
 
   if (!detail) {
     return (
-      <div className="space-y-4">
-        <BackLink />
-        <Card>
-          <CardContent className="p-6 text-center text-muted-foreground">
-            Import nicht gefunden.
-          </CardContent>
-        </Card>
+      <div className="space-y-8 max-w-[1400px]">
+        <PageHeader back={{ to: "/import", label: "Zur Importhistorie" }} eyebrow="Import" title="Nicht gefunden" />
+        <Panel><p className="text-center text-muted-foreground py-6">Import nicht gefunden.</p></Panel>
       </div>
     );
   }
@@ -78,142 +48,98 @@ export default function ImportDetail() {
   const aelterer = keineDetails && (detail.zeilen_fehlerhaft > 0 || detail.zeilen_uebersprungen > 0);
 
   return (
-    <div className="space-y-6">
-      <BackLink />
+    <div className="space-y-8 max-w-[1400px]">
+      <PageHeader
+        back={{ to: "/import", label: "Zur Importhistorie" }}
+        eyebrow="Import"
+        title={<span className="font-mono text-2xl">{detail.dateiname}</span>}
+      />
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileSpreadsheet className="h-5 w-5 text-blue-600" />
-            {detail.dateiname}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <dl className="grid grid-cols-1 gap-y-1 text-sm md:grid-cols-2">
-            <dt className="text-muted-foreground">Import-Datum</dt>
-            <dd>{detail.import_datum}</dd>
-            <dt className="text-muted-foreground">Datumsbereich</dt>
-            <dd>{detail.datumsbereich ?? "—"}</dd>
-            <dt className="text-muted-foreground">Importiert</dt>
-            <dd>
-              <Badge variant="success">{detail.zeilen_importiert}</Badge>
-            </dd>
-            <dt className="text-muted-foreground">Übersprungen (Duplikate)</dt>
-            <dd>
-              <Badge variant="warning">{detail.zeilen_uebersprungen}</Badge>
-            </dd>
-            <dt className="text-muted-foreground">Fehlerhaft</dt>
-            <dd>
-              <Badge variant="destructive">{detail.zeilen_fehlerhaft}</Badge>
-            </dd>
-          </dl>
-        </CardContent>
-      </Card>
+      <Panel eyebrow="Zusammenfassung" title="Kennzahlen">
+        <dl className="grid grid-cols-1 md:grid-cols-2 gap-y-3 text-sm">
+          <dt className="eyebrow self-center">Import-Datum</dt>
+          <dd className="font-mono text-xs">{detail.import_datum}</dd>
+          <dt className="eyebrow self-center">Datumsbereich</dt>
+          <dd className="font-mono text-xs">{detail.datumsbereich ?? "—"}</dd>
+          <dt className="eyebrow self-center">Importiert</dt>
+          <dd><Badge variant="success">{detail.zeilen_importiert}</Badge></dd>
+          <dt className="eyebrow self-center">Übersprungen</dt>
+          <dd><Badge variant="warning">{detail.zeilen_uebersprungen}</Badge></dd>
+          <dt className="eyebrow self-center">Fehlerhaft</dt>
+          <dd><Badge variant="destructive">{detail.zeilen_fehlerhaft}</Badge></dd>
+        </dl>
+      </Panel>
 
       {aelterer && (
-        <Card>
-          <CardContent className="p-6 text-sm text-muted-foreground">
-            <AlertTriangle className="mb-2 inline h-4 w-4 text-amber-500" />{" "}
-            Dieser Import wurde mit einer älteren App-Version (vor v1.0.3)
-            erstellt. Detail-Daten pro Zeile stehen erst für neue Importe zur
-            Verfügung — die Zähler oben sind weiterhin korrekt.
-          </CardContent>
-        </Card>
+        <Panel>
+          <p className="text-sm text-muted-foreground">
+            <AlertTriangle className="mb-1 mr-1 inline h-4 w-4 text-yolk" />
+            Dieser Import wurde mit einer älteren App-Version (vor v1.0.3) erstellt.
+            Detail-Daten pro Zeile stehen erst für neue Importe zur Verfügung — die Zähler oben sind weiterhin korrekt.
+          </p>
+        </Panel>
       )}
 
       {!keineDetails && (
         <Tabs defaultValue={detail.fehler.length > 0 ? "fehler" : "duplikat"}>
-          <TabsList>
-            <TabsTrigger value="fehler">
-              Fehlerhaft ({detail.fehler.length})
-            </TabsTrigger>
-            <TabsTrigger value="duplikat">
-              Übersprungen ({detail.duplikat.length})
-            </TabsTrigger>
+          <TabsList className="bg-surface border border-rule">
+            <TabsTrigger value="fehler">Fehlerhaft ({detail.fehler.length})</TabsTrigger>
+            <TabsTrigger value="duplikat">Übersprungen ({detail.duplikat.length})</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="fehler">
-            <ProtokollTabelle
-              zeilen={detail.fehler}
-              leerHinweis="Keine fehlerhaften Zeilen 🎉"
-            />
+          <TabsContent value="fehler" className="mt-6">
+            <ProtokollPanel zeilen={detail.fehler} title="Fehlerhafte Zeilen" leerHinweis="Keine fehlerhaften Zeilen 🎉" />
           </TabsContent>
-
-          <TabsContent value="duplikat">
-            <ProtokollTabelle
-              zeilen={detail.duplikat}
-              leerHinweis="Keine Duplikate."
-            />
+          <TabsContent value="duplikat" className="mt-6">
+            <ProtokollPanel zeilen={detail.duplikat} title="Übersprungene Zeilen" leerHinweis="Keine Duplikate." />
           </TabsContent>
         </Tabs>
       )}
 
       {detail.zeilen_fehlerhaft === 0 && detail.zeilen_uebersprungen === 0 && (
-        <Card>
-          <CardContent className="p-6 text-center text-sm text-muted-foreground">
-            Dieser Import lief vollständig fehlerfrei — alle{" "}
-            {detail.zeilen_importiert} Zeilen wurden importiert.
-          </CardContent>
-        </Card>
+        <Panel>
+          <p className="text-center text-sm text-muted-foreground py-6">
+            <FileSpreadsheet className="mb-1 inline h-4 w-4 text-sage mr-1" />
+            Vollständig fehlerfrei — alle {detail.zeilen_importiert} Zeilen importiert.
+          </p>
+        </Panel>
       )}
     </div>
   );
 }
 
-function BackLink() {
-  return (
-    <Link
-      to="/import"
-      className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-    >
-      <ArrowLeft className="h-4 w-4" />
-      Zur Importhistorie
-    </Link>
-  );
-}
-
-function ProtokollTabelle({
-  zeilen,
-  leerHinweis,
+function ProtokollPanel({
+  zeilen, title, leerHinweis,
 }: {
   zeilen: { csv_zeile: number; grund: string; rohdaten: string }[];
+  title: string;
   leerHinweis: string;
 }) {
   if (zeilen.length === 0) {
-    return (
-      <Card>
-        <CardContent className="p-6 text-center text-sm text-muted-foreground">
-          {leerHinweis}
-        </CardContent>
-      </Card>
-    );
+    return <Panel><p className="text-center text-sm text-muted-foreground py-6">{leerHinweis}</p></Panel>;
   }
   return (
-    <Card>
-      <CardContent className="p-0">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-24">CSV-Zeile</TableHead>
-                <TableHead className="w-1/3">Grund</TableHead>
-                <TableHead>Rohdaten</TableHead>
+    <Panel eyebrow="Tabelle" title={title}>
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow className="border-rule">
+              <TableHead className="w-24 font-mono text-[10px] uppercase tracking-[0.12em]">CSV-Zeile</TableHead>
+              <TableHead className="w-1/3 font-mono text-[10px] uppercase tracking-[0.12em]">Grund</TableHead>
+              <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Rohdaten</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {zeilen.map((z) => (
+              <TableRow key={z.csv_zeile} className="border-rule">
+                <TableCell className="font-mono tabular-nums">{z.csv_zeile}</TableCell>
+                <TableCell className="text-sm">{z.grund}</TableCell>
+                <TableCell className="font-mono text-xs text-muted-foreground">{z.rohdaten}</TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {zeilen.map((z) => (
-                <TableRow key={z.csv_zeile}>
-                  <TableCell className="font-mono">{z.csv_zeile}</TableCell>
-                  <TableCell className="text-sm">{z.grund}</TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">
-                    {z.rohdaten}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
-    </Card>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </Panel>
   );
 }

@@ -15,13 +15,39 @@ def _iso(d: Optional[date]) -> Optional[str]:
     return d.isoformat() if d else None
 
 
+def _ein_jahr_zurueck(d: Optional[date]) -> Optional[date]:
+    """Schiebt ein Datum um genau ein Jahr zurück. 29.02. → 28.02."""
+    if d is None:
+        return None
+    try:
+        return d.replace(year=d.year - 1)
+    except ValueError:
+        # Schaltjahr-29.02. — auf 28.02. im Vorjahr zurückfallen.
+        return d.replace(year=d.year - 1, day=28)
+
+
 @router.get("/dashboard")
 def dashboard(
     von: Optional[date] = Query(None),
     bis: Optional[date] = Query(None),
 ) -> dict:
+    """Dashboard-Antwort inkl. Vorjahresvergleich für Delta-Pills.
+
+    ``vorjahres_kpis`` enthält die gleichen KPIs für den um ein Jahr nach hinten
+    verschobenen Zeitraum. Liefert das Frontend in den KPI-Karten als
+    „↗ +X % vs. Vorjahr"-Pill. Bei fehlendem Zeitraum-Filter (komplettem
+    Datensatz) ist ``vorjahres_kpis`` ``None`` — eine sinnvolle Verschiebung
+    ist dort nicht möglich.
+    """
+    aktuell = queries.dashboard_kpis(_iso(von), _iso(bis))
+    vj_von, vj_bis = _ein_jahr_zurueck(von), _ein_jahr_zurueck(bis)
+    vorjahres_kpis = (
+        queries.dashboard_kpis(_iso(vj_von), _iso(vj_bis))
+        if (vj_von or vj_bis) else None
+    )
     return {
-        "kpis": queries.dashboard_kpis(_iso(von), _iso(bis)),
+        "kpis": aktuell,
+        "vorjahres_kpis": vorjahres_kpis,
         "top5_kunden": queries.top5_kunden(_iso(von), _iso(bis)),
         "top5_artikel": queries.top5_artikel(_iso(von), _iso(bis)),
     }

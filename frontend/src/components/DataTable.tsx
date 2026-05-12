@@ -9,7 +9,7 @@ import {
   SortingState,
   useReactTable,
 } from "@tanstack/react-table";
-import { ArrowDown, ArrowUp, ChevronsLeft, ChevronsRight } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronsLeft, ChevronsRight, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -57,46 +57,52 @@ export function DataTable<TData>({
   });
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {filterPlatzhalter && (
-        <Input
-          placeholder={filterPlatzhalter}
-          value={
-            filterColumnId
-              ? ((table.getColumn(filterColumnId)?.getFilterValue() as string) ?? "")
-              : globalFilter
-          }
-          onChange={(e) => {
-            if (filterColumnId) {
-              table.getColumn(filterColumnId)?.setFilterValue(e.target.value);
-            } else {
-              setGlobalFilter(e.target.value);
+        <div className="relative max-w-sm">
+          <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
+            placeholder={filterPlatzhalter}
+            value={
+              filterColumnId
+                ? ((table.getColumn(filterColumnId)?.getFilterValue() as string) ?? "")
+                : globalFilter
             }
-          }}
-          className="max-w-sm"
-        />
+            onChange={(e) => {
+              if (filterColumnId) {
+                table.getColumn(filterColumnId)?.setFilterValue(e.target.value);
+              } else {
+                setGlobalFilter(e.target.value);
+              }
+            }}
+            className="pl-9 bg-surface border-rule font-mono text-xs"
+          />
+        </div>
       )}
-      <div className="rounded-md border bg-card">
+      <div className="overflow-hidden rounded-lg border border-rule bg-surface">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((hg) => (
-              <TableRow key={hg.id}>
+              <TableRow key={hg.id} className="border-rule hover:bg-transparent">
                 {hg.headers.map((header) => {
                   const sortDir = header.column.getIsSorted();
                   const sortable = header.column.getCanSort();
                   return (
-                    <TableHead key={header.id}>
+                    <TableHead
+                      key={header.id}
+                      className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground bg-background/40"
+                    >
                       {header.isPlaceholder ? null : (
                         <button
                           type="button"
                           onClick={
                             sortable ? header.column.getToggleSortingHandler() : undefined
                           }
-                          className={`flex items-center gap-1 ${sortable ? "cursor-pointer select-none" : ""}`}
+                          className={`flex items-center gap-1 ${sortable ? "cursor-pointer select-none hover:text-ink transition" : ""}`}
                         >
                           {flexRender(header.column.columnDef.header, header.getContext())}
-                          {sortDir === "asc" && <ArrowUp className="h-3 w-3" />}
-                          {sortDir === "desc" && <ArrowDown className="h-3 w-3" />}
+                          {sortDir === "asc" && <ArrowUp className="h-3 w-3 text-yolk" />}
+                          {sortDir === "desc" && <ArrowDown className="h-3 w-3 text-yolk" />}
                         </button>
                       )}
                     </TableHead>
@@ -117,10 +123,10 @@ export function DataTable<TData>({
                 <TableRow
                   key={row.id}
                   onClick={onRowClick ? () => onRowClick(row.original) : undefined}
-                  className={onRowClick ? "cursor-pointer" : undefined}
+                  className={`border-rule ${onRowClick ? "cursor-pointer hover:bg-yolk/5 transition" : ""}`}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
+                    <TableCell key={cell.id} className="text-sm">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
@@ -131,9 +137,9 @@ export function DataTable<TData>({
         </Table>
       </div>
       <div className="flex items-center justify-between">
-        <span className="text-xs text-muted-foreground">
+        <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
           Seite {table.getState().pagination.pageIndex + 1} von{" "}
-          {Math.max(table.getPageCount(), 1)} ({table.getFilteredRowModel().rows.length} Zeilen)
+          {Math.max(table.getPageCount(), 1)} · {table.getFilteredRowModel().rows.length} Zeilen
         </span>
         <div className="flex gap-2">
           <Button
@@ -141,6 +147,7 @@ export function DataTable<TData>({
             size="sm"
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
+            className="border-rule"
           >
             <ChevronsLeft className="h-4 w-4" />
             Zurück
@@ -150,6 +157,7 @@ export function DataTable<TData>({
             size="sm"
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
+            className="border-rule"
           >
             Weiter
             <ChevronsRight className="h-4 w-4" />

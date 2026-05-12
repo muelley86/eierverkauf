@@ -1,38 +1,21 @@
 import { useEffect, useState } from "react";
 import {
-  Bar,
-  CartesianGrid,
-  ComposedChart,
-  Line,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
+  Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
 import { FileSpreadsheet, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import {
-  exportExcelUrl,
-  exportPdfUrl,
-  getJahresvergleich,
-  JahresvergleichZeile,
-} from "@/api/client";
-import { formatEuro, formatZahl, monatsKurz } from "@/lib/formatierung";
+import { PageHeader, Panel } from "@/components/PageHeader";
+import { exportExcelUrl, exportPdfUrl, getJahresvergleich, JahresvergleichZeile } from "@/api/client";
+import { formatZahl, monatsKurz } from "@/lib/formatierung";
 
-const FARBE_EIER = "#2563eb";
-const FARBE_VORJAHR = "#94a3b8";
+const FARBE_AKTUELL = "#D69826";   // Yolk
+const FARBE_VORJAHR = "#B5A98C";   // Warmes Grau (ink-30)
 
 export default function Jahresvergleich() {
   const aktuellesJahr = new Date().getFullYear();
@@ -41,19 +24,13 @@ export default function Jahresvergleich() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let abgebrochen = false;
+    let ab = false;
     setLoading(true);
     getJahresvergleich(jahr)
-      .then((d) => {
-        if (!abgebrochen) setDaten(d);
-      })
+      .then((d) => { if (!ab) setDaten(d); })
       .catch((e) => toast.error("Jahresvergleich-Fehler", { description: String(e) }))
-      .finally(() => {
-        if (!abgebrochen) setLoading(false);
-      });
-    return () => {
-      abgebrochen = true;
-    };
+      .finally(() => { if (!ab) setLoading(false); });
+    return () => { ab = true; };
   }, [jahr]);
 
   const jahrOptionen = Array.from({ length: 6 }, (_, i) => aktuellesJahr - i);
@@ -61,139 +38,130 @@ export default function Jahresvergleich() {
     daten.reduce((acc, d) => acc + Number(d[key] ?? 0), 0);
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <h2 className="text-xl font-semibold">
-            Jahresvergleich {jahr} vs. {jahr - 1}
-          </h2>
-          <Select
-            value={String(jahr)}
-            onChange={(e) => setJahr(Number(e.target.value))}
-            className="w-32"
-          >
-            {jahrOptionen.map((j) => (
-              <option key={j} value={j}>
-                {j}
-              </option>
-            ))}
-          </Select>
-        </div>
-        <div className="flex gap-2">
-          <Button asChild variant="outline" size="sm">
-            <a href={exportExcelUrl({ typ: "jahresvergleich", jahr })} target="_blank" rel="noreferrer">
-              <FileSpreadsheet className="h-4 w-4" /> Excel
-            </a>
-          </Button>
-          <Button asChild variant="outline" size="sm">
-            <a href={exportPdfUrl({ typ: "jahresvergleich", jahr })} target="_blank" rel="noreferrer">
-              <FileText className="h-4 w-4" /> PDF
-            </a>
-          </Button>
-        </div>
-      </div>
+    <div className="space-y-8 max-w-[1400px]">
+      {/* PageHeader gemäß Mockup: schlicht, ohne Eyebrow, ohne Zeitraumfilter, ohne Actions. */}
+      <PageHeader
+        title="Jahresvergleich"
+        subtitle="Aktuelles Jahr vs. Vorjahr."
+        withZeitraumFilter={false}
+      />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Eier — Monatsvergleich</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <Skeleton className="h-[350px]" />
-          ) : (
-            <ResponsiveContainer width="100%" height={350}>
-              <ComposedChart
-                data={daten.map((d) => ({ ...d, monatLabel: monatsKurz(d.monat) }))}
-                margin={{ top: 10, right: 12, left: 0, bottom: 0 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="monatLabel" />
-                <YAxis tickFormatter={(v: number) => formatZahl(v)} />
-                <Tooltip formatter={(v: number) => formatZahl(v)} />
-                <Bar dataKey="jahr" name={String(jahr)} fill={FARBE_EIER} />
-                <Line
-                  type="monotone"
-                  dataKey="vorjahr"
-                  name={String(jahr - 1)}
-                  stroke={FARBE_VORJAHR}
-                  strokeWidth={2}
-                  dot
-                />
-              </ComposedChart>
-            </ResponsiveContainer>
-          )}
-        </CardContent>
-      </Card>
+      <Panel
+        eyebrow="Vergleich"
+        title={<>{jahr} <span className="italic">vs.</span> {jahr - 1}</>}
+        actions={
+          <div className="flex items-center gap-3">
+            {/* Legende */}
+            <div className="hidden sm:flex items-center gap-3 text-xs font-mono text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-2.5 w-2.5 rounded-sm bg-yolk" /> {jahr}
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-2.5 w-2.5 rounded-sm" style={{ background: FARBE_VORJAHR }} /> {jahr - 1}
+              </span>
+            </div>
+            {/* Funktionale Aktionen (im Mockup nicht abgebildet, hier dezent neben Legende) */}
+            <Select
+              value={String(jahr)}
+              onChange={(e) => setJahr(Number(e.target.value))}
+              className="h-8 w-24 border-rule text-xs font-mono"
+            >
+              {jahrOptionen.map((j) => <option key={j} value={j}>{j}</option>)}
+            </Select>
+            <Button asChild variant="outline" size="sm" className="h-8 border-rule">
+              <a href={exportExcelUrl({ typ: "jahresvergleich", jahr })} target="_blank" rel="noreferrer" aria-label="Excel-Export">
+                <FileSpreadsheet className="h-4 w-4" />
+              </a>
+            </Button>
+            <Button asChild variant="outline" size="sm" className="h-8 border-rule">
+              <a href={exportPdfUrl({ typ: "jahresvergleich", jahr })} target="_blank" rel="noreferrer" aria-label="PDF-Export">
+                <FileText className="h-4 w-4" />
+              </a>
+            </Button>
+          </div>
+        }
+      >
+        {loading ? <Skeleton className="h-[360px]" /> : (
+          <ResponsiveContainer width="100%" height={360}>
+            <BarChart
+              data={daten.map((d) => ({ ...d, monatLabel: monatsKurz(d.monat) }))}
+              margin={{ top: 12, right: 12, left: 0, bottom: 8 }}
+              barCategoryGap="32%"
+              barGap={4}
+            >
+              <CartesianGrid stroke="#E4D9BB" strokeDasharray="3 3" vertical={false} />
+              <XAxis
+                dataKey="monatLabel"
+                stroke="#6F6552"
+                tick={{ fill: "#6F6552", fontSize: 11, fontFamily: "JetBrains Mono" }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                tickFormatter={(v: number) => formatZahl(v)}
+                stroke="#6F6552"
+                tick={{ fill: "#6F6552", fontSize: 11, fontFamily: "JetBrains Mono" }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <Tooltip
+                formatter={(v: number) => formatZahl(v)}
+                contentStyle={{ background: "#FAF5E6", border: "1px solid #E4D9BB", borderRadius: 8, fontFamily: "JetBrains Mono", fontSize: 12 }}
+                cursor={{ fill: "rgba(214,152,38,0.06)" }}
+              />
+              {/* Reihenfolge im Mockup: Vorjahr links/grau, Jahr rechts/orange */}
+              <Bar dataKey="vorjahr" name={String(jahr - 1)} fill={FARBE_VORJAHR} radius={[2, 2, 0, 0]} />
+              <Bar dataKey="jahr"    name={String(jahr)}     fill={FARBE_AKTUELL} radius={[2, 2, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </Panel>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Differenz-Tabelle</CardTitle>
-        </CardHeader>
-        <CardContent>
+      {/* Tabelle im Mockup-Stil: nur Eier-Spalten, Vorjahr-vor-Jahr-Reihenfolge, kein Panel-Header. */}
+      <Panel>
+        {loading ? <Skeleton className="h-72" /> : (
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>Monat</TableHead>
-                <TableHead>Eier {jahr}</TableHead>
-                <TableHead>Eier {jahr - 1}</TableHead>
-                <TableHead>Δ Stück</TableHead>
-                <TableHead>Δ %</TableHead>
-                <TableHead>Umsatz {jahr}</TableHead>
-                <TableHead>Δ €</TableHead>
+              <TableRow className="border-rule hover:bg-transparent">
+                <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Monat</TableHead>
+                <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground text-right">{jahr - 1}</TableHead>
+                <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground text-right">{jahr}</TableHead>
+                <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground text-right">Δ Stück</TableHead>
+                <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground text-right">Δ %</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {daten.map((d) => {
                 const prozent = d.vorjahr > 0 ? (d.differenz / d.vorjahr) * 100 : 0;
+                const deltaKlasse = d.differenz > 0 ? "text-sage" : d.differenz < 0 ? "text-brick" : "text-muted-foreground";
                 return (
-                  <TableRow key={d.monat}>
-                    <TableCell>{monatsKurz(d.monat)}</TableCell>
-                    <TableCell className="tabular-nums">{formatZahl(d.jahr)}</TableCell>
-                    <TableCell className="tabular-nums">{formatZahl(d.vorjahr)}</TableCell>
-                    <TableCell
-                      className={`tabular-nums font-medium ${
-                        d.differenz > 0 ? "text-emerald-600" : d.differenz < 0 ? "text-red-600" : ""
-                      }`}
-                    >
-                      {d.differenz > 0 ? "+" : ""}
-                      {formatZahl(d.differenz)}
+                  <TableRow key={d.monat} className="border-rule hover:bg-yolk/[0.04]">
+                    <TableCell className="font-medium text-ink">{monatsKurz(d.monat)}</TableCell>
+                    <TableCell className="font-mono tabular-nums text-right">{formatZahl(d.vorjahr)}</TableCell>
+                    <TableCell className="font-mono tabular-nums text-right">{formatZahl(d.jahr)}</TableCell>
+                    <TableCell className={`font-mono tabular-nums text-right ${deltaKlasse}`}>
+                      {d.differenz > 0 ? "+" : ""}{formatZahl(d.differenz)}
                     </TableCell>
-                    <TableCell
-                      className={`tabular-nums ${
-                        prozent > 0 ? "text-emerald-600" : prozent < 0 ? "text-red-600" : ""
-                      }`}
-                    >
+                    <TableCell className={`font-mono tabular-nums text-right ${deltaKlasse}`}>
                       {d.vorjahr > 0 ? `${prozent > 0 ? "+" : ""}${formatZahl(prozent, 1)} %` : "—"}
-                    </TableCell>
-                    <TableCell className="tabular-nums">{formatEuro(d.jahr_umsatz)}</TableCell>
-                    <TableCell
-                      className={`tabular-nums font-medium ${
-                        d.differenz_umsatz > 0
-                          ? "text-emerald-600"
-                          : d.differenz_umsatz < 0
-                            ? "text-red-600"
-                            : ""
-                      }`}
-                    >
-                      {d.differenz_umsatz > 0 ? "+" : ""}
-                      {formatEuro(d.differenz_umsatz)}
                     </TableCell>
                   </TableRow>
                 );
               })}
-              <TableRow className="font-semibold border-t-2">
-                <TableCell>Summe</TableCell>
-                <TableCell className="tabular-nums">{formatZahl(summe("jahr"))}</TableCell>
-                <TableCell className="tabular-nums">{formatZahl(summe("vorjahr"))}</TableCell>
-                <TableCell className="tabular-nums">{formatZahl(summe("differenz"))}</TableCell>
+              {/* Summenzeile dezent — funktional erhalten, im Mockup nur abgeschnitten. */}
+              <TableRow className="border-t-2 border-rule bg-background/40 hover:bg-background/40 font-semibold">
+                <TableCell className="text-ink">Summe</TableCell>
+                <TableCell className="font-mono tabular-nums text-right">{formatZahl(summe("vorjahr"))}</TableCell>
+                <TableCell className="font-mono tabular-nums text-right">{formatZahl(summe("jahr"))}</TableCell>
+                <TableCell className="font-mono tabular-nums text-right">
+                  {summe("differenz") > 0 ? "+" : ""}{formatZahl(summe("differenz"))}
+                </TableCell>
                 <TableCell />
-                <TableCell className="tabular-nums">{formatEuro(summe("jahr_umsatz"))}</TableCell>
-                <TableCell className="tabular-nums">{formatEuro(summe("differenz_umsatz"))}</TableCell>
               </TableRow>
             </TableBody>
           </Table>
-        </CardContent>
-      </Card>
+        )}
+      </Panel>
     </div>
   );
 }

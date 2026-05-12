@@ -7,6 +7,10 @@ Backend: FastAPI + SQLite. Frontend: React 18 + TypeScript + Vite + Recharts + s
 - Persistente Datenbank für Auswertungen über beliebige Zeiträume.
 - Browser-basierte CSV-Imports, Excel- und PDF-Exporte.
 
+> **Vollständige Deployment-Anleitung:** Erstinstallation, Updates, Migration, Reverse-Proxy
+> und Troubleshooting findest du in [DEPLOYMENT.md](DEPLOYMENT.md). Diese README ist die
+> Kurz-Referenz; DEPLOYMENT.md ist das ausführliche Handbuch für Server-Admins.
+
 ---
 
 ## Inhalt

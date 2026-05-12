@@ -1,23 +1,53 @@
-"""CSV-Import: Parsing, Eiermenge-Berechnung, Artikelnormierung, DB-Insert."""
+"""CSV-Import: Parsing, Eiermenge-Berechnung, Artikelnormierung, DB-Insert.
+
+Robustheit:
+- Die Kopfzeile wird automatisch in den ersten 30 Zeilen gesucht (nach den
+  Schlüsselwörtern Datum/Nummer/Kunde/Menge). Anzahl der Metazeilen davor
+  ist egal.
+- Die ersten 15 Spalten werden positionsbasiert auf kanonische Namen
+  umbenannt — Bezeichnungen wie `#`, `#.1`, `#2` für die Pack-Code-Spalte
+  spielen daher keine Rolle.
+- Pro fehlerhafte Zeile wird ein konkreter Grund samt Zeilennummer
+  protokolliert und an die UI durchgereicht.
+"""
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Tuple
 
 import pandas as pd
 
 from .db import get_conn
 
-# Erwartete Spaltennamen in Zeile 8 der CSV (nach skiprows=7).
-ERWARTETE_SPALTEN = [
-    "Datum", "Nummer", "#", "Kunde", "Mitarbeiter",
-    "Menge", "Einheit", "#.1", "Beschreibung",
-    "Preis/Einh.", "Mwst.", "Diesel/Einh.",
-    "Rabatt Rg.", "Rabatt Pos.", "Gesamt",
+# Spaltenreihenfolge gemäß Spezifikation. Die ersten N Spalten der CSV werden
+# nach dem Lesen auf diese Namen umbenannt (positionsbasiert).
+CANONICAL_COLUMNS: list[str] = [
+    "Datum",          # 0
+    "Nummer",         # 1  Rechnungsnummer
+    "Kundennummer",   # 2  in der CSV: "#"
+    "Kunde",          # 3  Kundenname
+    "Mitarbeiter",    # 4  (wird ignoriert)
+    "Menge",          # 5
+    "Einheit",        # 6  stk / PACK / kg / leer
+    "PackCode",       # 7  in der CSV: "#.1" oder "#2" — 110/111 oder leer
+    "Beschreibung",   # 8
+    "Preis",          # 9  "Preis/Einh."
+    "Mwst",           # 10
+    "Diesel",         # 11 "Diesel/Einh."
+    "RabattRg",       # 12 "Rabatt Rg."
+    "RabattPos",      # 13 "Rabatt Pos."
+    "Gesamt",         # 14
 ]
+
+# Schlüsselwörter, die in der Kopfzeile vorkommen müssen — für die
+# automatische Header-Erkennung.
+_HEADER_KEYWORDS = ("Datum", "Nummer", "Kunde", "Menge")
+
+# Maximale Anzahl Fehlerdetails, die ans Frontend zurückgemeldet werden.
+_FEHLER_DETAILS_MAX = 50
 
 
 @dataclass
@@ -28,6 +58,7 @@ class ImportErgebnis:
     zeilen_fehlerhaft: int
     datumsbereich: str
     dateiname: str
+    fehler_details: list[str] = field(default_factory=list)
 
     def as_dict(self) -> dict:
         return {
@@ -37,6 +68,7 @@ class ImportErgebnis:
             "zeilen_fehlerhaft": self.zeilen_fehlerhaft,
             "datumsbereich": self.datumsbereich,
             "dateiname": self.dateiname,
+            "fehler_details": list(self.fehler_details),
         }
 
 
@@ -64,25 +96,31 @@ def parse_german_number(value: object) -> Optional[float]:
 
 
 def parse_german_date(value: object) -> Optional[str]:
-    """'DD.MM.YY' -> 'YYYY-MM-DD' (alle Jahre als 20YY interpretiert)."""
+    """Akzeptiert sowohl 'DD.MM.YY' als auch 'DD.MM.YYYY' -> 'YYYY-MM-DD'.
+
+    Zweistellige Jahre werden immer als 20YY interpretiert (Eierverkäufe
+    sind 21. Jh.).
+    """
     if value is None:
         return None
     s = str(value).strip()
     if not s or s.lower() == "nan":
         return None
+    # Vierstellig zuerst (präziser).
+    try:
+        dt = datetime.strptime(s, "%d.%m.%Y")
+        return dt.strftime("%Y-%m-%d")
+    except ValueError:
+        pass
+    # Zweistellig — strptime nutzt POSIX-Cutoff (00–68 → 20XX, 69–99 → 19XX).
+    # Wir zwingen alles ins 21. Jh.
     try:
         dt = datetime.strptime(s, "%d.%m.%y")
-        # strptime ergibt 19YY bei großen Werten; auf 20YY normalisieren.
         if dt.year < 2000:
             dt = dt.replace(year=dt.year + 100)
         return dt.strftime("%Y-%m-%d")
     except ValueError:
-        # Fallback: vierstelliges Jahr.
-        try:
-            dt = datetime.strptime(s, "%d.%m.%Y")
-            return dt.strftime("%Y-%m-%d")
-        except ValueError:
-            return None
+        return None
 
 
 def berechne_eier(menge: float, einheit: Optional[str], pack_code: Optional[int]) -> Optional[int]:
@@ -144,18 +182,49 @@ def extrahiere_groesse(beschreibung: str) -> Optional[str]:
 # CSV-Parsing
 # ---------------------------------------------------------------------------
 
+def _finde_header_zeile(file_path: str | Path) -> int:
+    """Sucht die Kopfzeile in den ersten 30 Zeilen und liefert ihren 0-basierten Index.
+
+    Erkennt sie daran, dass `Datum`, `Nummer`, `Kunde` und `Menge` alle in
+    derselben Zeile auftauchen. Wirft `ValueError`, wenn nichts gefunden wird.
+    """
+    with open(file_path, "r", encoding="utf-8-sig", errors="replace") as fp:
+        for idx, line in enumerate(fp):
+            if idx >= 30:
+                break
+            if all(kw in line for kw in _HEADER_KEYWORDS):
+                return idx
+    raise ValueError(
+        "Kopfzeile nicht gefunden. Erwartet eine Zeile mit den Spalten "
+        f"{', '.join(_HEADER_KEYWORDS)} in den ersten 30 Zeilen der CSV."
+    )
+
+
 def parse_csv(file_path: str | Path) -> pd.DataFrame:
-    """Liest die CSV mit Semikolon-Trennzeichen, UTF-8-BOM und 7 Metazeilen."""
+    """Liest die CSV mit Semikolon-Trennzeichen und UTF-8-BOM.
+
+    Die Anzahl der Metazeilen vor der Kopfzeile wird automatisch ermittelt
+    (siehe `_finde_header_zeile`). Anschließend werden die ersten
+    `len(CANONICAL_COLUMNS)` Spalten positionsbasiert auf kanonische Namen
+    umbenannt, sodass Eigenheiten wie `#`/`#.1`/`#2` in der Pack-Code-Spalte
+    irrelevant sind.
+    """
+    header_idx = _finde_header_zeile(file_path)
     df = pd.read_csv(
         str(file_path),
         sep=";",
         encoding="utf-8-sig",
-        skiprows=7,
+        skiprows=header_idx,
         dtype=str,
         engine="python",
         on_bad_lines="skip",
     )
-    df.columns = [c.strip() for c in df.columns]
+    df.columns = [str(c).strip() for c in df.columns]
+    # Positionsbasiert umbenennen (überschreibt was-auch-immer in der Quelle).
+    n = min(len(CANONICAL_COLUMNS), len(df.columns))
+    df = df.rename(columns={df.columns[i]: CANONICAL_COLUMNS[i] for i in range(n)})
+    # Komplett leere Zeilen entfernen (Pandas liest manchmal eine Schluss-Leerzeile mit).
+    df = df.dropna(how="all").reset_index(drop=True)
     return df
 
 
@@ -169,62 +238,90 @@ def vorschau(file_path: str | Path, n: int = 10) -> list[dict]:
 # Import
 # ---------------------------------------------------------------------------
 
-def _row_to_record(row: pd.Series) -> Optional[dict]:
-    """Wandelt eine CSV-Zeile in den Verkaufspositionen-Record. Liefert None bei unbrauchbarer Zeile."""
-    datum = parse_german_date(row.get("Datum"))
-    menge = parse_german_number(row.get("Menge"))
-    if datum is None or menge is None:
-        return None
-    kundennummer = (str(row.get("#") or "")).strip()
+def _row_to_record(row: pd.Series) -> Tuple[Optional[dict], Optional[str]]:
+    """Wandelt eine CSV-Zeile in einen Verkaufspositionen-Record um.
+
+    Rückgabe: ``(record, None)`` bei Erfolg, ``(None, grund)`` bei Fehler.
+    """
+    datum_raw = row.get("Datum")
+    datum = parse_german_date(datum_raw)
+    if datum is None:
+        return None, f"Datum '{datum_raw}' nicht erkannt (erwartet DD.MM.YY oder DD.MM.YYYY)"
+
+    menge_raw = row.get("Menge")
+    menge = parse_german_number(menge_raw)
+    if menge is None:
+        return None, f"Menge '{menge_raw}' nicht numerisch"
+
+    kundennummer = (str(row.get("Kundennummer") or "")).strip()
+    if not kundennummer:
+        return None, "Kundennummer fehlt"
     kundenname = (str(row.get("Kunde") or "")).strip()
-    if not kundennummer or not kundenname:
-        return None
+    if not kundenname:
+        return None, "Kundenname fehlt"
+
     einheit_raw = (str(row.get("Einheit") or "")).strip()
     einheit = einheit_raw if einheit_raw else None
-    pack_code_raw = (str(row.get("#.1") or "")).strip()
+
+    pack_code_raw = (str(row.get("PackCode") or "")).strip()
     pack_code: Optional[int] = None
     if pack_code_raw and pack_code_raw.lower() != "nan":
         try:
             pack_code = int(float(pack_code_raw))
         except ValueError:
+            # Pack-Code unleserlich — Zeile importieren wir trotzdem (eier_stueck
+            # bleibt None). Kein harter Fehler.
             pack_code = None
+
     beschreibung = (str(row.get("Beschreibung") or "")).strip()
     eier = berechne_eier(menge, einheit, pack_code)
     artikel_code = normiere_artikel(einheit, pack_code, beschreibung)
     groesse = extrahiere_groesse(beschreibung)
-    preis = parse_german_number(row.get("Preis/Einh."))
+    preis = parse_german_number(row.get("Preis"))
     gesamt = parse_german_number(row.get("Gesamt"))
     rechnungsnummer = (str(row.get("Nummer") or "")).strip() or None
-    return {
-        "rechnungsdatum": datum,
-        "rechnungsnummer": rechnungsnummer,
-        "kundennummer": kundennummer,
-        "kundenname": kundenname,
-        "menge": menge,
-        "einheit": einheit,
-        "pack_code": pack_code,
-        "eier_stueck": eier,
-        "artikel_code": artikel_code,
-        "groesse": groesse,
-        "beschreibung": beschreibung,
-        "preis_einheit": preis,
-        "gesamt": gesamt,
-    }
+
+    return (
+        {
+            "rechnungsdatum": datum,
+            "rechnungsnummer": rechnungsnummer,
+            "kundennummer": kundennummer,
+            "kundenname": kundenname,
+            "menge": menge,
+            "einheit": einheit,
+            "pack_code": pack_code,
+            "eier_stueck": eier,
+            "artikel_code": artikel_code,
+            "groesse": groesse,
+            "beschreibung": beschreibung,
+            "preis_einheit": preis,
+            "gesamt": gesamt,
+        },
+        None,
+    )
 
 
 def import_csv(file_path: str | Path, dateiname: str) -> ImportErgebnis:
     """Parst eine CSV-Datei und schreibt die Verkaufspositionen in die DB.
 
     Duplikate (gemäß UNIQUE-Constraint) werden via INSERT OR IGNORE übersprungen
-    und gezählt — kein Fehler.
+    und gezählt — kein Fehler. Fehlerhafte Zeilen werden gezählt UND die ersten
+    `_FEHLER_DETAILS_MAX` Gründe samt Zeilennummer protokolliert.
     """
     df = parse_csv(file_path)
     records: list[dict] = []
     fehlerhaft = 0
-    for _, row in df.iterrows():
-        rec = _row_to_record(row)
+    fehler_details: list[str] = []
+
+    for pandas_idx, row in df.iterrows():
+        rec, grund = _row_to_record(row)
         if rec is None:
             fehlerhaft += 1
+            if len(fehler_details) < _FEHLER_DETAILS_MAX:
+                # +2: pandas-Index ist 0-basiert auf Daten, plus eine Zeile für
+                # den Header — entspricht der ungefähren Zeilennummer in Excel.
+                csv_zeile = int(pandas_idx) + 2
+                fehler_details.append(f"Zeile {csv_zeile}: {grund}")
             continue
         records.append(rec)
 
@@ -285,6 +382,7 @@ def import_csv(file_path: str | Path, dateiname: str) -> ImportErgebnis:
         zeilen_fehlerhaft=fehlerhaft,
         datumsbereich=datumsbereich,
         dateiname=dateiname,
+        fehler_details=fehler_details,
     )
 
 

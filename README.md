@@ -313,7 +313,34 @@ sudo systemctl start eierverkauf
 ```
 
 ### CSV-Import zählt 0 Zeilen importiert
-Wahrscheinlich Duplikatschutz aktiv — alle Zeilen waren bereits importiert (siehe `zeilen_uebersprungen` im Importprotokoll). Bei tatsächlich neuen Daten Spaltenstruktur und Encoding der CSV prüfen.
+Mehrere mögliche Ursachen, in dieser Reihenfolge prüfen:
+
+1. **Alle Zeilen sind Duplikate.** Im Importprotokoll steht dann eine hohe
+   Zahl bei „Übersprungen". Der UNIQUE-Constraint verhindert
+   Doppel-Imports. Kein Fehler.
+2. **Alle Zeilen sind fehlerhaft.** Steht „Fehlerhaft" hoch und
+   „Importiert" auf 0, zeigt die App seit v1.0.2 ein **Fehlerprotokoll**
+   mit Zeilennummer und konkretem Grund unterhalb der KPI-Zahlen. Häufige
+   Gründe:
+   - `Datum '…' nicht erkannt` → Spalte A enthält keinen Wert im Format
+     `DD.MM.YY` oder `DD.MM.YYYY`. Andere Formate (z. B. ISO `2025-11-05`
+     oder US `11/05/2025`) werden aktuell nicht unterstützt.
+   - `Menge '…' nicht numerisch` → Spalte F enthält Text oder
+     Sonderzeichen.
+   - `Kundennummer fehlt` / `Kundenname fehlt` → Spalte C bzw. D leer.
+3. **Datei wird nach dem Drop nicht angenommen.** Seit v1.0.2 erscheint ein
+   Toast „Datei abgelehnt" mit Grund. Vorher landeten unter Windows
+   manchmal `.csv`-Dateien stillschweigend im Mülleimer, weil Windows den
+   MIME-Type `application/vnd.ms-excel` statt `text/csv` liefert — das ist
+   jetzt mit abgedeckt.
+
+### CSV: meine Datei hat „Eierverkäufe Je Rechnungsposition" als Vorzeile, geht trotzdem nicht
+Bis v1.0.1 war die Anzahl der Metazeilen auf genau 7 fest verdrahtet
+(entsprechend der ursprünglichen Spec). Die tatsächlich aus dem
+Warenwirtschaftssystem kommenden Exporte haben aber 5 Metazeilen + 3 leere
+Zeilen, insgesamt also 8. Seit v1.0.2 wird die Kopfzeile **automatisch
+gesucht** (über die Schlüsselwörter Datum/Nummer/Kunde/Menge in den ersten
+30 Zeilen) — die Anzahl der Metazeilen davor ist egal.
 
 ### PowerShell-Fehler "Die Zeichenfolge hat kein Abschlusszeichen"
 PowerShell 5.1 (Windows-Standard) liest `.ps1`-Dateien **ohne UTF-8-BOM als

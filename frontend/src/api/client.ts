@@ -106,6 +106,8 @@ export interface ImportErgebnis {
   zeilen_fehlerhaft: number;
   datumsbereich: string;
   dateiname: string;
+  /** Bis zu 50 Detail-Gründe, warum einzelne Zeilen verworfen wurden. */
+  fehler_details: string[];
 }
 
 export interface VorschauResponse {

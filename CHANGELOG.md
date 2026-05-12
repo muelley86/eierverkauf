@@ -7,6 +7,37 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-05-12
+
+### Behoben
+- **CSV-Import scheiterte stillschweigend** bei den real verwendeten
+  Exportdateien — drei voneinander unabhängige Ursachen, alle gefixt:
+  1. **Anzahl der Metazeilen variabel** (Test-Datei: 8 Zeilen vor dem Header
+     statt der spezifizierten 7). Hartes `skiprows=7` interpretierte eine
+     leere Zeile als Kopfzeile, sämtliche Spalten hießen `Unnamed: N`, jede
+     Datenzeile landete als „fehlerhaft". Der Parser sucht jetzt die
+     Kopfzeile in den ersten 30 Zeilen automatisch anhand der
+     Spaltennamen *Datum/Nummer/Kunde/Menge*.
+  2. **Pack-Code-Spalte hieß `#2`** (nicht `#.1` wie spezifiziert). Spalten
+     werden jetzt positionsbasiert auf interne kanonische Namen umbenannt
+     (`Datum`, `Nummer`, `Kundennummer`, …, `PackCode`, …) — egal wie die
+     Header-Bezeichnung in der Quelle aussieht.
+  3. **Drag&Drop verwarf .csv-Dateien stillschweigend** unter Windows, weil
+     der Browser MIME-Type `application/vnd.ms-excel` (statt `text/csv`)
+     liefert. `accept` akzeptiert jetzt mehrere MIME-Varianten, und
+     `onDropRejected` zeigt einen Toast statt das Drop einfach zu
+     ignorieren.
+- **`parse_german_date`** akzeptiert jetzt sowohl `DD.MM.YY` als auch
+  `DD.MM.YYYY` (Test-Datei mischt beide Formate).
+
+### Hinzugefügt
+- **Detailliertes Fehlerprotokoll** im Import-Dialog: pro fehlerhafte
+  Zeile wird Zeilennummer und konkreter Grund angezeigt (z.B.
+  *"Zeile 47: Datum '05/11/25' nicht erkannt"*). Bis zu 50 Details werden
+  vom Backend zurückgereicht, der Rest nur gezählt.
+- **`ImportErgebnis.fehler_details: string[]`** im Backend
+  (`data/importer.py`) und Frontend (`src/api/client.ts`).
+
 ## [1.0.1] - 2026-05-11
 
 ### Behoben
@@ -50,6 +81,7 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
   - Dev-Setup-Scripts für Windows (`dev-setup.ps1`, `dev-start.ps1`) und macOS/Linux.
   - Docker Compose für vollständige Integrationstests inkl. PDF-Export.
 
-[Unreleased]: https://example.com/eierverkauf/compare/v1.0.1...HEAD
+[Unreleased]: https://example.com/eierverkauf/compare/v1.0.2...HEAD
+[1.0.2]: https://example.com/eierverkauf/compare/v1.0.1...v1.0.2
 [1.0.1]: https://example.com/eierverkauf/compare/v1.0.0...v1.0.1
 [1.0.0]: https://example.com/eierverkauf/releases/tag/v1.0.0

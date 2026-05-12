@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { useDropzone } from "react-dropzone";
-import { FileSpreadsheet, Trash2, UploadCloud } from "lucide-react";
+import { FileRejection, useDropzone } from "react-dropzone";
+import { AlertTriangle, FileSpreadsheet, Trash2, UploadCloud } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -61,6 +61,17 @@ export default function Import() {
     }
   }, []);
 
+  // Windows liefert für .csv häufig MIME `application/vnd.ms-excel` (oder
+  // gar nichts), nicht `text/csv`. Wir lehnen sonst stillschweigend ab.
+  const onDropRejected = useCallback((rejections: FileRejection[]) => {
+    const erste = rejections[0];
+    if (!erste) return;
+    const grund = erste.errors[0]?.message ?? "Datei wurde nicht akzeptiert.";
+    toast.error("Datei abgelehnt", {
+      description: `${erste.file.name}: ${grund}`,
+    });
+  }, []);
+
   const importieren = async () => {
     if (!datei) return;
     setLoading(true);
@@ -68,7 +79,19 @@ export default function Import() {
       const ergebnis = await uploadImport(datei);
       setProtokoll(ergebnis);
       setImportiert(true);
-      toast.success(`Import abgeschlossen: ${ergebnis.zeilen_importiert} Zeilen`);
+      if (ergebnis.zeilen_importiert === 0) {
+        toast.warning(
+          `Keine Zeile importiert (${ergebnis.zeilen_fehlerhaft} fehlerhaft, ` +
+          `${ergebnis.zeilen_uebersprungen} Duplikate)`,
+        );
+      } else {
+        toast.success(
+          `Import abgeschlossen: ${ergebnis.zeilen_importiert} Zeilen` +
+          (ergebnis.zeilen_fehlerhaft > 0
+            ? ` — ${ergebnis.zeilen_fehlerhaft} fehlerhaft`
+            : ""),
+        );
+      }
       await ladeHistorie();
     } catch (e) {
       toast.error("Import fehlgeschlagen", { description: String(e) });
@@ -90,7 +113,16 @@ export default function Import() {
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: { "text/csv": [".csv"] },
+    onDropRejected,
+    // Mehrere MIME-Varianten + Extension-Fallback. Windows liefert für
+    // .csv-Dateien teilweise `application/vnd.ms-excel`, manche Browser
+    // gar keinen MIME-Type.
+    accept: {
+      "text/csv": [".csv"],
+      "text/plain": [".csv"],
+      "application/vnd.ms-excel": [".csv"],
+      "application/csv": [".csv"],
+    },
     multiple: false,
   });
 
@@ -114,7 +146,9 @@ export default function Import() {
                 ? "CSV hier loslassen…"
                 : "CSV-Datei hierher ziehen oder klicken zum Auswählen"}
             </p>
-            <p className="text-xs text-muted-foreground">Semikolon-getrennt, UTF-8-BOM, 7 Metazeilen</p>
+            <p className="text-xs text-muted-foreground">
+              Semikolon-getrennt, UTF-8-BOM. Kopfzeile wird automatisch erkannt.
+            </p>
           </div>
           {datei && (
             <div className="mt-4 flex items-center justify-between rounded-md border bg-muted/30 p-3">
@@ -165,7 +199,7 @@ export default function Import() {
           <CardHeader>
             <CardTitle>Importprotokoll</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <dl className="grid grid-cols-2 gap-y-1 text-sm">
               <dt className="text-muted-foreground">Datei</dt>
               <dd>{protokoll.dateiname}</dd>
@@ -184,6 +218,25 @@ export default function Import() {
                 <Badge variant="destructive">{protokoll.zeilen_fehlerhaft}</Badge>
               </dd>
             </dl>
+
+            {protokoll.fehler_details.length > 0 && (
+              <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3">
+                <div className="mb-2 flex items-center gap-2 text-sm font-medium text-destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  Fehlerprotokoll
+                  {protokoll.zeilen_fehlerhaft > protokoll.fehler_details.length && (
+                    <span className="text-xs font-normal text-muted-foreground">
+                      (erste {protokoll.fehler_details.length} von {protokoll.zeilen_fehlerhaft})
+                    </span>
+                  )}
+                </div>
+                <ul className="space-y-1 font-mono text-xs">
+                  {protokoll.fehler_details.map((zeile, idx) => (
+                    <li key={idx}>{zeile}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

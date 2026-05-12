@@ -6,7 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Web-App zur Auswertung von Eierverkäufen für **Kerba Bio-Ei GbR**. FastAPI-Backend + React/Vite-Frontend, SQLite, läuft im Betrieb ohne Internet. Produktiv-Deployment in LXC unter Debian Trixie nach `/opt/eierverkauf/`. UI ist durchgehend **deutsch** — Symbole, Spaltennamen, Logs und Fehlermeldungen sind deutsch zu halten.
 
-`README.md` ist das **Nutzer-Handbuch** (Installation, Helper-Befehl, Troubleshooting). Diese Datei beschränkt sich auf Entwickler-Orientierung.
+`README.md` ist die **Kurz-Referenz**. Das vollständige Server-Admin-Handbuch (Erstinstallation, Updates, Backup, Restore, Reverse-Proxy, Troubleshooting) liegt in `DEPLOYMENT.md`. Diese Datei beschränkt sich auf Entwickler-Orientierung.
+
+Repository: <https://github.com/muelley86/eierverkauf> (öffentlich). Production-Updates erwartet `eierverkauf update`, das `git pull --ff-only origin main` macht — ein Push auf main wirkt sich also direkt aufs nächste Update aus. Tag-Konvention `v<MAJOR>.<MINOR>.<PATCH>` für reproduzierbare Server-Pinns.
 
 ## Lokale Entwicklung
 
@@ -60,6 +62,7 @@ docker compose up --build           # http://localhost:8050
 - **Schema-Migration ab v1.0.4** (in `_migrate_unique_constraint`): UNIQUE-Constraint auf `verkaufspositionen` enthält jetzt `rechnungsdatum`. SQLite kann Constraints nicht in-place ändern → Rebuild via temporärer Tabelle, automatisches DB-Backup nach `data/eierverkauf.db.pre-v1.0.4.bak`. Wenn `SCHEMA_SQL` und der Migrations-`CREATE`-Block geändert werden, **müssen beide synchron bleiben** (Kommentar markiert die Stelle).
 - `importer.py` ist die einzige Komplexitäts-Konzentration im Backend — siehe nächster Abschnitt.
 - `queries.py` ist reine SQL-Schicht ohne ORM. Zeitraumfilter via `_zeitraum_filter(von, bis, prefix=…)` — `prefix` muss `WHERE` oder `AND` sein je nachdem, ob schon eine WHERE-Klausel existiert.
+- **Vorjahres-Vergleichsmuster** (seit v1.1.0): `/api/dashboard` liefert zusätzlich `vorjahres_kpis: DashboardKPIs | null` für denselben Zeitraum exakt 12 Monate zurückversetzt (`_ein_jahr_zurueck`-Helper in `api/auswertung_router.py`). Frontend nutzt das für Delta-Pillen. Das Feld ist **nullable und additiv** — ältere Frontend-Builds brechen nicht, weil sie es einfach ignorieren. Pattern für künftige Vergleichs-Endpoints: nullable Vorjahres-Sektion in die Response, nicht neue Endpoints.
 
 ### CSV-Importer (`data/importer.py`) — kritische Invarianten
 
@@ -89,19 +92,49 @@ Weitere Eigenheiten:
 - `api/client.ts` ist **strikt typisiert ohne `any`** — alle API-Response-Shapes als Interfaces. Neue Endpoints kommen mit ihren Typen hierher.
 - `lib/formatierung.ts` ist die einzige Quelle für deutsche Zahl-, Datums- und Währungsformatierung. Keine inline-`toLocaleString`-Aufrufe in Components.
 - `components/ui/` enthält shadcn/ui-generierte Komponenten — bei Updates über die shadcn-CLI regenerieren, nicht von Hand patchen.
-- Charts: Recharts mit `ResponsiveContainer`, `Brush` für Zoom, Standard-Farben **Eier `#2563eb`, Umsatz `#16a34a`, Vorjahr `#94a3b8`** (Konsistenz über alle Seiten).
+
+**Design-System „Warm Editorial" (seit v1.1.0):**
+
+- **Schriften**: `Manrope` (Display + Body) und `JetBrains Mono` (tabular nums, Monospace). Beides offline via `@fontsource` in `main.tsx` geladen — kein CDN-Roundtrip im Browser. Bei Schrift-Änderungen `main.tsx` + `index.css` (`--font-display`, `--font-body`, `--font-mono`) + `tailwind.config.ts` (`fontFamily.display/body/mono`) **synchron** halten.
+- **Farbpalette** (Tokens in `tailwind.config.ts` + HSL-Varianten in `index.css`):
+  - `yolk #D69826` — Primärakzent, Eier-Diagramme, aktive Pillen
+  - `sage #5A7F4F` — Umsatz, positive Deltas
+  - `brick #B5532C` — negative Deltas, Fehler
+  - `surface #FAF5E6` — Card-Hintergrund
+  - `ink #1A1610` — primärer Text
+  - `rule #E4D9BB` — Trennlinien
+  - Vorjahres-Werte in Charts: `#B5A98C` (warmes Grau)
+  Direkte Hex-Werte in Recharts (Bar/Line `fill`/`stroke`) sind OK — Tailwind kann an Recharts-Props nicht durchgereicht werden. Für UI-Elemente: Tailwind-Tokens (`bg-yolk`, `text-sage`) nutzen.
+- **Pflicht-Wrapper für neue Seiten** (nicht jedes Mal eigene Header/Cards basteln):
+  - `components/PageHeader.tsx` → `<PageHeader eyebrow="…" title="…" subtitle="…" />`. Rendert standardmäßig die `ZeitraumFilter`-Pille rechts; mit `withZeitraumFilter={false}` ausschaltbar (z. B. auf Jahresvergleich/Import-Seiten). Optional `exportHref` für dezenten Download-Icon-Button.
+  - `components/PageHeader.tsx`'s `<Panel>` ist der **einzige Card-Wrapper** — `eyebrow`, `title`, `actions`, Children im `<div className="p-6">`. Eigene Cards (`rounded-xl border …`) bedeuten Drift zur einheitlichen Optik.
+  - `components/ZeitraumFilter.tsx` → Pill mit Quick-Range-Erkennung (Dieser Monat / Letztes Jahr / Eigener Zeitraum). Wird vom `PageHeader` automatisch eingebunden, nur in Ausnahmefällen einzeln rendern.
+  - `components/KPICard.tsx` → Hero-Variante (8/12-Spalten, 88–112 px Wertgröße) + Default-Variante. `wertFarbe="ink|yolk|sage"`, `sparkline: number[]` (optional, sitzt absolute in der rechten unteren Ecke), `delta: { wert, richtung }`.
+- **Charts**: Recharts mit `ResponsiveContainer`. Achsenlinien/Tick-Striche entfernt für ruhigeres Bild (`axisLine={false} tickLine={false}`). Grid via `<CartesianGrid stroke="#E4D9BB" strokeDasharray="3 3" />`. Tooltip-Style einheitlich `background: "#FAF5E6", border: "1px solid #E4D9BB", borderRadius: 8, fontFamily: "JetBrains Mono"`.
+
+**Tabellen-Sortierung — kritische Invariante:**
+
+In `ColumnDef<…>[]` jeder TanStack-Table v8 muss für **Zahlen-Spalten** explizit `sortingFn: "basic"` gesetzt sein. Sonst greift Auto-Detection (`alphanumeric`) und sortiert lexikographisch (`1, 10, 100, 2, 20`). Betrifft bereits `pages/Artikel.tsx`, `pages/Kunden.tsx`, `pages/Ranking.tsx`. Bei neuen Tabellen-Spalten mit numerischen Werten: **immer `sortingFn: "basic"` ergänzen**, sonst kommt der Sortier-Bug zurück.
 
 ### Export (`export/`)
 
-- `excel_export.py`: openpyxl. Titelzeile „Kerba Bio-Ei GbR" + Zeitraum, dunkelblauer Header.
-- `pdf_export.py`: WeasyPrint. **Auf Windows lokal oft kaputt** (GTK fehlt) → der Endpoint fängt `OSError` und liefert 500 mit klarem Hinweis. PDF-Tests am besten in Docker.
+- `excel_export.py`: openpyxl. Titelzeile „Kerba Bio-Ei GbR" + Zeitraum, **dunkelblauer Header (`#1E3A8A`)** aus der Pre-v1.1.0-Palette. **Stilistisch inkonsistent** mit dem neuen Warm-Editorial-Frontend (Yolk/Sage/Brick) — bei Gelegenheit auf `#D69826` (Yolk) für den Kopf + `#5A7F4F` (Sage) für Akzente migrieren. Niedrige Priorität, weil Excel-Exporte selten geöffnet werden und der dunkelblaue Kopf gut lesbar ist.
+- `pdf_export.py`: WeasyPrint. **Auf Windows lokal oft kaputt** (GTK fehlt) → der Endpoint fängt `OSError` und liefert 500 mit klarem Hinweis. PDF-Tests am besten in Docker. PDF-Styling sollte bei Gelegenheit ebenfalls auf die Warm-Editorial-Palette angeglichen werden.
 
 ## Versions- und Release-Hygiene
 
-- `VERSION` enthält ausschließlich die Versionsnummer (aktuell `1.0.5`). Helper-Script liest sie für die Statusanzeige.
-- `CHANGELOG.md` im Keep-a-Changelog-Format. Bei Bugfixes mit Schema-Auswirkung **Migration in `data/db.py` ergänzen** und CHANGELOG-Eintrag verlinkt halten (Beispiel: v1.0.4-Migration ist im README-Troubleshooting referenziert).
-- `main.py:version` ist im FastAPI-Konstruktor noch hartcodiert auf `"1.0.0"` — kein funktionaler Bug, aber bei nächster Version mitziehen oder aus `VERSION` lesen.
+Aktuelle Version: `1.1.0`. Bei jedem Release müssen **drei Stellen synchron** angepasst werden — sonst läuft `eierverkauf status` falsch oder die Swagger-UI zeigt eine veraltete Versions-Nummer:
+
+1. `VERSION` (Plaintext-Datei, vom Helper-Script gelesen)
+2. `CHANGELOG.md` (Keep-a-Changelog-Format; `[Unreleased]` → neue Version mit Hinzugefügt/Geändert/Behoben/Hinweise-Sektionen)
+3. `main.py:version="…"` im FastAPI-Konstruktor
+
+Bei Bugfixes mit Schema-Auswirkung zusätzlich **Migration in `data/db.py` ergänzen** und im CHANGELOG-Eintrag „Datenmigration"-Sektion dokumentieren (Beispiel: v1.0.4-Migration des UNIQUE-Constraints).
+
+Release-Commit-Konvention: Tag `v<MAJOR>.<MINOR>.<PATCH>` setzen, dann `git push origin main && git push origin v<X.Y.Z>`. Server zieht via `eierverkauf update` automatisch nach.
 
 ## Deployment
 
-Produktivumgebung wird durch `install.sh` aufgesetzt und durch `eierverkauf-helper.sh` (Symlink `/usr/local/bin/eierverkauf`) gepflegt. Details: README → „Erstinstallation" und „Der `eierverkauf`-Befehl". Update-Pipeline macht automatisches Pre-Update-Backup mit Rollback bei Fehler — die Backup-Logik liegt im Helper-Script, nicht in der App.
+Produktivumgebung wird durch `install.sh` aufgesetzt und durch `eierverkauf-helper.sh` (Symlink `/usr/local/bin/eierverkauf`) gepflegt. **Vollständige Server-Admin-Anleitung in `DEPLOYMENT.md`** — inkl. LXC-Setup, Update-Pipeline, Backup/Restore, Reverse-Proxy, Daten-Migration vom alten Server, Troubleshooting. Update-Pipeline macht automatisches Pre-Update-Backup mit Rollback bei Fehler — die Backup-Logik liegt im Helper-Script, nicht in der App.
+
+**Wichtige Diskrepanz zwischen `install.sh` und `eierverkauf-helper.sh update`:** Der Installer rsync't den Code von einem temporären Quellverzeichnis nach `/opt/eierverkauf` **ohne `.git`**. Der Update-Helper erwartet aber ein Git-Working-Copy mit Remote `origin/main`. Nach jeder Erstinstallation muss daher manuell `git init` + `git remote add origin …` + `git fetch` + `git reset --hard <tag>` in `/opt/eierverkauf` ausgeführt werden — siehe `DEPLOYMENT.md` §4.5. Dieses Manuell-Setup ist die einzige nicht-automatisierte Stelle in der Deploy-Pipeline.

@@ -364,6 +364,24 @@ def parse_csv(file_path: str | Path) -> Tuple[pd.DataFrame, list[str]]:
     df = df.rename(columns=rename_dict)
     # Komplett leere Zeilen entfernen (Pandas liest manchmal eine Schluss-Leerzeile mit).
     df = df.dropna(how="all").reset_index(drop=True)
+
+    # Trailing-Zusammenfassung am Datei-Ende abschneiden: Die letzte Zeile mit
+    # parseesbarem Datum markiert das Ende der Daten-Sektion. Alle weiteren
+    # Zeilen (Saldo, Gesamtsumme, Statistik etc.) sind eine erwartete
+    # Strukturkomponente jedes Warenwirtschafts-Exports und werden
+    # stillschweigend ignoriert — sonst würden sie als „fehlerhaft" gezählt.
+    if "Datum" in df.columns and len(df) > 0:
+        date_valid = df["Datum"].apply(lambda v: parse_german_date(v) is not None)
+        if date_valid.any():
+            last_valid = int(date_valid[date_valid].index.max())
+            if last_valid + 1 < len(df):
+                n_dropped = len(df) - (last_valid + 1)
+                df = df.iloc[: last_valid + 1].copy().reset_index(drop=True)
+                print(
+                    f"[parse_csv] {n_dropped} trailing Zeile(n) nach der letzten "
+                    f"Datumszeile ignoriert (vermutlich Zusammenfassung)."
+                )
+
     return df, warnungen
 
 

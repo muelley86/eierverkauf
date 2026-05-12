@@ -7,6 +7,23 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.0.5] - 2026-05-12
+
+### Behoben
+- **Zusammenfassungs-Zeilen am Ende der CSV wurden als Fehler gezählt.**
+  Jede Exportdatei aus dem Warenwirtschaftssystem endet mit 3–10 Zeilen
+  „Gesamtsumme / Saldo / Statistik" ohne Rechnungsdatum. Diese landeten
+  bisher als `zeilen_fehlerhaft` im Importprotokoll mit dem Grund
+  *„Datum '' nicht erkannt"* — irreführend, weil sie eine erwartete
+  Strukturkomponente sind und keine echten Fehler. Der Parser schneidet
+  jetzt den DataFrame nach der **letzten Zeile mit parseesbarem Datum**
+  ab; alle weiteren Zeilen werden stillschweigend ignoriert. Auf stdout
+  erscheint einmalig ein `[parse_csv]`-Log mit der Anzahl ignorierter
+  Zeilen für Diagnose-Zwecke.
+
+  Datumsfehler **innerhalb** der Daten-Sektion (z.B. Tippfehler in einer
+  mittleren Datenzeile) werden weiterhin korrekt als Fehler protokolliert.
+
 ## [1.0.4] - 2026-05-12
 
 ### Behoben
@@ -156,7 +173,8 @@ hochladen.
   - Dev-Setup-Scripts für Windows (`dev-setup.ps1`, `dev-start.ps1`) und macOS/Linux.
   - Docker Compose für vollständige Integrationstests inkl. PDF-Export.
 
-[Unreleased]: https://example.com/eierverkauf/compare/v1.0.4...HEAD
+[Unreleased]: https://example.com/eierverkauf/compare/v1.0.5...HEAD
+[1.0.5]: https://example.com/eierverkauf/compare/v1.0.4...v1.0.5
 [1.0.4]: https://example.com/eierverkauf/compare/v1.0.3...v1.0.4
 [1.0.3]: https://example.com/eierverkauf/compare/v1.0.2...v1.0.3
 [1.0.2]: https://example.com/eierverkauf/compare/v1.0.1...v1.0.2

@@ -13,6 +13,7 @@ frontend/dist/
 # Daten & Uploads (laufzeitbedingt)
 data/*.db
 data/*.db-*
+data/*.db.*.bak
 uploads/*
 !uploads/.gitkeep
 backups/*

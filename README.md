@@ -324,7 +324,11 @@ Mehrere mögliche Ursachen, in dieser Reihenfolge prüfen:
    Gründe:
    - `Datum '…' nicht erkannt` → Spalte A enthält keinen Wert im Format
      `DD.MM.YY` oder `DD.MM.YYYY`. Andere Formate (z. B. ISO `2025-11-05`
-     oder US `11/05/2025`) werden aktuell nicht unterstützt.
+     oder US `11/05/2025`) werden aktuell nicht unterstützt. **Hinweis:**
+     Seit v1.0.5 werden Zusammenfassungs-Zeilen am Datei-Ende (Saldo,
+     Gesamtsumme etc.) ohne Datum nicht mehr als Fehler gezählt — der
+     Parser bricht automatisch nach der letzten Zeile mit gültigem Datum
+     ab.
    - `Menge '…' nicht numerisch` → Spalte F enthält Text oder
      Sonderzeichen.
    - `Kundennummer fehlt` / `Kundenname fehlt` → Spalte C bzw. D leer.

@@ -290,6 +290,35 @@ def import_loeschen(import_id: int) -> int:
         conn.close()
 
 
+def import_eintrag(import_id: int) -> Optional[dict]:
+    """Einzelner Import-Eintrag (gleicher Shape wie ein Element aus ``import_historie``)."""
+    conn = get_conn()
+    try:
+        row = conn.execute("SELECT * FROM imports WHERE id = ?", (import_id,)).fetchone()
+        return _row_to_dict(row) if row else None
+    finally:
+        conn.close()
+
+
+def protokoll_zeilen(import_id: int, status: str) -> list[dict]:
+    """Liefert alle Protokoll-Zeilen eines Imports mit gegebenem Status.
+
+    ``status`` ist entweder ``'fehler'`` oder ``'duplikat'``. Sortiert nach
+    CSV-Zeilennummer.
+    """
+    sql = """
+        SELECT csv_zeile, grund, rohdaten
+        FROM import_zeilen_protokoll
+        WHERE import_id = ? AND status = ?
+        ORDER BY csv_zeile
+    """
+    conn = get_conn()
+    try:
+        return [_row_to_dict(r) for r in conn.execute(sql, (import_id, status)).fetchall()]
+    finally:
+        conn.close()
+
+
 def stammdaten_kunde(kundennummer: str) -> Optional[dict]:
     sql = """
         SELECT kundennummer, kundenname,
@@ -313,5 +342,6 @@ __all__ = [
     "kunden_uebersicht", "kunde_monate", "kunde_jahresvergleich",
     "artikel_uebersicht", "artikel_monate",
     "ranking", "jahresvergleich",
-    "import_historie", "import_loeschen", "stammdaten_kunde",
+    "import_historie", "import_loeschen", "import_eintrag", "protokoll_zeilen",
+    "stammdaten_kunde",
 ]

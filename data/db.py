@@ -73,6 +73,20 @@ CREATE TABLE IF NOT EXISTS verkaufspositionen (
 CREATE INDEX IF NOT EXISTS idx_datum   ON verkaufspositionen(rechnungsdatum);
 CREATE INDEX IF NOT EXISTS idx_kunde   ON verkaufspositionen(kundennummer);
 CREATE INDEX IF NOT EXISTS idx_artikel ON verkaufspositionen(artikel_code);
+
+-- Pro übersprungene/fehlerhafte Zeile ein Eintrag mit Rohdaten und Grund.
+-- Erlaubt nachträgliche Diagnose über die Importhistorie (Detail-Seite).
+CREATE TABLE IF NOT EXISTS import_zeilen_protokoll (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    import_id INTEGER NOT NULL REFERENCES imports(id) ON DELETE CASCADE,
+    csv_zeile INTEGER NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('fehler', 'duplikat')),
+    grund TEXT NOT NULL,
+    rohdaten TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_protokoll_import ON import_zeilen_protokoll(import_id);
+CREATE INDEX IF NOT EXISTS idx_protokoll_status ON import_zeilen_protokoll(import_id, status);
 """
 
 

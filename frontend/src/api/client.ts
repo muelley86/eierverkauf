@@ -108,6 +108,20 @@ export interface ImportErgebnis {
   dateiname: string;
   /** Bis zu 50 Detail-Gründe, warum einzelne Zeilen verworfen wurden. */
   fehler_details: string[];
+  /** Backend-Warnungen, wenn wichtige Spalten (z.B. Gesamt) im Header
+   *  nicht erkannt wurden. Wird prominent oberhalb des Protokolls angezeigt. */
+  header_warnungen: string[];
+}
+
+export interface ImportProtokollZeile {
+  csv_zeile: number;
+  grund: string;
+  rohdaten: string;
+}
+
+export interface ImportDetail extends ImportProtokollEintrag {
+  fehler: ImportProtokollZeile[];
+  duplikat: ImportProtokollZeile[];
 }
 
 export interface VorschauResponse {
@@ -209,6 +223,11 @@ export async function uploadVorschau(file: File): Promise<VorschauResponse> {
 
 export async function getImportHistorie(): Promise<ImportProtokollEintrag[]> {
   const { data } = await api.get<ImportProtokollEintrag[]>("/imports");
+  return data;
+}
+
+export async function getImportDetail(id: number): Promise<ImportDetail> {
+  const { data } = await api.get<ImportDetail>(`/imports/${id}`);
   return data;
 }
 

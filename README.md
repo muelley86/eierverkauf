@@ -334,6 +334,23 @@ Mehrere mögliche Ursachen, in dieser Reihenfolge prüfen:
    MIME-Type `application/vnd.ms-excel` statt `text/csv` liefert — das ist
    jetzt mit abgedeckt.
 
+### Umsatz wird als `0,00 €` angezeigt, obwohl die CSV Werte enthält
+Seit v1.0.3 erkennt der Importer Spalten **per Header-Name** (Substring-Match
+auf `gesamt`, `nummer`, `menge`, …) statt sie blind positionsbasiert
+zuzuordnen. Vorher konnte es passieren, dass die `Gesamt`-Spalte auf einer
+falschen Quellspalte landete, wenn die reale CSV eine andere
+Spaltenreihenfolge oder weniger Spalten hatte.
+
+Wenn der Umsatz trotzdem `0` ist:
+1. Importhistorie öffnen, **auf den Dateinamen klicken** → `/import/:id`
+   öffnet die Detail-Seite. Falls eine Amber-Box mit „Spalte ‚Gesamt' nicht
+   im Header gefunden" erscheint, fehlt die Spalte tatsächlich in der CSV
+   — neuer Export aus dem Warenwirtschaftssystem mit aktiviertem
+   Gesamt-Feld nötig.
+2. In den Tabs „Fehlerhaft" / „Übersprungen" zeigt die Spalte „Rohdaten"
+   die tatsächlich eingelesenen Werte. Wenn `Gesamt`-Werte da stehen, der
+   Umsatz aber 0 ist: Bug, bitte melden.
+
 ### CSV: meine Datei hat „Eierverkäufe Je Rechnungsposition" als Vorzeile, geht trotzdem nicht
 Bis v1.0.1 war die Anzahl der Metazeilen auf genau 7 fest verdrahtet
 (entsprechend der ursprünglichen Spec). Die tatsächlich aus dem

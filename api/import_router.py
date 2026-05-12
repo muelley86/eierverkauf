@@ -64,6 +64,26 @@ def liste_imports() -> list[dict]:
     return queries.import_historie()
 
 
+@router.get("/imports/{import_id}")
+def import_detail(import_id: int) -> dict:
+    """Vollständige Detail-Antwort für die ``/import/:id``-Seite.
+
+    Liefert den Import-Header zusammen mit den vollständigen Protokoll-Listen
+    (``fehler[]`` = fehlerhafte Zeilen, ``duplikat[]`` = übersprungene
+    Duplikate). Beide Arrays sind leer, wenn der Import vor v1.0.3 entstanden
+    ist (kein Protokoll persistiert) oder wenn alle Zeilen erfolgreich
+    importiert wurden.
+    """
+    eintrag = queries.import_eintrag(import_id)
+    if eintrag is None:
+        raise HTTPException(status_code=404, detail="Import nicht gefunden.")
+    return {
+        **eintrag,
+        "fehler": queries.protokoll_zeilen(import_id, "fehler"),
+        "duplikat": queries.protokoll_zeilen(import_id, "duplikat"),
+    }
+
+
 @router.delete("/imports/{import_id}")
 def loesche_import(import_id: int) -> dict:
     geloeschte = queries.import_loeschen(import_id)

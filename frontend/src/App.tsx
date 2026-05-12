@@ -4,6 +4,7 @@ import { Layout } from "@/components/Layout";
 import { ZeitraumProvider } from "@/context/ZeitraumContext";
 import Dashboard from "@/pages/Dashboard";
 import Import from "@/pages/Import";
+import ImportDetail from "@/pages/ImportDetail";
 import Kunden from "@/pages/Kunden";
 import KundenDetail from "@/pages/KundenDetail";
 import Artikel from "@/pages/Artikel";
@@ -19,6 +20,7 @@ export default function App() {
           <Route element={<Layout />}>
             <Route index element={<Dashboard />} />
             <Route path="import" element={<Import />} />
+            <Route path="import/:id" element={<ImportDetail />} />
             <Route path="kunden" element={<Kunden />} />
             <Route path="kunden/:nr" element={<KundenDetail />} />
             <Route path="artikel" element={<Artikel />} />

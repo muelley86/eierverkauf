@@ -7,6 +7,50 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.0.3] - 2026-05-12
+
+### Behoben
+- **Umsatz wurde als `0,00 €` angezeigt**, obwohl die CSV Umsatzwerte
+  enthielt. Ursache: Der v1.0.2-Parser benannte die ersten 15 Spalten *blind
+  positionsbasiert* in kanonische Namen um. Wenn die reale Exportdatei eine
+  andere Spaltenreihenfolge oder weniger Spalten hatte, landete die Quelle
+  `Gesamt` auf einer falschen Position (oder wurde gar nicht eingelesen) →
+  `gesamt = NULL` in der DB → `SUM(gesamt) = 0`. Spalten werden jetzt
+  **anhand des Header-Textes** zugeordnet (Substring-Match auf
+  `gesamt/datum/menge/…`). Der bisherige Positions-Fallback bleibt nur noch
+  für die literalen `#`/`#.1`/`#2`-Spalten (Kundennummer/PackCode) bestehen.
+- **Spurious „Übersprungen"-Zähler** verschwinden mit dem Mapping-Fix: Wenn
+  `Nummer` (Rechnungsnummer) zuvor auf eine falsche Quelle gemappt war,
+  feuerte der UNIQUE-Constraint
+  `(rechnungsnummer, kundennummer, menge, einheit, pack_code, beschreibung)`
+  fälschlicherweise.
+
+### Hinzugefügt
+- **Eigene Detail-Seite `/import/:id`**: Klick auf eine Zeile in der
+  Importhistorie (Spalte „Datei") öffnet eine vollständige Diagnose-Ansicht:
+  - Übersichts-Card mit Datei, Zeitraum und Zählern.
+  - Tab „Fehlerhaft" — pro fehlerhafter Zeile: CSV-Zeilennummer, Grund
+    *(z.B. „Datum '05/11/25' nicht erkannt")* und Rohdaten der Zeile.
+  - Tab „Übersprungen (Duplikate)" — analog, mit Ausweis der
+    UNIQUE-Schlüsselwerte (Rechnungsnummer, Kundennummer, Menge, …).
+- **Neue Tabelle `import_zeilen_protokoll`** persistiert alle
+  fehlerhaften und übersprungenen Zeilen samt Rohdaten. Idempotent
+  angelegt via `CREATE TABLE IF NOT EXISTS`. CASCADE-Delete beim Löschen
+  eines Imports.
+- **Header-Warnungen** im Importprotokoll: Werden wichtige Spalten
+  (`Gesamt`, `Nummer`, `PackCode`) im CSV-Header nicht erkannt, erscheint
+  vor dem Fehlerprotokoll eine prominente Amber-Box mit dem konkreten
+  Hinweis und den tatsächlich erkannten Header-Namen.
+- **Neuer Endpunkt** `GET /api/imports/{id}` liefert
+  `{ ..., fehler: [...], duplikat: [...] }`.
+- **`ImportErgebnis.header_warnungen: string[]`** im Backend
+  (`data/importer.py`) und Frontend (`src/api/client.ts`).
+
+### Geändert
+- `parse_csv()` liefert nun zusätzlich die Liste der Header-Warnungen
+  zurück (Tuple `(DataFrame, list[str])`). Interne Aufrufer wurden
+  angepasst.
+
 ## [1.0.2] - 2026-05-12
 
 ### Behoben
@@ -81,7 +125,8 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
   - Dev-Setup-Scripts für Windows (`dev-setup.ps1`, `dev-start.ps1`) und macOS/Linux.
   - Docker Compose für vollständige Integrationstests inkl. PDF-Export.
 
-[Unreleased]: https://example.com/eierverkauf/compare/v1.0.2...HEAD
+[Unreleased]: https://example.com/eierverkauf/compare/v1.0.3...HEAD
+[1.0.3]: https://example.com/eierverkauf/compare/v1.0.2...v1.0.3
 [1.0.2]: https://example.com/eierverkauf/compare/v1.0.1...v1.0.2
 [1.0.1]: https://example.com/eierverkauf/compare/v1.0.0...v1.0.1
 [1.0.0]: https://example.com/eierverkauf/releases/tag/v1.0.0

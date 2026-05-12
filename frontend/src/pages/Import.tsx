@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { FileRejection, useDropzone } from "react-dropzone";
-import { AlertTriangle, FileSpreadsheet, Trash2, UploadCloud } from "lucide-react";
+import { AlertTriangle, FileSpreadsheet, Info, Trash2, UploadCloud } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -200,9 +201,30 @@ export default function Import() {
             <CardTitle>Importprotokoll</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {protokoll.header_warnungen?.length > 0 && (
+              <div className="rounded-md border border-amber-500/40 bg-amber-50 p-3 dark:bg-amber-950/30">
+                <div className="mb-2 flex items-center gap-2 text-sm font-medium text-amber-700 dark:text-amber-400">
+                  <Info className="h-4 w-4" />
+                  Header-Warnungen
+                </div>
+                <ul className="space-y-1 text-xs text-amber-800 dark:text-amber-300">
+                  {protokoll.header_warnungen.map((w, i) => (
+                    <li key={i}>• {w}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             <dl className="grid grid-cols-2 gap-y-1 text-sm">
               <dt className="text-muted-foreground">Datei</dt>
-              <dd>{protokoll.dateiname}</dd>
+              <dd>
+                <Link
+                  to={`/import/${protokoll.import_id}`}
+                  className="text-blue-600 underline-offset-2 hover:underline"
+                >
+                  {protokoll.dateiname}
+                </Link>
+              </dd>
               <dt className="text-muted-foreground">Datumsbereich</dt>
               <dd>{protokoll.datumsbereich}</dd>
               <dt className="text-muted-foreground">Importiert</dt>
@@ -262,7 +284,14 @@ export default function Import() {
               {historie.map((h) => (
                 <TableRow key={h.id}>
                   <TableCell>{h.import_datum}</TableCell>
-                  <TableCell>{h.dateiname}</TableCell>
+                  <TableCell>
+                    <Link
+                      to={`/import/${h.id}`}
+                      className="text-blue-600 underline-offset-2 hover:underline"
+                    >
+                      {h.dateiname}
+                    </Link>
+                  </TableCell>
                   <TableCell>{h.datumsbereich ?? "—"}</TableCell>
                   <TableCell>{h.zeilen_importiert}</TableCell>
                   <TableCell>{h.zeilen_uebersprungen}</TableCell>

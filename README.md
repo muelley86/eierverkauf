@@ -334,6 +334,26 @@ Mehrere mögliche Ursachen, in dieser Reihenfolge prüfen:
    MIME-Type `application/vnd.ms-excel` statt `text/csv` liefert — das ist
    jetzt mit abgedeckt.
 
+### Echte Verkaufszeilen werden als „Duplikat" verworfen
+Bis v1.0.3 berücksichtigte der UNIQUE-Constraint auf `verkaufspositionen`
+**kein Rechnungsdatum**. Bestellte derselbe Kunde an mehreren Tagen
+identische Positionen (gleiche Menge, Einheit, Pack-Code, Beschreibung) und
+trug die Quelle entweder keine oder sich wiederholende Rechnungsnummern
+ein, verwarf der Importer die zweite Zeile stillschweigend.
+
+Ab v1.0.4 ist `rechnungsdatum` Teil des UNIQUE-Schlüssels — gleiche
+Position an verschiedenen Tagen wird nun korrekt als zwei Datensätze
+behandelt. Beim ersten Start nach dem Update läuft eine automatische
+Schema-Migration (siehe CHANGELOG v1.0.4); ein Backup der DB wird zuvor
+unter `data/eierverkauf.db.pre-v1.0.4.bak` abgelegt.
+
+**Bereits importierte CSVs neu einspielen:** Die fälschlicherweise
+verworfenen Zeilen sind nicht in der Datenbank, sondern nur im
+Protokoll archiviert. Auf der Detail-Seite eines Imports
+(`/import/:id`) sehen Sie die Rohdaten. Um die Zeilen tatsächlich zu
+übernehmen, den Import in der Historie löschen (Mülleimer-Icon) und
+dieselbe CSV erneut hochladen.
+
 ### Umsatz wird als `0,00 €` angezeigt, obwohl die CSV Werte enthält
 Seit v1.0.3 erkennt der Importer Spalten **per Header-Name** (Substring-Match
 auf `gesamt`, `nummer`, `menge`, …) statt sie blind positionsbasiert

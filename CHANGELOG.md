@@ -7,6 +7,37 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.0.4] - 2026-05-12
+
+### Behoben
+- **Wiederkehrende Bestellungen wurden fälschlich als Duplikat verworfen.**
+  Der UNIQUE-Constraint auf `verkaufspositionen` enthielt das Rechnungsdatum
+  nicht — er lautete bisher
+  `UNIQUE(rechnungsnummer, kundennummer, menge, einheit, pack_code, beschreibung)`.
+  Bestellt derselbe Kunde an verschiedenen Tagen dieselbe Position
+  (identische Menge, Einheit, Pack-Code, Beschreibung) und teilt sich
+  ggf. Rechnungsnummern oder hat keine, kollidieren echte Datensätze. Der
+  Constraint umfasst nun zusätzlich `rechnungsdatum`:
+  `UNIQUE(rechnungsdatum, rechnungsnummer, kundennummer, menge, einheit, pack_code, beschreibung)`.
+- **Duplikat-Grund-Anzeige zeigt jetzt das Rechnungsdatum** — die Diagnose
+  ist damit auf einen Blick möglich, ohne in die Rohdaten zu schauen.
+
+### Datenmigration
+Beim ersten Start nach dem Update führt das Backend automatisch eine
+Schema-Migration durch:
+1. Die Datei `data/eierverkauf.db` wird nach
+   `data/eierverkauf.db.pre-v1.0.4.bak` kopiert (Fallback bei Bedarf).
+2. Die Tabelle `verkaufspositionen` wird neu aufgebaut, alle bestehenden
+   Zeilen werden 1:1 übernommen, die Indizes neu angelegt.
+3. Im Log erscheint ein einmaliger `[migration]`-Eintrag mit der Anzahl
+   migrierter Zeilen.
+
+**Wichtig:** Zeilen, die *vor* v1.0.4 fälschlicherweise als Duplikat
+verworfen wurden, sind nicht in der Datenbank — sie stehen nur als
+Rohdaten in `import_zeilen_protokoll`. Um sie nachzuziehen, betroffene
+Importe in der Historie löschen (Mülleimer-Icon) und die CSV erneut
+hochladen.
+
 ## [1.0.3] - 2026-05-12
 
 ### Behoben
@@ -125,7 +156,8 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
   - Dev-Setup-Scripts für Windows (`dev-setup.ps1`, `dev-start.ps1`) und macOS/Linux.
   - Docker Compose für vollständige Integrationstests inkl. PDF-Export.
 
-[Unreleased]: https://example.com/eierverkauf/compare/v1.0.3...HEAD
+[Unreleased]: https://example.com/eierverkauf/compare/v1.0.4...HEAD
+[1.0.4]: https://example.com/eierverkauf/compare/v1.0.3...v1.0.4
 [1.0.3]: https://example.com/eierverkauf/compare/v1.0.2...v1.0.3
 [1.0.2]: https://example.com/eierverkauf/compare/v1.0.1...v1.0.2
 [1.0.1]: https://example.com/eierverkauf/compare/v1.0.0...v1.0.1

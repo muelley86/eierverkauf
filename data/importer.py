@@ -531,9 +531,11 @@ def import_csv(file_path: str | Path, dateiname: str) -> ImportErgebnis:
             else:
                 uebersprungen += 1
                 # Bei INSERT OR IGNORE: rowcount=0 → Duplikat-Treffer.
-                # Schlüssel: (rechnungsnummer, kundennummer, menge, einheit, pack_code, beschreibung).
+                # Schlüssel ab v1.0.4: (rechnungsdatum, rechnungsnummer, kundennummer,
+                # menge, einheit, pack_code, beschreibung).
                 grund = (
-                    f"Duplikat (R-Nr {rec.get('rechnungsnummer') or '∅'}, "
+                    f"Duplikat (Datum {rec.get('rechnungsdatum')}, "
+                    f"R-Nr {rec.get('rechnungsnummer') or '∅'}, "
                     f"Kd {rec.get('kundennummer')}, Menge {rec.get('menge')}, "
                     f"{rec.get('einheit') or '—'}, "
                     f"Pack {rec.get('pack_code') or '—'}, "

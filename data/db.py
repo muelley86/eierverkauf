@@ -89,7 +89,30 @@ CREATE TABLE IF NOT EXISTS import_zeilen_protokoll (
 
 CREATE INDEX IF NOT EXISTS idx_protokoll_import ON import_zeilen_protokoll(import_id);
 CREATE INDEX IF NOT EXISTS idx_protokoll_status ON import_zeilen_protokoll(import_id, status);
+
+-- Eier-pro-Einheit-Faktor pro Artikel-Code (ab v1.4.0).
+-- Faktor ist konfigurierbar via /api/konfiguration/artikel-eier.
+-- NULL erlaubt für Artikel ohne Stückzahl-Aussage (z. B. Gewicht in kg).
+CREATE TABLE IF NOT EXISTS artikel_eier_konfiguration (
+    artikel_code TEXT PRIMARY KEY,
+    faktor INTEGER,
+    aktualisiert_am TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 """
+
+
+# Seed-Werte für `artikel_eier_konfiguration`. Entsprechen exakt dem hartcodierten
+# Verhalten von `berechne_eier()` vor v1.4.0 — werden idempotent via INSERT OR IGNORE
+# eingespielt, sodass ein bestehender User-Override beim Server-Update erhalten bleibt.
+_EIER_KONFIG_DEFAULTS: tuple[tuple[str, int | None], ...] = (
+    ("10er Kvp", 10),
+    ("6er Kvp", 6),
+    ("Lose 180", 1),
+    ("Lose 20", 1),
+    ("Lose unsortiert", 1),
+    ("Gewicht (kg)", None),
+    ("Sonstige", 1),
+)
 
 
 # Spalten-Reihenfolge der `verkaufspositionen`-Tabelle (für `INSERT … SELECT`
@@ -205,8 +228,23 @@ def init_db() -> None:
         conn.executescript(SCHEMA_SQL)
         conn.commit()
         _migrate_unique_constraint(conn)
+        _seed_eier_konfiguration(conn)
     finally:
         conn.close()
+
+
+def _seed_eier_konfiguration(conn: sqlite3.Connection) -> None:
+    """Trägt die Default-Faktoren idempotent ein.
+
+    Bestehende Einträge (z. B. User-Overrides nach erstem Konfigurations-Speichern)
+    bleiben durch INSERT OR IGNORE unberührt.
+    """
+    conn.executemany(
+        "INSERT OR IGNORE INTO artikel_eier_konfiguration (artikel_code, faktor) "
+        "VALUES (?, ?)",
+        _EIER_KONFIG_DEFAULTS,
+    )
+    conn.commit()
 
 
 __all__ = ["DB_PATH", "get_conn", "db_cursor", "init_db", "SCHEMA_SQL"]

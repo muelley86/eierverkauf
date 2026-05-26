@@ -274,6 +274,32 @@ export async function deleteImport(id: number): Promise<void> {
   await api.delete(`/imports/${id}`);
 }
 
+// Konfiguration: Eier-pro-Artikel-Faktoren -----------------------------------
+export interface ArtikelEierKonfig {
+  artikel_code: string;
+  faktor: number | null;
+}
+
+export interface KonfigSpeichernAntwort {
+  aktualisiert: number;
+  neu_berechnete_belege: number;
+}
+
+export async function getArtikelEierKonfig(): Promise<ArtikelEierKonfig[]> {
+  const { data } = await api.get<ArtikelEierKonfig[]>("/konfiguration/artikel-eier");
+  return data;
+}
+
+export async function putArtikelEierKonfig(
+  eintraege: ArtikelEierKonfig[],
+): Promise<KonfigSpeichernAntwort> {
+  const { data } = await api.put<KonfigSpeichernAntwort>(
+    "/konfiguration/artikel-eier",
+    eintraege,
+  );
+  return data;
+}
+
 // Export-URLs (Browser-Download via <a href>) -------------------------------
 export interface ExportOptionen extends Zeitraum {
   typ:

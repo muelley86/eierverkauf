@@ -27,6 +27,7 @@ from typing import Optional, Tuple
 import pandas as pd
 
 from .db import get_conn
+from .konfiguration import lade_eier_konfig
 
 # Substring-Keywords je kanonischem Namen (alle lowercase). Erste Übereinstimmung
 # mit einer noch nicht zugeordneten Quellspalte gewinnt.
@@ -158,29 +159,28 @@ def parse_german_date(value: object) -> Optional[str]:
         return None
 
 
-def berechne_eier(menge: float, einheit: Optional[str], pack_code: Optional[int]) -> Optional[int]:
-    """Anzahl Eier aus Menge + Einheit + Pack-Code ableiten.
+def berechne_eier(
+    menge: Optional[float],
+    artikel_code: Optional[str],
+    konfig: dict[str, Optional[int]],
+) -> Optional[int]:
+    """Anzahl Eier aus Menge × Faktor(artikel_code) berechnen.
 
-    PACK 110 -> Menge x 10  (10er-Verpackung)
-    PACK 111 -> Menge x 6   (6er-Verpackung)
-    stk      -> Menge x 1
-    kg       -> None (keine Stückzahl-Aussage)
+    Faktoren stammen aus der `artikel_eier_konfiguration`-Tabelle und sind
+    über die UI editierbar. Defaults (Seed-Werte aus `data/db.py`):
+
+      10er Kvp       → 10
+      6er Kvp        → 6
+      Lose 180/20/u. → 1
+      Sonstige       → 1
+      Gewicht (kg)   → None (keine Stückzahl-Aussage)
     """
-    if menge is None:
+    if menge is None or artikel_code is None:
         return None
-    e = (einheit or "").strip()
-    if e.upper() == "PACK":
-        if pack_code == 110:
-            return int(menge * 10)
-        if pack_code == 111:
-            return int(menge * 6)
+    faktor = konfig.get(artikel_code)
+    if faktor is None:
         return None
-    if e.lower() == "stk":
-        return int(menge)
-    if e.lower() == "kg":
-        return None
-    # Default (leere Einheit): Stückzahl annehmen.
-    return int(menge)
+    return int(menge * faktor)
 
 
 def normiere_artikel(einheit: Optional[str], pack_code: Optional[int], beschreibung: str) -> str:
@@ -395,7 +395,10 @@ def vorschau(file_path: str | Path, n: int = 10) -> list[dict]:
 # Import
 # ---------------------------------------------------------------------------
 
-def _row_to_record(row: pd.Series) -> Tuple[Optional[dict], Optional[str]]:
+def _row_to_record(
+    row: pd.Series,
+    konfig: dict[str, Optional[int]],
+) -> Tuple[Optional[dict], Optional[str]]:
     """Wandelt eine CSV-Zeile in einen Verkaufspositionen-Record um.
 
     Rückgabe: ``(record, None)`` bei Erfolg, ``(None, grund)`` bei Fehler.
@@ -431,8 +434,8 @@ def _row_to_record(row: pd.Series) -> Tuple[Optional[dict], Optional[str]]:
             pack_code = None
 
     beschreibung = (str(row.get("Beschreibung") or "")).strip()
-    eier = berechne_eier(menge, einheit, pack_code)
     artikel_code = normiere_artikel(einheit, pack_code, beschreibung)
+    eier = berechne_eier(menge, artikel_code, konfig)
     groesse = extrahiere_groesse(beschreibung)
     preis = parse_german_number(row.get("Preis"))
     gesamt = parse_german_number(row.get("Gesamt"))
@@ -483,6 +486,13 @@ def import_csv(file_path: str | Path, dateiname: str) -> ImportErgebnis:
     df, header_warnungen = parse_csv(file_path)
     spalten = list(df.columns)
 
+    # Eier-Konfig einmal pro Import aus der DB laden (statt pro Zeile).
+    konfig_conn = get_conn()
+    try:
+        konfig = lade_eier_konfig(konfig_conn)
+    finally:
+        konfig_conn.close()
+
     # CSV-Zeilennummer = pandas-Index + header_idx + 2
     #   header_idx ist 0-basiert und zeigt auf die Header-Zeile.
     #   +1 für 1-basierte Zeilenzählung (wie in Excel),
@@ -497,7 +507,7 @@ def import_csv(file_path: str | Path, dateiname: str) -> ImportErgebnis:
     protokoll_fehler: list[Tuple[int, str, str]] = []   # (csv_zeile, grund, rohdaten)
 
     for pandas_idx, row in df.iterrows():
-        rec, grund = _row_to_record(row)
+        rec, grund = _row_to_record(row, konfig)
         zeile = csv_zeilennr(pandas_idx)
         if rec is None:
             fehlerhaft += 1

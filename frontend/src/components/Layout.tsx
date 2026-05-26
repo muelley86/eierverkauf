@@ -8,6 +8,7 @@ import {
   MoreHorizontal,
   Package,
   Receipt,
+  Settings,
   Upload,
 } from "lucide-react";
 import { ReactNode, useEffect, useState } from "react";
@@ -34,6 +35,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/belege", label: "Belege", icon: <Receipt className="h-5 w-5" /> },
   { to: "/jahresvergleich", label: "Jahresvergleich", icon: <BarChart3 className="h-5 w-5" /> },
   { to: "/import", label: "Import", icon: <Upload className="h-5 w-5" /> },
+  { to: "/konfiguration", label: "Konfiguration", icon: <Settings className="h-5 w-5" /> },
 ];
 
 // Auf <md zeigt die Bottom-Nav die ersten 4 + "Mehr"-Sheet (mit dem Rest).

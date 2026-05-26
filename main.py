@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from api.auswertung_router import router as auswertung_router
 from api.export_router import router as export_router
 from api.import_router import router as import_router
+from api.konfiguration_router import router as konfiguration_router
 from data.db import init_db
 
 
@@ -25,7 +26,7 @@ async def lifespan(_app: FastAPI):
 app = FastAPI(
     title="Eierverkauf-Auswertung",
     description="Auswertung von Eierverkäufen (Kerba Bio-Ei GbR).",
-    version="1.3.1",
+    version="1.4.0",
     lifespan=lifespan,
 )
 
@@ -42,6 +43,7 @@ app.add_middleware(
 app.include_router(import_router, prefix="/api")
 app.include_router(auswertung_router, prefix="/api")
 app.include_router(export_router, prefix="/api")
+app.include_router(konfiguration_router, prefix="/api")
 
 
 @app.get("/api/health")

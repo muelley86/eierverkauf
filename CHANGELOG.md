@@ -7,6 +7,46 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-05-26
+
+### Hinzugefügt
+- **Konfigurationsseite `/konfiguration`** zur Pflege der Eier-pro-Einheit-Faktoren
+  je Artikel-Code (10er Kvp, 6er Kvp, Lose 180/20/unsortiert, Gewicht (kg),
+  Sonstige). Der Betriebsleiter kann Faktoren direkt im UI ändern, ohne dass
+  ein Code-Release nötig wäre — z. B. für eine neu eingeführte 12er-Verpackung.
+- **Neue DB-Tabelle `artikel_eier_konfiguration`** (Schlüssel `artikel_code`,
+  `faktor INTEGER` mit NULL für Artikel ohne Stückzahl-Aussage). Wird beim
+  Startup idempotent mit den bisherigen hartcodierten Werten geseedet, sodass
+  ein Update kein bestehendes Verhalten ändert.
+- **REST-Endpoints `GET/PUT /api/konfiguration/artikel-eier`** in
+  `api/konfiguration_router.py`.
+- **Modul `data/konfiguration.py`** als Lese-/Schreib-Layer mit
+  Re-Berechnungs-Transaktion.
+
+### Geändert
+- **`berechne_eier()`-Signatur** in `data/importer.py` von
+  `(menge, einheit, pack_code)` auf `(menge, artikel_code, konfig)`. Reihenfolge
+  in `_row_to_record()`: erst `normiere_artikel()`, dann `berechne_eier()` mit
+  dem ermittelten Code und der einmal pro Import geladenen Konfiguration. Rein
+  interner Refactor — externe Aufrufer existieren nicht.
+- **Navigation:** neuer Menüpunkt „Konfiguration" mit Settings-Icon nach
+  „Import" (Desktop-Sidebar + Mobile „Mehr"-Sheet).
+
+### Datenmigration
+- Idempotente Tabellen-Anlage in `data/db.py:init_db()` via
+  `CREATE TABLE IF NOT EXISTS` + `INSERT OR IGNORE` der Seed-Werte. **Keine
+  rückwirkende Re-Berechnung beim Update** — die Seeds entsprechen exakt dem
+  alten hartcodierten Verhalten, alle bestehenden `eier_stueck`-Werte bleiben
+  unverändert. Eine Re-Berechnung wird erst beim ersten Klick auf „Speichern"
+  in der Konfigurationsseite ausgelöst.
+
+### Hinweise zum Update
+- `eierverkauf update` reicht — neue Tabelle entsteht automatisch beim Startup.
+- **Vorsicht bei Konfig-Änderungen:** Der Server schreibt `eier_stueck` aller
+  bestehenden Belege neu. Historische Eier-Zahlen gegen frühere Faktoren
+  lassen sich danach nicht mehr rekonstruieren. Auswertungen zeigen ab dem
+  Klick auf „Speichern" die neue Sicht — auch für Belege aus älteren Imports.
+
 ## [1.3.1] - 2026-05-26
 
 ### Behoben

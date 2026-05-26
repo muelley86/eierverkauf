@@ -12,6 +12,7 @@ import ArtikelDetail from "@/pages/ArtikelDetail";
 import Ranking from "@/pages/Ranking";
 import Belege from "@/pages/Belege";
 import Jahresvergleich from "@/pages/Jahresvergleich";
+import Konfiguration from "@/pages/Konfiguration";
 
 export default function App() {
   return (
@@ -29,6 +30,7 @@ export default function App() {
             <Route path="ranking" element={<Ranking />} />
             <Route path="belege" element={<Belege />} />
             <Route path="jahresvergleich" element={<Jahresvergleich />} />
+            <Route path="konfiguration" element={<Konfiguration />} />
           </Route>
         </Routes>
       </BrowserRouter>

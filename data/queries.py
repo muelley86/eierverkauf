@@ -210,6 +210,54 @@ def artikel_monate(code: str, von: Optional[str], bis: Optional[str]) -> list[di
 
 
 # ---------------------------------------------------------------------------
+# Belege
+# ---------------------------------------------------------------------------
+
+def belege_uebersicht(von: Optional[str], bis: Optional[str]) -> list[dict]:
+    """Aggregat pro Rechnung: Eier, Umsatz, Positionen. Sortiert nach Eier DESC.
+
+    Gruppierung schließt ``rechnungsdatum`` ein, weil der UNIQUE-Constraint ab
+    v1.0.4 das Datum mit umfasst — derselbe Rechnungsnummer-String an einem
+    anderen Tag wird bewusst als separater Beleg geführt.
+    """
+    wh, params = _zeitraum_filter(von, bis)
+    sql = f"""
+        SELECT rechnungsnummer,
+               rechnungsdatum,
+               kundennummer,
+               kundenname,
+               COALESCE(SUM(eier_stueck), 0) AS eier,
+               COALESCE(SUM(gesamt), 0)      AS umsatz,
+               COUNT(*)                       AS positionen
+        FROM verkaufspositionen
+        {wh}
+        GROUP BY rechnungsnummer, rechnungsdatum, kundennummer, kundenname
+        ORDER BY eier DESC, rechnungsdatum DESC
+    """
+    conn = get_conn()
+    try:
+        return [_row_to_dict(r) for r in conn.execute(sql, params).fetchall()]
+    finally:
+        conn.close()
+
+
+def beleg_positionen(rechnungsnummer: str, rechnungsdatum: str) -> list[dict]:
+    """Einzelne Positionen eines Belegs (gleiche Rechnungsnummer + gleiches Datum)."""
+    sql = """
+        SELECT artikel_code, beschreibung, menge, einheit, pack_code,
+               eier_stueck, preis_einheit, gesamt
+        FROM verkaufspositionen
+        WHERE rechnungsnummer = ? AND rechnungsdatum = ?
+        ORDER BY id
+    """
+    conn = get_conn()
+    try:
+        return [_row_to_dict(r) for r in conn.execute(sql, (rechnungsnummer, rechnungsdatum)).fetchall()]
+    finally:
+        conn.close()
+
+
+# ---------------------------------------------------------------------------
 # Ranking & Jahresvergleich
 # ---------------------------------------------------------------------------
 
@@ -341,6 +389,7 @@ __all__ = [
     "dashboard_kpis", "top5_kunden", "top5_artikel",
     "kunden_uebersicht", "kunde_monate", "kunde_jahresvergleich",
     "artikel_uebersicht", "artikel_monate",
+    "belege_uebersicht", "beleg_positionen",
     "ranking", "jahresvergleich",
     "import_historie", "import_loeschen", "import_eintrag", "protokoll_zeilen",
     "stammdaten_kunde",

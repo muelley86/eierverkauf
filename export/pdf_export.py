@@ -33,6 +33,14 @@ SPALTEN_PDF: dict[str, list[tuple[str, str, str]]] = {
         ("Eier", "eier", "int"),
         ("Umsatz", "umsatz", "euro"),
     ],
+    "belege": [
+        ("Datum", "rechnungsdatum", "text"),
+        ("Beleg-Nr.", "rechnungsnummer", "text"),
+        ("Kunde", "kundenname", "text"),
+        ("Pos.", "positionen", "int"),
+        ("Eier", "eier", "int"),
+        ("Umsatz", "umsatz", "euro"),
+    ],
     "kunde_monate": [
         ("Monat", "monat", "text"),
         ("Eier", "eier", "int"),

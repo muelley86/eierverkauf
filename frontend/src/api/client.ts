@@ -91,6 +91,28 @@ export interface RankingZeile {
   umsatz: number;
 }
 
+export interface BelegeZeile {
+  rechnungsnummer: string;
+  /** ISO YYYY-MM-DD */
+  rechnungsdatum: string;
+  kundennummer: string;
+  kundenname: string;
+  eier: number;
+  umsatz: number;
+  positionen: number;
+}
+
+export interface BelegPosition {
+  artikel_code: string | null;
+  beschreibung: string | null;
+  menge: number;
+  einheit: string | null;
+  pack_code: number | null;
+  eier_stueck: number | null;
+  preis_einheit: number | null;
+  gesamt: number | null;
+}
+
 export interface ImportProtokollEintrag {
   id: number;
   import_datum: string;
@@ -200,6 +222,21 @@ export async function getRanking(z: Zeitraum, sort: "menge" | "umsatz"): Promise
   return data;
 }
 
+export async function getBelege(z: Zeitraum): Promise<BelegeZeile[]> {
+  const { data } = await api.get<BelegeZeile[]>(`/belege?${params(z)}`);
+  return data;
+}
+
+export async function getBelegPositionen(
+  rechnungsnummer: string,
+  datum: string,
+): Promise<BelegPosition[]> {
+  const { data } = await api.get<BelegPosition[]>(
+    `/belege/${encodeURIComponent(rechnungsnummer)}/positionen?datum=${encodeURIComponent(datum)}`,
+  );
+  return data;
+}
+
 export async function getJahresvergleich(jahr: number): Promise<JahresvergleichZeile[]> {
   const { data } = await api.get<JahresvergleichZeile[]>(`/jahresvergleich?jahr=${jahr}`);
   return data;
@@ -243,6 +280,7 @@ export interface ExportOptionen extends Zeitraum {
     | "kunden"
     | "artikel"
     | "ranking"
+    | "belege"
     | "kunde_monate"
     | "artikel_monate"
     | "jahresvergleich";

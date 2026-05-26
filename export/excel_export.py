@@ -43,6 +43,15 @@ SPALTEN_DEFINITIONEN: dict[str, list[tuple[str, str, Optional[str]]]] = {
         ("Eier (Stück)", "eier", ZAHLENFORMAT_INT),
         ("Umsatz", "umsatz", ZAHLENFORMAT_EURO),
     ],
+    "belege": [
+        ("Datum", "rechnungsdatum", None),
+        ("Beleg-Nr.", "rechnungsnummer", None),
+        ("Kundennummer", "kundennummer", None),
+        ("Kundenname", "kundenname", None),
+        ("Positionen", "positionen", ZAHLENFORMAT_INT),
+        ("Eier (Stück)", "eier", ZAHLENFORMAT_INT),
+        ("Umsatz", "umsatz", ZAHLENFORMAT_EURO),
+    ],
     "kunde_monate": [
         ("Monat", "monat", None),
         ("Eier (Stück)", "eier", ZAHLENFORMAT_INT),

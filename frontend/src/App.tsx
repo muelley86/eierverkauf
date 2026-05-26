@@ -10,6 +10,7 @@ import KundenDetail from "@/pages/KundenDetail";
 import Artikel from "@/pages/Artikel";
 import ArtikelDetail from "@/pages/ArtikelDetail";
 import Ranking from "@/pages/Ranking";
+import Belege from "@/pages/Belege";
 import Jahresvergleich from "@/pages/Jahresvergleich";
 
 export default function App() {
@@ -26,6 +27,7 @@ export default function App() {
             <Route path="artikel" element={<Artikel />} />
             <Route path="artikel/:code" element={<ArtikelDetail />} />
             <Route path="ranking" element={<Ranking />} />
+            <Route path="belege" element={<Belege />} />
             <Route path="jahresvergleich" element={<Jahresvergleich />} />
           </Route>
         </Routes>

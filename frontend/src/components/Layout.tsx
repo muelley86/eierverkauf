@@ -5,6 +5,7 @@ import {
   LayoutDashboard,
   ListOrdered,
   Package,
+  Receipt,
   Upload,
 } from "lucide-react";
 import { ReactNode } from "react";
@@ -23,6 +24,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/kunden", label: "Kunden", icon: <Diamond className="h-4 w-4" /> },
   { to: "/artikel", label: "Artikel", icon: <Package className="h-4 w-4" /> },
   { to: "/ranking", label: "Ranking", icon: <ListOrdered className="h-4 w-4" /> },
+  { to: "/belege", label: "Belege", icon: <Receipt className="h-4 w-4" /> },
   { to: "/jahresvergleich", label: "Jahresvergleich", icon: <BarChart3 className="h-4 w-4" /> },
   { to: "/import", label: "Import", icon: <Upload className="h-4 w-4" /> },
 ];

@@ -7,6 +7,35 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-05-26
+
+### Hinzugefügt
+- **Neuer Menüpunkt „Belege"** zwischen Ranking und Jahresvergleich. Die
+  Seite listet alle Rechnungen im gewählten Zeitraum mit aggregierten
+  Eiermengen, Umsatz und Anzahl Positionen — eine Zeile je Beleg. Default-
+  Sortierung absteigend nach Eieranzahl, freie Textsuche über Beleg-Nr.
+  und Kundenname, Pagination wie auf den übrigen Übersichtsseiten.
+- **Detail-Dialog je Beleg.** Klick auf eine Zeile öffnet ein Modal mit
+  allen Einzelpositionen (Artikel, Beschreibung, Menge + Einheit, Eier,
+  Stückpreis, Gesamt). Pack-Code wird beim PACK-Einheiten-Label aufgelöst
+  („PACK (10er)" / „PACK (6er)").
+- **Excel- und PDF-Export für Belege.** Download-Icon im PageHeader liefert
+  dieselbe Tabelle als `.xlsx` (openpyxl, deutsche Zahlenformate) bzw.
+  `.pdf` (WeasyPrint, A4 quer).
+- **Backend-Endpoints** `GET /api/belege` (Aggregat je Rechnung) und
+  `GET /api/belege/{rechnungsnummer}/positionen?datum=YYYY-MM-DD`
+  (Einzelpositionen).
+- **shadcn-Dialog-Komponente** (`components/ui/dialog.tsx`) — Standard-
+  Wrapper um `@radix-ui/react-dialog` mit Warm-Editorial-Tokens (Surface,
+  Rule, Manrope). Wiederverwendbar für künftige Modal-Use-Cases.
+
+### Hinweise zum Update
+- **Kein Schema-Change.** `verkaufspositionen` enthält bereits alle
+  benötigten Felder; die `eierverkauf update`-Routine genügt.
+- **API additiv** — bestehende Frontend-Builds sind nicht betroffen, die
+  neuen Endpoints liegen unter `/api/belege*` ohne Konflikt zu bestehenden
+  Routen.
+
 ## [1.1.0] - 2026-05-12
 
 ### Hinzugefügt
@@ -230,7 +259,9 @@ hochladen.
   - Dev-Setup-Scripts für Windows (`dev-setup.ps1`, `dev-start.ps1`) und macOS/Linux.
   - Docker Compose für vollständige Integrationstests inkl. PDF-Export.
 
-[Unreleased]: https://example.com/eierverkauf/compare/v1.0.5...HEAD
+[Unreleased]: https://example.com/eierverkauf/compare/v1.2.0...HEAD
+[1.2.0]: https://example.com/eierverkauf/compare/v1.1.0...v1.2.0
+[1.1.0]: https://example.com/eierverkauf/compare/v1.0.5...v1.1.0
 [1.0.5]: https://example.com/eierverkauf/compare/v1.0.4...v1.0.5
 [1.0.4]: https://example.com/eierverkauf/compare/v1.0.3...v1.0.4
 [1.0.3]: https://example.com/eierverkauf/compare/v1.0.2...v1.0.3

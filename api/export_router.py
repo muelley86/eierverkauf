@@ -15,7 +15,7 @@ from export.pdf_export import build_pdf
 router = APIRouter(tags=["export"])
 
 ExportTyp = Literal[
-    "kunden", "artikel", "ranking",
+    "kunden", "artikel", "ranking", "belege",
     "kunde_monate", "artikel_monate", "jahresvergleich",
 ]
 
@@ -33,6 +33,8 @@ def _daten_laden(typ: str, von: Optional[str], bis: Optional[str],
         return queries.artikel_uebersicht(von, bis)
     if typ == "ranking":
         return queries.ranking(von, bis, sort)
+    if typ == "belege":
+        return queries.belege_uebersicht(von, bis)
     if typ == "kunde_monate":
         if not kunde_nr:
             raise HTTPException(status_code=400, detail="Parameter 'kunde_nr' erforderlich.")

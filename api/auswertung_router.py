@@ -100,6 +100,22 @@ def artikel_monate(
     return queries.artikel_monate(code, _iso(von), _iso(bis))
 
 
+@router.get("/belege")
+def belege(
+    von: Optional[date] = Query(None),
+    bis: Optional[date] = Query(None),
+) -> list[dict]:
+    return queries.belege_uebersicht(_iso(von), _iso(bis))
+
+
+@router.get("/belege/{rechnungsnummer}/positionen")
+def beleg_positionen(
+    rechnungsnummer: str,
+    datum: date = Query(..., description="Rechnungsdatum als ISO-String (YYYY-MM-DD)"),
+) -> list[dict]:
+    return queries.beleg_positionen(rechnungsnummer, datum.isoformat())
+
+
 @router.get("/ranking")
 def ranking(
     von: Optional[date] = Query(None),

@@ -42,13 +42,13 @@ export function ZeitraumFilter({ className }: { className?: string }) {
         <Button
           variant="outline"
           className={cn(
-            "h-auto gap-3 rounded-full border-rule bg-surface px-4 py-2.5 text-ink hover:bg-yolk/10",
+            "h-11 gap-2 sm:gap-3 rounded-full border-rule bg-surface px-3 sm:px-4 text-ink hover:bg-yolk/10",
             className,
           )}
         >
           <span className="h-2 w-2 rounded-full bg-yolk" aria-hidden="true" />
-          <span className="font-display text-base leading-none">{rangeLabel}</span>
-          <span className="font-mono text-xs text-muted-foreground tabular-nums">
+          <span className="font-display text-sm sm:text-base leading-none">{rangeLabel}</span>
+          <span className="hidden sm:inline font-mono text-xs text-muted-foreground tabular-nums">
             {formatDatum(z.von)} – {formatDatum(z.bis)}
           </span>
           <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />

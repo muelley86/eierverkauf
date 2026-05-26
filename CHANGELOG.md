@@ -7,6 +7,69 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-05-26
+
+### Hinzugefügt
+- **Mobile-First-Bedienung** — adaptive 3-Stufen-Navigation:
+  Bottom-Tab-Bar mit fünf Einträgen + „Mehr"-Sheet auf Smartphones (<768 px),
+  Hamburger-Drawer auf Tablets (768–1023 px), klassische Sidebar auf dem
+  Desktop (≥1024 px). Touch-Targets durchgängig ≥44 px, Safe-Area-Insets
+  für iOS-Notch und Gesture-Bar.
+- **Responsive Tabellen-Komponente** (`DataTable.tsx`) im Dual-Mode:
+  oberhalb `md:` wie bisher als Tabelle, darunter als Card-Liste mit
+  optional steuerbarer `column.meta.mobilePriority` (primary/secondary/hidden).
+  Greift ohne Anpassung auf bestehende Tabellen (Kunden, Artikel, Ranking,
+  Belege) durch.
+- **Landwirtschafts-Illustrationen** als SVG-Line-Art in
+  `frontend/src/components/illustrations/`: Eierkarton, Henne, Scheune,
+  Weizenähre, Eierkorb. Verwendet als Wasserzeichen in der Hero-KPI und
+  in den neuen Empty-States.
+- **`EmptyState`-Komponente** für einheitliche Leerzustände
+  (Dashboard ohne Imports, Import-Historie leer).
+- **`Sheet`-Komponente** (Drawer/Bottom-Sheet auf Radix-Dialog-Basis) für
+  die Mobile-Navigation und künftige modale Flows.
+- **Tailwind-Tokens `straw` (#F0E6CC) und `loam` (#8C7A5F)** als ergänzende
+  Erd-/Stroh-Töne neben yolk/sage/brick.
+
+### Geändert
+- **Logo:** Yolk-Dot-Kreis ersetzt durch eine sauber gezeichnete
+  Ei-Silhouette mit Yolk-Glanz (`EggMark` in `Layout.tsx`).
+- **Body-Hintergrund** trägt jetzt eine sehr dezente Korn-Textur + warme
+  Radial-Gradients (papierige Anmutung statt steriler Flächen).
+- **Chart-Farbwerte zentralisiert** in `frontend/src/lib/chart-farben.ts`
+  (`CHART_FARBEN`, `TOOLTIP_STYLE`, `AXIS_TICK`, `CHART_GRID`). Recharts
+  in Dashboard, Ranking, ArtikelDetail, KundenDetail, Jahresvergleich und
+  KPICard nutzen jetzt die Konstanten — keine doppelten Hex-Strings mehr.
+- **`PageHeader.tsx`** skaliert die H1 jetzt `text-3xl → 4xl → 5xl → 6xl`
+  und stapelt Actions/Zeitraumfilter auf Schmalformat unter dem Titel.
+- **`KPICard.tsx`** hat einen neuen `illustration`-Prop (Hero-Variante:
+  Illustration als Wasserzeichen rechts oben, 30 % Opazität).
+- **Button-Default-Höhe** von `h-9` auf `h-10` angehoben (alle Sizes um
+  einen Schritt grösser für Touch-Tauglichkeit), Press-Feedback via
+  `active:scale-[0.97]`.
+- **`ZeitraumFilter`** auf Mobile kompakter (Datumsbereich-Text ausgeblendet,
+  Pill-Höhe 44 px).
+- **Import-Seite:** DropZone und Action-Bar stapeln auf Mobile,
+  Historie wird als Card-Liste statt Tabelle dargestellt, Empty-State mit
+  Henne-Illustration.
+- **Detail-Tabellen** (Artikel, Kunden, Jahresvergleich) haben einen
+  horizontalen Scroll-Wrapper, der bündig in das Panel-Padding einrastet.
+
+### Behoben
+- **Viewport-Meta** enthält jetzt `viewport-fit=cover` — vorher kollidierten
+  fixe UI-Elemente mit dem iOS-Notch.
+- **`prefers-reduced-motion`** wird respektiert: Animationen und Transitions
+  werden auf ~0 ms zurückgefahren, wenn das OS es verlangt.
+- **Focus-Ringe** sind jetzt einheitlich Yolk-gelb und überall sichtbar
+  (`:focus-visible` in `index.css`).
+- **`min-h-dvh`** statt `min-h-screen` — kein Layout-Sprung mehr durch die
+  iOS-Adressleiste, die beim Scrollen ein-/ausblendet.
+
+### Hinweise zum Update
+- Keine Datenmigration nötig — reine Frontend-Änderungen.
+- Server-Update wie gewohnt: `eierverkauf update`. Backend bleibt funktional
+  identisch, nur die ausgelieferten Statics werden ersetzt.
+
 ## [1.2.2] - 2026-05-26
 
 ### Behoben

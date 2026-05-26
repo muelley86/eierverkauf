@@ -16,14 +16,7 @@ import { PageHeader, Panel } from "@/components/PageHeader";
 import { exportExcelUrl, exportPdfUrl, getArtikelMonate, MonatsZeile } from "@/api/client";
 import { useZeitraum } from "@/context/ZeitraumContext";
 import { formatEuro, formatMonat, formatZahl } from "@/lib/formatierung";
-
-const FARBE_EIER = "#D69826";
-const chartGrid = { stroke: "#E4D9BB", strokeDasharray: "3 3" };
-const axisTick = { fill: "#6F6552", fontSize: 11, fontFamily: "JetBrains Mono" };
-const tooltipStyle = {
-  background: "#FAF5E6", border: "1px solid #E4D9BB", borderRadius: 8,
-  fontFamily: "JetBrains Mono", fontSize: 12,
-};
+import { AXIS_TICK, CHART_FARBEN, CHART_GRID, TOOLTIP_STYLE } from "@/lib/chart-farben";
 
 export default function ArtikelDetail() {
   const { code } = useParams<{ code: string }>();
@@ -75,21 +68,21 @@ export default function ArtikelDetail() {
             <ResponsiveContainer width="100%" height={350}>
               {modus === "bar" ? (
                 <BarChart data={chartDaten} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
-                  <CartesianGrid {...chartGrid} vertical={false} />
-                  <XAxis dataKey="monatLabel" stroke="#6F6552" tick={axisTick} />
-                  <YAxis tickFormatter={(v: number) => formatZahl(v)} stroke="#6F6552" tick={axisTick} />
-                  <Tooltip formatter={(v: number) => formatZahl(v)} contentStyle={tooltipStyle} />
-                  <Bar dataKey="eier" fill={FARBE_EIER} radius={[4, 4, 0, 0]} />
-                  <Brush dataKey="monatLabel" height={20} stroke={FARBE_EIER} fill="#FAF5E6" />
+                  <CartesianGrid {...CHART_GRID} vertical={false} />
+                  <XAxis dataKey="monatLabel" stroke={CHART_FARBEN.inkMuted} tick={AXIS_TICK} />
+                  <YAxis tickFormatter={(v: number) => formatZahl(v)} stroke={CHART_FARBEN.inkMuted} tick={AXIS_TICK} />
+                  <Tooltip formatter={(v: number) => formatZahl(v)} contentStyle={TOOLTIP_STYLE} />
+                  <Bar dataKey="eier" fill={CHART_FARBEN.yolk} radius={[4, 4, 0, 0]} />
+                  <Brush dataKey="monatLabel" height={20} stroke={CHART_FARBEN.yolk} fill={CHART_FARBEN.surface} />
                 </BarChart>
               ) : (
                 <LineChart data={chartDaten} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
-                  <CartesianGrid {...chartGrid} vertical={false} />
-                  <XAxis dataKey="monatLabel" stroke="#6F6552" tick={axisTick} />
-                  <YAxis tickFormatter={(v: number) => formatZahl(v)} stroke="#6F6552" tick={axisTick} />
-                  <Tooltip formatter={(v: number) => formatZahl(v)} contentStyle={tooltipStyle} />
-                  <Line type="monotone" dataKey="eier" stroke={FARBE_EIER} strokeWidth={2} dot={{ fill: FARBE_EIER, r: 3 }} />
-                  <Brush dataKey="monatLabel" height={20} stroke={FARBE_EIER} fill="#FAF5E6" />
+                  <CartesianGrid {...CHART_GRID} vertical={false} />
+                  <XAxis dataKey="monatLabel" stroke={CHART_FARBEN.inkMuted} tick={AXIS_TICK} />
+                  <YAxis tickFormatter={(v: number) => formatZahl(v)} stroke={CHART_FARBEN.inkMuted} tick={AXIS_TICK} />
+                  <Tooltip formatter={(v: number) => formatZahl(v)} contentStyle={TOOLTIP_STYLE} />
+                  <Line type="monotone" dataKey="eier" stroke={CHART_FARBEN.yolk} strokeWidth={2} dot={{ fill: CHART_FARBEN.yolk, r: 3 }} />
+                  <Brush dataKey="monatLabel" height={20} stroke={CHART_FARBEN.yolk} fill={CHART_FARBEN.surface} />
                 </LineChart>
               )}
             </ResponsiveContainer>
@@ -98,26 +91,28 @@ export default function ArtikelDetail() {
       </Panel>
 
       <Panel eyebrow="Tabelle" title="Detailwerte">
-        <Table>
-          <TableHeader>
-            <TableRow className="border-rule">
-              <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Monat</TableHead>
-              <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Menge</TableHead>
-              <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Eier</TableHead>
-              <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Umsatz</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {monate.map((m) => (
-              <TableRow key={m.monat} className="border-rule">
-                <TableCell>{formatMonat(m.monat)}</TableCell>
-                <TableCell className="font-mono tabular-nums">{formatZahl(m.menge ?? 0, 2)}</TableCell>
-                <TableCell className="font-mono tabular-nums">{formatZahl(m.eier)}</TableCell>
-                <TableCell className="font-mono tabular-nums">{formatEuro(m.umsatz)}</TableCell>
+        <div className="-mx-6 px-6 overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="border-rule">
+                <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Monat</TableHead>
+                <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Menge</TableHead>
+                <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Eier</TableHead>
+                <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Umsatz</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {monate.map((m) => (
+                <TableRow key={m.monat} className="border-rule">
+                  <TableCell>{formatMonat(m.monat)}</TableCell>
+                  <TableCell className="font-mono tabular-nums">{formatZahl(m.menge ?? 0, 2)}</TableCell>
+                  <TableCell className="font-mono tabular-nums">{formatZahl(m.eier)}</TableCell>
+                  <TableCell className="font-mono tabular-nums">{formatEuro(m.umsatz)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </Panel>
     </div>
   );

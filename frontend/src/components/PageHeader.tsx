@@ -33,31 +33,31 @@ export function PageHeader({
   className,
 }: PageHeaderProps) {
   return (
-    <div className={cn("mb-10 flex flex-wrap items-start justify-between gap-4", className)}>
-      <div className="space-y-2">
+    <div className={cn("mb-6 md:mb-10 flex flex-col md:flex-row md:flex-wrap md:items-start md:justify-between gap-4", className)}>
+      <div className="space-y-2 min-w-0">
         {back && (
           <Link
             to={back.to}
-            className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-[0.12em] text-muted-foreground hover:text-ink transition"
+            className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-[0.12em] text-muted-foreground hover:text-ink transition min-h-[32px]"
           >
             <ArrowLeft className="h-3 w-3" /> {back.label}
           </Link>
         )}
         {eyebrow && <div className="eyebrow">{eyebrow}</div>}
-        <h1 className="font-display text-5xl md:text-6xl text-ink leading-[1.05] tracking-tight">
+        <h1 className="font-display text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-ink leading-[1.05] tracking-tight break-words">
           {title}
         </h1>
         {subtitle && (
-          <p className="text-sm text-muted-foreground max-w-xl pt-1">{subtitle}</p>
+          <p className="text-sm text-muted-foreground max-w-full md:max-w-xl pt-1">{subtitle}</p>
         )}
       </div>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 md:shrink-0">
         {actions}
         {withZeitraumFilter && <ZeitraumFilter />}
         {exportHref && (
           <a
             href={exportHref}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-rule bg-surface text-muted-foreground hover:text-ink hover:bg-yolk/10 transition"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-rule bg-surface text-muted-foreground hover:text-ink hover:bg-yolk/10 active:scale-95 transition"
             aria-label="Daten exportieren"
           >
             <Download className="h-4 w-4" />

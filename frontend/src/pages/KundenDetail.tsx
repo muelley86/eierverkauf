@@ -21,16 +21,7 @@ import {
 } from "@/api/client";
 import { useZeitraum } from "@/context/ZeitraumContext";
 import { formatEuro, formatMonat, formatZahl, monatsKurz } from "@/lib/formatierung";
-
-const FARBE_EIER = "#D69826";
-const FARBE_VORJAHR = "#B5A98C";
-
-const chartGrid = { stroke: "#E4D9BB", strokeDasharray: "3 3" };
-const axisTick = { fill: "#6F6552", fontSize: 11, fontFamily: "JetBrains Mono" };
-const tooltipStyle = {
-  background: "#FAF5E6", border: "1px solid #E4D9BB", borderRadius: 8,
-  fontFamily: "JetBrains Mono", fontSize: 12,
-};
+import { AXIS_TICK, CHART_FARBEN, CHART_GRID, TOOLTIP_STYLE } from "@/lib/chart-farben";
 
 export default function KundenDetail() {
   const params = useParams<{ nr: string }>();
@@ -106,21 +97,21 @@ export default function KundenDetail() {
                 <ResponsiveContainer width="100%" height={350}>
                   {modus === "bar" ? (
                     <BarChart data={monateChart} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
-                      <CartesianGrid {...chartGrid} vertical={false} />
-                      <XAxis dataKey="monatLabel" stroke="#6F6552" tick={axisTick} />
-                      <YAxis tickFormatter={(v: number) => formatZahl(v)} stroke="#6F6552" tick={axisTick} />
-                      <Tooltip formatter={(v: number) => formatZahl(v)} contentStyle={tooltipStyle} />
-                      <Bar dataKey="eier" fill={FARBE_EIER} radius={[4, 4, 0, 0]} />
-                      <Brush dataKey="monatLabel" height={20} stroke={FARBE_EIER} fill="#FAF5E6" />
+                      <CartesianGrid {...CHART_GRID} vertical={false} />
+                      <XAxis dataKey="monatLabel" stroke={CHART_FARBEN.inkMuted} tick={AXIS_TICK} />
+                      <YAxis tickFormatter={(v: number) => formatZahl(v)} stroke={CHART_FARBEN.inkMuted} tick={AXIS_TICK} />
+                      <Tooltip formatter={(v: number) => formatZahl(v)} contentStyle={TOOLTIP_STYLE} />
+                      <Bar dataKey="eier" fill={CHART_FARBEN.yolk} radius={[4, 4, 0, 0]} />
+                      <Brush dataKey="monatLabel" height={20} stroke={CHART_FARBEN.yolk} fill={CHART_FARBEN.surface} />
                     </BarChart>
                   ) : (
                     <LineChart data={monateChart} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
-                      <CartesianGrid {...chartGrid} vertical={false} />
-                      <XAxis dataKey="monatLabel" stroke="#6F6552" tick={axisTick} />
-                      <YAxis tickFormatter={(v: number) => formatZahl(v)} stroke="#6F6552" tick={axisTick} />
-                      <Tooltip formatter={(v: number) => formatZahl(v)} contentStyle={tooltipStyle} />
-                      <Line type="monotone" dataKey="eier" stroke={FARBE_EIER} strokeWidth={2} dot={{ fill: FARBE_EIER, r: 3 }} />
-                      <Brush dataKey="monatLabel" height={20} stroke={FARBE_EIER} fill="#FAF5E6" />
+                      <CartesianGrid {...CHART_GRID} vertical={false} />
+                      <XAxis dataKey="monatLabel" stroke={CHART_FARBEN.inkMuted} tick={AXIS_TICK} />
+                      <YAxis tickFormatter={(v: number) => formatZahl(v)} stroke={CHART_FARBEN.inkMuted} tick={AXIS_TICK} />
+                      <Tooltip formatter={(v: number) => formatZahl(v)} contentStyle={TOOLTIP_STYLE} />
+                      <Line type="monotone" dataKey="eier" stroke={CHART_FARBEN.yolk} strokeWidth={2} dot={{ fill: CHART_FARBEN.yolk, r: 3 }} />
+                      <Brush dataKey="monatLabel" height={20} stroke={CHART_FARBEN.yolk} fill={CHART_FARBEN.surface} />
                     </LineChart>
                   )}
                 </ResponsiveContainer>
@@ -129,26 +120,28 @@ export default function KundenDetail() {
           </Panel>
 
           <Panel eyebrow="Tabelle" title="Detailwerte">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-rule">
-                  <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Monat</TableHead>
-                  <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Eier</TableHead>
-                  <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Umsatz</TableHead>
-                  <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Positionen</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {monate.map((m) => (
-                  <TableRow key={m.monat} className="border-rule">
-                    <TableCell>{formatMonat(m.monat)}</TableCell>
-                    <TableCell className="font-mono tabular-nums">{formatZahl(m.eier)}</TableCell>
-                    <TableCell className="font-mono tabular-nums">{formatEuro(m.umsatz)}</TableCell>
-                    <TableCell className="font-mono tabular-nums text-muted-foreground">{formatZahl(m.positionen ?? 0)}</TableCell>
+            <div className="-mx-6 px-6 overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-rule">
+                    <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Monat</TableHead>
+                    <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Eier</TableHead>
+                    <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Umsatz</TableHead>
+                    <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Positionen</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {monate.map((m) => (
+                    <TableRow key={m.monat} className="border-rule">
+                      <TableCell>{formatMonat(m.monat)}</TableCell>
+                      <TableCell className="font-mono tabular-nums">{formatZahl(m.eier)}</TableCell>
+                      <TableCell className="font-mono tabular-nums">{formatEuro(m.umsatz)}</TableCell>
+                      <TableCell className="font-mono tabular-nums text-muted-foreground">{formatZahl(m.positionen ?? 0)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </Panel>
         </TabsContent>
 
@@ -168,46 +161,48 @@ export default function KundenDetail() {
                   data={vergleich.map((v) => ({ ...v, monatLabel: monatsKurz(v.monat) }))}
                   margin={{ top: 10, right: 12, left: 0, bottom: 0 }}
                 >
-                  <CartesianGrid {...chartGrid} vertical={false} />
-                  <XAxis dataKey="monatLabel" stroke="#6F6552" tick={axisTick} />
-                  <YAxis tickFormatter={(v: number) => formatZahl(v)} stroke="#6F6552" tick={axisTick} />
-                  <Tooltip formatter={(v: number) => formatZahl(v)} contentStyle={tooltipStyle} />
-                  <Bar dataKey="jahr" name={String(jahr)} fill={FARBE_EIER} radius={[4, 4, 0, 0]} />
-                  <Line type="monotone" dataKey="vorjahr" name={String(jahr - 1)} stroke={FARBE_VORJAHR} strokeWidth={2} dot={{ fill: FARBE_VORJAHR, r: 3 }} />
+                  <CartesianGrid {...CHART_GRID} vertical={false} />
+                  <XAxis dataKey="monatLabel" stroke={CHART_FARBEN.inkMuted} tick={AXIS_TICK} />
+                  <YAxis tickFormatter={(v: number) => formatZahl(v)} stroke={CHART_FARBEN.inkMuted} tick={AXIS_TICK} />
+                  <Tooltip formatter={(v: number) => formatZahl(v)} contentStyle={TOOLTIP_STYLE} />
+                  <Bar dataKey="jahr" name={String(jahr)} fill={CHART_FARBEN.yolk} radius={[4, 4, 0, 0]} />
+                  <Line type="monotone" dataKey="vorjahr" name={String(jahr - 1)} stroke={CHART_FARBEN.vorjahr} strokeWidth={2} dot={{ fill: CHART_FARBEN.vorjahr, r: 3 }} />
                 </ComposedChart>
               </ResponsiveContainer>
             )}
           </Panel>
 
           <Panel eyebrow="Tabelle" title="Differenz">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-rule">
-                  <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Monat</TableHead>
-                  <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Eier {jahr}</TableHead>
-                  <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Eier {jahr - 1}</TableHead>
-                  <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Δ</TableHead>
-                  <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Umsatz {jahr}</TableHead>
-                  <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Δ €</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {vergleich.map((v) => (
-                  <TableRow key={v.monat} className="border-rule">
-                    <TableCell>{monatsKurz(v.monat)}</TableCell>
-                    <TableCell className="font-mono tabular-nums">{formatZahl(v.jahr)}</TableCell>
-                    <TableCell className="font-mono tabular-nums">{formatZahl(v.vorjahr)}</TableCell>
-                    <TableCell className={`font-mono tabular-nums font-medium ${v.differenz > 0 ? "text-sage" : v.differenz < 0 ? "text-brick" : ""}`}>
-                      {v.differenz > 0 ? "+" : ""}{formatZahl(v.differenz)}
-                    </TableCell>
-                    <TableCell className="font-mono tabular-nums">{formatEuro(v.jahr_umsatz)}</TableCell>
-                    <TableCell className={`font-mono tabular-nums font-medium ${v.differenz_umsatz > 0 ? "text-sage" : v.differenz_umsatz < 0 ? "text-brick" : ""}`}>
-                      {v.differenz_umsatz > 0 ? "+" : ""}{formatEuro(v.differenz_umsatz)}
-                    </TableCell>
+            <div className="-mx-6 px-6 overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-rule">
+                    <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Monat</TableHead>
+                    <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Eier {jahr}</TableHead>
+                    <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Eier {jahr - 1}</TableHead>
+                    <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Δ</TableHead>
+                    <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Umsatz {jahr}</TableHead>
+                    <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Δ €</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {vergleich.map((v) => (
+                    <TableRow key={v.monat} className="border-rule">
+                      <TableCell>{monatsKurz(v.monat)}</TableCell>
+                      <TableCell className="font-mono tabular-nums">{formatZahl(v.jahr)}</TableCell>
+                      <TableCell className="font-mono tabular-nums">{formatZahl(v.vorjahr)}</TableCell>
+                      <TableCell className={`font-mono tabular-nums font-medium ${v.differenz > 0 ? "text-sage" : v.differenz < 0 ? "text-brick" : ""}`}>
+                        {v.differenz > 0 ? "+" : ""}{formatZahl(v.differenz)}
+                      </TableCell>
+                      <TableCell className="font-mono tabular-nums">{formatEuro(v.jahr_umsatz)}</TableCell>
+                      <TableCell className={`font-mono tabular-nums font-medium ${v.differenz_umsatz > 0 ? "text-sage" : v.differenz_umsatz < 0 ? "text-brick" : ""}`}>
+                        {v.differenz_umsatz > 0 ? "+" : ""}{formatEuro(v.differenz_umsatz)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </Panel>
         </TabsContent>
       </Tabs>

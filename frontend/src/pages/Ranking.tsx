@@ -12,9 +12,7 @@ import { useZeitraum } from "@/context/ZeitraumContext";
 import { getRanking, RankingZeile } from "@/api/client";
 import { formatEuro, formatZahl } from "@/lib/formatierung";
 import { cn } from "@/lib/utils";
-
-const FARBE_EIER = "#D69826";
-const FARBE_UMSATZ = "#5A7F4F";
+import { AXIS_TICK, CHART_FARBEN, CHART_GRID, TOOLTIP_STYLE } from "@/lib/chart-farben";
 
 type SortMode = "menge" | "umsatz";
 
@@ -37,7 +35,7 @@ export default function Ranking() {
 
   const top10 = useMemo(() => daten.slice(0, 10), [daten]);
   const dataKey = sort === "menge" ? "eier" : "umsatz";
-  const farbe = sort === "menge" ? FARBE_EIER : FARBE_UMSATZ;
+  const farbe = sort === "menge" ? CHART_FARBEN.yolk : CHART_FARBEN.sage;
 
   const columns = useMemo<ColumnDef<RankingZeile>[]>(
     () => [
@@ -84,7 +82,7 @@ export default function Ranking() {
                 type="button"
                 onClick={() => setSort(m)}
                 className={cn(
-                  "px-4 py-1.5 text-xs font-mono uppercase tracking-[0.1em] rounded-full transition",
+                  "min-h-[40px] px-4 py-2 text-xs font-mono uppercase tracking-[0.1em] rounded-full transition active:scale-95",
                   sort === m ? "bg-yolk text-ink" : "text-muted-foreground hover:text-ink",
                 )}
               >
@@ -101,15 +99,15 @@ export default function Ranking() {
         ) : (
           <ResponsiveContainer width="100%" height={450}>
             <BarChart data={top10} layout="vertical" margin={{ top: 10, right: 30, left: 80, bottom: 10 }}>
-              <CartesianGrid stroke="#E4D9BB" strokeDasharray="3 3" horizontal={false} />
+              <CartesianGrid {...CHART_GRID} horizontal={false} />
               <XAxis type="number" tickFormatter={(v: number) => formatZahl(v)}
-                stroke="#6F6552" tick={{ fill: "#6F6552", fontSize: 11, fontFamily: "JetBrains Mono" }} />
+                stroke={CHART_FARBEN.inkMuted} tick={AXIS_TICK} />
               <YAxis dataKey="kundenname" type="category" width={150}
-                stroke="#6F6552" tick={{ fill: "#6F6552", fontSize: 11, fontFamily: "JetBrains Mono" }} />
+                stroke={CHART_FARBEN.inkMuted} tick={AXIS_TICK} />
               <Tooltip
                 formatter={(v: number) => sort === "menge" ? formatZahl(v) : formatEuro(v)}
-                contentStyle={{ background: "#FAF5E6", border: "1px solid #E4D9BB", borderRadius: 8, fontFamily: "JetBrains Mono", fontSize: 12 }}
-                labelStyle={{ color: "#1A1610" }}
+                contentStyle={TOOLTIP_STYLE}
+                labelStyle={{ color: CHART_FARBEN.ink }}
               />
               <Bar dataKey={dataKey} fill={farbe} radius={[0, 4, 4, 0]} cursor="pointer"
                 onClick={(d: RankingZeile) => navigate(`/kunden/${encodeURIComponent(d.kundennummer)}`)} />

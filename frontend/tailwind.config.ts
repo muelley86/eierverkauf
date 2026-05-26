@@ -51,6 +51,9 @@ const config: Config = {
         surface: "#FAF5E6",
         ink: "#1A1610",
         rule: "#E4D9BB",
+        // Sekundäre Erd-/Stroh-Töne (ergänzend zum Hauptset)
+        straw: "#F0E6CC",   // heller als surface, für aktive Mobile-Nav, Hervorhebungen
+        loam: "#8C7A5F",    // warmes Mittelgrau für Secondary-Text (AA-konform auf surface)
       },
       fontFamily: {
         display: ["'Manrope'", "system-ui", "sans-serif"],

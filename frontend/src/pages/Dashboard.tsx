@@ -14,6 +14,9 @@ import { toast } from "sonner";
 import { KPICard } from "@/components/KPICard";
 import { PageHeader, Panel } from "@/components/PageHeader";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/EmptyState";
+import { EggCarton } from "@/components/illustrations/EggCarton";
+import { Hen } from "@/components/illustrations/Hen";
 import { useZeitraum } from "@/context/ZeitraumContext";
 import {
   DashboardResponse,
@@ -24,11 +27,7 @@ import {
   getJahresvergleich,
 } from "@/api/client";
 import { formatDatum, formatEuro, formatZahl, monatsKurz } from "@/lib/formatierung";
-
-const FARBE_YOLK = "#D69826";
-const FARBE_SAGE = "#5A7F4F";
-const FARBE_RULE = "#E4D9BB";
-const FARBE_INK_MUTED = "#6F6552";
+import { AXIS_TICK, CHART_FARBEN, CHART_GRID, TOOLTIP_STYLE } from "@/lib/chart-farben";
 
 // ---------------------------------------------------------------------------
 // Hilfsfunktionen
@@ -154,8 +153,9 @@ export default function Dashboard() {
             wert={formatZahl(daten.kpis.gesamt_eier)}
             wertFarbe="yolk"
             sparkline={sparkEier}
-            sparklineFarbe={FARBE_YOLK}
+            sparklineFarbe={CHART_FARBEN.yolk}
             delta={deltaEier ?? undefined}
+            illustration={<EggCarton />}
             className="lg:col-span-8"
           />
           <div className="lg:col-span-4 space-y-4">
@@ -164,7 +164,7 @@ export default function Dashboard() {
               wert={formatEuro(daten.kpis.umsatz)}
               wertFarbe="sage"
               sparkline={sparkUmsatz}
-              sparklineFarbe={FARBE_SAGE}
+              sparklineFarbe={CHART_FARBEN.sage}
               delta={deltaUmsatz ?? undefined}
             />
             <div className="grid grid-cols-2 gap-4">
@@ -215,36 +215,30 @@ export default function Dashboard() {
               >
                 <defs>
                   <linearGradient id="aktuellFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={FARBE_YOLK} stopOpacity={0.35} />
-                    <stop offset="100%" stopColor={FARBE_YOLK} stopOpacity={0} />
+                    <stop offset="0%" stopColor={CHART_FARBEN.yolk} stopOpacity={0.35} />
+                    <stop offset="100%" stopColor={CHART_FARBEN.yolk} stopOpacity={0.05} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid stroke={FARBE_RULE} strokeDasharray="3 3" vertical={false} />
+                <CartesianGrid {...CHART_GRID} vertical={false} />
                 <XAxis
                   dataKey="monat"
-                  stroke={FARBE_INK_MUTED}
-                  tick={{ fill: FARBE_INK_MUTED, fontSize: 11, fontFamily: "JetBrains Mono" }}
+                  stroke={CHART_FARBEN.inkMuted}
+                  tick={AXIS_TICK}
                   axisLine={false}
                   tickLine={false}
                 />
                 <YAxis
                   tickFormatter={(v: number) => formatZahl(v)}
-                  stroke={FARBE_INK_MUTED}
-                  tick={{ fill: FARBE_INK_MUTED, fontSize: 11, fontFamily: "JetBrains Mono" }}
+                  stroke={CHART_FARBEN.inkMuted}
+                  tick={AXIS_TICK}
                   axisLine={false}
                   tickLine={false}
                 />
                 <Tooltip
                   formatter={(v: number) => formatZahl(v)}
                   labelFormatter={(l) => `Monat: ${l}`}
-                  contentStyle={{
-                    background: "#FAF5E6",
-                    border: `1px solid ${FARBE_RULE}`,
-                    borderRadius: 8,
-                    fontFamily: "JetBrains Mono",
-                    fontSize: 12,
-                  }}
-                  labelStyle={{ color: "#1A1610" }}
+                  contentStyle={TOOLTIP_STYLE}
+                  labelStyle={{ color: CHART_FARBEN.ink }}
                 />
                 <Area
                   type="monotone"
@@ -256,7 +250,7 @@ export default function Dashboard() {
                 <Line
                   type="monotone"
                   dataKey="vorjahr"
-                  stroke={FARBE_INK_MUTED}
+                  stroke={CHART_FARBEN.inkMuted}
                   strokeWidth={1.5}
                   strokeDasharray="4 4"
                   dot={false}
@@ -266,9 +260,9 @@ export default function Dashboard() {
                 <Line
                   type="monotone"
                   dataKey="aktuell"
-                  stroke={FARBE_YOLK}
+                  stroke={CHART_FARBEN.yolk}
                   strokeWidth={2.5}
-                  dot={{ r: 3, fill: FARBE_YOLK, stroke: "#FAF5E6", strokeWidth: 1.5 }}
+                  dot={{ r: 3, fill: CHART_FARBEN.yolk, stroke: CHART_FARBEN.surface, strokeWidth: 1.5 }}
                   isAnimationActive={false}
                   name={String(jahr)}
                 />
@@ -394,7 +388,19 @@ export default function Dashboard() {
           {loading || !imports ? (
             <Skeleton className="h-[260px]" />
           ) : imports.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Noch keine Imports.</p>
+            <EmptyState
+              illustration={<Hen />}
+              title="Noch keine Imports"
+              description="Laden Sie eine CSV im Bereich Import hoch, um Auswertungen zu sehen."
+              action={
+                <Link
+                  to="/import"
+                  className="inline-flex items-center gap-2 rounded-full bg-yolk text-ink px-4 py-2 text-sm font-medium hover:bg-yolk/90 active:scale-95 transition min-h-[44px]"
+                >
+                  Zum Import
+                </Link>
+              }
+            />
           ) : (
             <ul className="space-y-5">
               {imports.map((imp) => (

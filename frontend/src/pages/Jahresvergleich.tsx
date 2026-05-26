@@ -13,9 +13,7 @@ import {
 import { PageHeader, Panel } from "@/components/PageHeader";
 import { exportExcelUrl, exportPdfUrl, getJahresvergleich, JahresvergleichZeile } from "@/api/client";
 import { formatZahl, monatsKurz } from "@/lib/formatierung";
-
-const FARBE_AKTUELL = "#D69826";   // Yolk
-const FARBE_VORJAHR = "#B5A98C";   // Warmes Grau (ink-30)
+import { AXIS_TICK, CHART_FARBEN, CHART_GRID, TOOLTIP_STYLE } from "@/lib/chart-farben";
 
 export default function Jahresvergleich() {
   const aktuellesJahr = new Date().getFullYear();
@@ -57,7 +55,7 @@ export default function Jahresvergleich() {
                 <span className="h-2.5 w-2.5 rounded-sm bg-yolk" /> {jahr}
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-sm" style={{ background: FARBE_VORJAHR }} /> {jahr - 1}
+                <span className="h-2.5 w-2.5 rounded-sm" style={{ background: CHART_FARBEN.vorjahr }} /> {jahr - 1}
               </span>
             </div>
             {/* Funktionale Aktionen (im Mockup nicht abgebildet, hier dezent neben Legende) */}
@@ -89,29 +87,29 @@ export default function Jahresvergleich() {
               barCategoryGap="32%"
               barGap={4}
             >
-              <CartesianGrid stroke="#E4D9BB" strokeDasharray="3 3" vertical={false} />
+              <CartesianGrid {...CHART_GRID} vertical={false} />
               <XAxis
                 dataKey="monatLabel"
-                stroke="#6F6552"
-                tick={{ fill: "#6F6552", fontSize: 11, fontFamily: "JetBrains Mono" }}
+                stroke={CHART_FARBEN.inkMuted}
+                tick={AXIS_TICK}
                 axisLine={false}
                 tickLine={false}
               />
               <YAxis
                 tickFormatter={(v: number) => formatZahl(v)}
-                stroke="#6F6552"
-                tick={{ fill: "#6F6552", fontSize: 11, fontFamily: "JetBrains Mono" }}
+                stroke={CHART_FARBEN.inkMuted}
+                tick={AXIS_TICK}
                 axisLine={false}
                 tickLine={false}
               />
               <Tooltip
                 formatter={(v: number) => formatZahl(v)}
-                contentStyle={{ background: "#FAF5E6", border: "1px solid #E4D9BB", borderRadius: 8, fontFamily: "JetBrains Mono", fontSize: 12 }}
+                contentStyle={TOOLTIP_STYLE}
                 cursor={{ fill: "rgba(214,152,38,0.06)" }}
               />
               {/* Reihenfolge im Mockup: Vorjahr links/grau, Jahr rechts/orange */}
-              <Bar dataKey="vorjahr" name={String(jahr - 1)} fill={FARBE_VORJAHR} radius={[2, 2, 0, 0]} />
-              <Bar dataKey="jahr"    name={String(jahr)}     fill={FARBE_AKTUELL} radius={[2, 2, 0, 0]} />
+              <Bar dataKey="vorjahr" name={String(jahr - 1)} fill={CHART_FARBEN.vorjahr} radius={[2, 2, 0, 0]} />
+              <Bar dataKey="jahr"    name={String(jahr)}     fill={CHART_FARBEN.yolk} radius={[2, 2, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         )}
@@ -120,6 +118,7 @@ export default function Jahresvergleich() {
       {/* Tabelle im Mockup-Stil: nur Eier-Spalten, Vorjahr-vor-Jahr-Reihenfolge, kein Panel-Header. */}
       <Panel>
         {loading ? <Skeleton className="h-72" /> : (
+          <div className="-mx-6 px-6 overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="border-rule hover:bg-transparent">
@@ -160,6 +159,7 @@ export default function Jahresvergleich() {
               </TableRow>
             </TableBody>
           </Table>
+          </div>
         )}
       </Panel>
     </div>

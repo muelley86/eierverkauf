@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import { Area, AreaChart, Line, ResponsiveContainer } from "recharts";
 import { cn } from "@/lib/utils";
+import { CHART_FARBEN } from "@/lib/chart-farben";
 
 interface KPICardProps {
   titel: string;
@@ -14,6 +15,8 @@ interface KPICardProps {
   sparkline?: number[];
   /** Strich-/Flächenfarbe der Sparkline. Default richtet sich nach `wertFarbe`. */
   sparklineFarbe?: string;
+  /** Optionale Illustration (SVG-Komponente), die als Wasserzeichen rechts oben sitzt (Hero). */
+  illustration?: ReactNode;
   className?: string;
 }
 
@@ -24,9 +27,9 @@ const FARB_KLASSEN: Record<NonNullable<KPICardProps["wertFarbe"]>, string> = {
 };
 
 const FARB_HEX: Record<NonNullable<KPICardProps["wertFarbe"]>, string> = {
-  ink: "#1A1610",
-  yolk: "#D69826",
-  sage: "#5A7F4F",
+  ink: CHART_FARBEN.ink,
+  yolk: CHART_FARBEN.yolk,
+  sage: CHART_FARBEN.sage,
 };
 
 /** Mini-Area-Chart ohne Achsen — reines visuelles Verlaufssignal. */
@@ -70,30 +73,31 @@ export function KPICard({
   wertFarbe = "ink",
   sparkline,
   sparklineFarbe,
+  illustration,
   className,
 }: KPICardProps) {
   const isHero = variant === "hero";
   const farbeHex = sparklineFarbe ?? FARB_HEX[wertFarbe];
 
-  // Hero-Variante: großer Wert links, Sparkline schwebt in der rechten unteren Ecke.
+  // Hero-Variante: großer Wert links, optionale Illustration rechts oben, Sparkline schwebt unten rechts.
   if (isHero) {
     return (
       <div
         className={cn(
-          "relative rounded-xl border border-rule bg-surface p-8 flex flex-col md:col-span-2 lg:col-span-2 overflow-hidden",
+          "relative rounded-xl border border-rule bg-surface p-6 sm:p-8 flex flex-col md:col-span-2 lg:col-span-2 overflow-hidden",
           className,
         )}
       >
         <span className="eyebrow">{titel}</span>
         <div
           className={cn(
-            "mt-6 kpi-value leading-none text-[88px] md:text-[112px]",
+            "mt-4 sm:mt-6 kpi-value leading-none text-[64px] sm:text-[88px] md:text-[112px]",
             FARB_KLASSEN[wertFarbe],
           )}
         >
           {wert}
         </div>
-        <div className="mt-6 flex items-center gap-3">
+        <div className="mt-4 sm:mt-6 flex items-center gap-3 flex-wrap">
           {delta && (
             <span className={delta.richtung === "down" ? "delta-down" : "delta-up"}>
               {delta.richtung === "down" ? "▾" : "▴"} {delta.wert}
@@ -101,9 +105,20 @@ export function KPICard({
           )}
           {hinweis && <span className="text-xs text-muted-foreground">{hinweis}</span>}
         </div>
+        {illustration && (
+          <div
+            className={cn(
+              "absolute top-6 right-6 w-24 sm:w-32 pointer-events-none opacity-30 hidden sm:block",
+              FARB_KLASSEN[wertFarbe],
+            )}
+            aria-hidden="true"
+          >
+            {illustration}
+          </div>
+        )}
         {sparkline && sparkline.length > 1 && (
           <div
-            className="absolute bottom-6 right-6 h-14 w-48 pointer-events-none opacity-80"
+            className="absolute bottom-6 right-6 h-12 sm:h-14 w-32 sm:w-48 pointer-events-none opacity-80"
             aria-hidden="true"
           >
             <Sparkline data={sparkline} color={farbeHex} />
@@ -117,12 +132,12 @@ export function KPICard({
   return (
     <div
       className={cn(
-        "relative rounded-xl border border-rule bg-surface p-6 flex flex-col gap-3 overflow-hidden",
+        "relative rounded-xl border border-rule bg-surface p-5 sm:p-6 flex flex-col gap-2 sm:gap-3 overflow-hidden",
         className,
       )}
     >
       <span className="eyebrow">{titel}</span>
-      <div className={cn("kpi-value text-5xl md:text-6xl", FARB_KLASSEN[wertFarbe])}>
+      <div className={cn("kpi-value text-4xl sm:text-5xl md:text-6xl", FARB_KLASSEN[wertFarbe])}>
         {wert}
       </div>
       {delta && (

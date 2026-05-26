@@ -7,6 +7,23 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.2.2] - 2026-05-26
+
+### Behoben
+- **Shell-Skripte (`eierverkauf-helper.sh`, `install.sh`, `dev-setup.sh`,
+  `dev-start.sh`) sind jetzt im Git-Index mit Exec-Bit (`100755`) markiert.**
+  Vorher: alle als `100644` committed (Windows-Filemode), wodurch jeder
+  `git pull` / `git reset --hard` das `+x`-Bit auf dem Linux-Server entfernte
+  und `eierverkauf <command>` mit „Permission denied" abbrach. Die
+  Erstinstallation via `install.sh` blieb wegen explizitem `chmod +x` im
+  Installer funktionsfähig — der Bug zeigte sich erst beim **zweiten** Update.
+
+### Hinweise zum Update
+- **Einmaliger Server-Hotfix nötig**, falls der `eierverkauf`-Befehl bereits
+  mit „Permission denied" abbricht — vor dem Update von Hand:
+  `chmod 0755 /opt/eierverkauf/eierverkauf-helper.sh`. Anschließend
+  `eierverkauf update` aufrufen → ab v1.2.2 sind die Modes dauerhaft korrekt.
+
 ## [1.2.1] - 2026-05-26
 
 ### Behoben

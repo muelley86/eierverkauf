@@ -133,13 +133,27 @@ do_update() {
     : > "$progress_log"
 
     (
+        # Niemals interaktiv auf Credentials warten — sonst friert die whiptail-Gauge
+        # bei 15 % ein, wenn git ohne TTY auf einen Auth-Prompt wartet (z. B. nach
+        # einer kurzzeitig privaten Repo-Phase mit gecachten Stale-Credentials).
+        export GIT_TERMINAL_PROMPT=0
+        export GIT_ASKPASS=/bin/true
+        export SSH_ASKPASS=/bin/true
+
         echo 5;  echo "# Aktuelle Version prüfen…"
         cd "$APP_DIR"
-        git fetch origin >>"$progress_log" 2>&1 || true
+        timeout 60 git fetch origin --progress >>"$progress_log" 2>&1 || true
 
         echo 15; echo "# Git-Repository aktualisieren…"
-        if ! git pull --ff-only origin main >>"$progress_log" 2>&1; then
-            echo "# GIT-Fehler" ; sleep 1
+        pull_rc=0
+        timeout 120 git pull --ff-only origin main --progress >>"$progress_log" 2>&1 || pull_rc=$?
+        if [ "$pull_rc" -ne 0 ]; then
+            if [ "$pull_rc" -eq 124 ]; then
+                echo "# GIT-Timeout (>120 s) — vermutlich Auth- oder Netz-Problem"
+            else
+                echo "# GIT-Fehler (Exit $pull_rc)"
+            fi
+            sleep 2
             exit 11
         fi
 
@@ -170,7 +184,9 @@ do_update() {
         systemctl stop "$SERVICE" 2>/dev/null || true
         cp -f "$backup_file" "$DB_FILE"
         systemctl start "$SERVICE" 2>/dev/null || true
-        msg "Update fehlgeschlagen" "Code: $rc\nBackup wurde wiederhergestellt.\nDetails: $progress_log"
+        local log_tail
+        log_tail=$(tail -15 "$progress_log" 2>/dev/null || echo "(kein Log)")
+        msg "Update fehlgeschlagen" "Code: $rc\nBackup wurde wiederhergestellt.\n\n--- Letzte Log-Zeilen ($progress_log) ---\n$log_tail"
         return "$rc"
     fi
 

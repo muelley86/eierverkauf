@@ -7,6 +7,32 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-05-26
+
+### Behoben
+- **`eierverkauf update` hängt nicht mehr bei 15 %**, wenn git auf eine
+  Authentifizierung wartet. `git fetch` bricht jetzt nach 60 s, `git pull`
+  nach 120 s mit klarer Fehlermeldung ab. Hintergrund: nach einer kurzen
+  Privat-Phase des Repos konnten gecachte oder fehlende Credentials einen
+  lautlosen Auth-Prompt auslösen — die whiptail-Pipeline hat keinen TTY,
+  also wartete git unendlich.
+- **Fehlerdialog im Update zeigt jetzt die letzten 15 Log-Zeilen**, nicht
+  nur den Pfad zur Log-Datei. Damit ist der eigentliche Fehler auch ohne
+  zusätzliche Shell-Sitzung sichtbar.
+
+### Geändert
+- Update-Subshell exportiert `GIT_TERMINAL_PROMPT=0`, `GIT_ASKPASS=/bin/true`
+  und `SSH_ASKPASS=/bin/true` — git fragt nie wieder interaktiv nach
+  Credentials, sondern failt sauber.
+
+### Hinweise zum Update
+- **Erst-Mitigation auf dem Server nötig**, falls das Update bereits
+  hängt: gecachte git-Credentials entfernen (`rm -f /root/.git-credentials`)
+  und Credential-Helper deaktivieren (`git -C /opt/eierverkauf config
+  --unset-all credential.helper`). Dann läuft `eierverkauf update` durch
+  und holt v1.2.1, das künftige Hänger verhindert. Details in
+  `DEPLOYMENT.md` §11.1.
+
 ## [1.2.0] - 2026-05-26
 
 ### Hinzugefügt

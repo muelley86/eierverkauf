@@ -36,12 +36,14 @@ export default function Artikel() {
       {
         accessorKey: "artikel_code",
         header: "Artikel",
+        meta: { mobilePriority: "primary" },
         cell: (i) => <span className="font-mono text-xs">{i.getValue<string>()}</span>,
       },
       {
         accessorKey: "menge",
         header: "Menge",
         sortingFn: "basic",
+        meta: { mobilePriority: "secondary", mobileLabel: "Menge" },
         cell: (i) => (
           <span className="font-mono tabular-nums">{formatZahl(i.getValue<number>(), 2)}</span>
         ),
@@ -50,6 +52,7 @@ export default function Artikel() {
         accessorKey: "eier",
         header: "Eier",
         sortingFn: "basic",
+        meta: { mobilePriority: "secondary", mobileLabel: "Eier" },
         cell: (i) => (
           <span className="font-mono tabular-nums">{formatZahl(i.getValue<number>())}</span>
         ),
@@ -58,6 +61,7 @@ export default function Artikel() {
         accessorKey: "umsatz",
         header: "Umsatz",
         sortingFn: "basic",
+        meta: { mobilePriority: "primary" },
         cell: (i) => (
           <span className="font-mono tabular-nums">{formatEuro(i.getValue<number>())}</span>
         ),
@@ -66,6 +70,7 @@ export default function Artikel() {
         accessorKey: "positionen",
         header: "Positionen",
         sortingFn: "basic",
+        meta: { mobilePriority: "secondary", mobileLabel: "Pos." },
         cell: (i) => (
           <span className="font-mono tabular-nums text-muted-foreground">
             {formatZahl(i.getValue<number>())}

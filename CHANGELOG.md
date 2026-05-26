@@ -7,6 +7,26 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-05-26
+
+### Behoben
+- **Lange Texte (Kundennamen) brechen nicht mehr aus Mobile-Cards aus.**
+  In der `DataTable`-Mobile-Card-Ansicht (<768 px) hatte die Secondary-Cell
+  `shrink-0` — Text-Inhalte wie lange Kundennamen sprengten dadurch das
+  Card-Layout horizontal. Jetzt `min-w-0 break-words`, Labels auf max. 45 %
+  Card-Breite limitiert. Betraf primär die Belege-Übersicht.
+
+### Geändert
+- **Explizite Mobile-Spalten-Priorisierung** in `Belege.tsx`, `Kunden.tsx`,
+  `Ranking.tsx` und `Artikel.tsx` via `column.meta.mobilePriority`. Auf
+  Mobile ist jetzt der Kundenname (bzw. Artikel-Code) der Card-Titel
+  oben, der wichtigste Geldwert rechts daneben, alle anderen Spalten
+  als Label/Wert-Paare im Card-Body. Vorher landete bei der Belege-Seite
+  das Rechnungsdatum oben — semantisch deutlich schwächer.
+
+### Hinweise zum Update
+- Reiner Frontend-Fix, keine Datenmigration. `eierverkauf update` reicht.
+
 ## [1.3.0] - 2026-05-26
 
 ### Hinzugefügt

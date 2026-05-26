@@ -90,6 +90,7 @@ export default function Belege() {
       {
         accessorKey: "rechnungsdatum",
         header: "Datum",
+        meta: { mobilePriority: "secondary", mobileLabel: "Datum" },
         cell: (i) => (
           <span className="font-mono text-xs text-muted-foreground">
             {formatDatum(i.getValue<string>())}
@@ -99,6 +100,7 @@ export default function Belege() {
       {
         accessorKey: "rechnungsnummer",
         header: "Beleg-Nr.",
+        meta: { mobilePriority: "secondary", mobileLabel: "Beleg-Nr." },
         cell: (i) => (
           <span className="font-mono text-xs text-ink">{i.getValue<string>() ?? "—"}</span>
         ),
@@ -106,6 +108,7 @@ export default function Belege() {
       {
         accessorKey: "kundennummer",
         header: "Kunden-Nr.",
+        meta: { mobilePriority: "secondary", mobileLabel: "Kd.-Nr." },
         cell: (i) => (
           <span className="font-mono text-xs text-muted-foreground">
             {i.getValue<string>()}
@@ -115,12 +118,14 @@ export default function Belege() {
       {
         accessorKey: "kundenname",
         header: "Kunde",
+        meta: { mobilePriority: "primary" },
         cell: (i) => <span className="text-ink">{i.getValue<string>()}</span>,
       },
       {
         accessorKey: "positionen",
         header: "Pos.",
         sortingFn: "basic",
+        meta: { mobilePriority: "secondary", mobileLabel: "Pos." },
         cell: (i) => (
           <span className="font-mono tabular-nums text-muted-foreground">
             {formatZahl(i.getValue<number>())}
@@ -131,6 +136,7 @@ export default function Belege() {
         accessorKey: "eier",
         header: "Eier",
         sortingFn: "basic",
+        meta: { mobilePriority: "secondary", mobileLabel: "Eier" },
         cell: (i) => (
           <span className="font-mono tabular-nums">{formatZahl(i.getValue<number>())}</span>
         ),
@@ -139,6 +145,7 @@ export default function Belege() {
         accessorKey: "umsatz",
         header: "Umsatz",
         sortingFn: "basic",
+        meta: { mobilePriority: "primary" },
         cell: (i) => (
           <span className="font-mono tabular-nums text-sage">
             {formatEuro(i.getValue<number>())}

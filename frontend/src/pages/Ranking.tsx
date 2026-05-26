@@ -42,6 +42,7 @@ export default function Ranking() {
       {
         id: "rang",
         header: "#",
+        meta: { mobilePriority: "secondary", mobileLabel: "Rang" },
         cell: (i) => (
           <span className="font-mono text-xs text-muted-foreground tabular-nums">
             {String(i.row.index + 1).padStart(2, "0")}
@@ -51,17 +52,24 @@ export default function Ranking() {
       {
         accessorKey: "kundennummer",
         header: "Nr.",
+        meta: { mobilePriority: "secondary", mobileLabel: "Nr." },
         cell: (i) => <span className="font-mono text-xs text-muted-foreground">{i.getValue<string>()}</span>,
       },
-      { accessorKey: "kundenname", header: "Name" },
+      {
+        accessorKey: "kundenname",
+        header: "Name",
+        meta: { mobilePriority: "primary" },
+      },
       {
         accessorKey: "eier", header: "Eier",
         sortingFn: "basic",
+        meta: { mobilePriority: "primary" },
         cell: (i) => <span className="font-mono tabular-nums">{formatZahl(i.getValue<number>())}</span>,
       },
       {
         accessorKey: "umsatz", header: "Umsatz",
         sortingFn: "basic",
+        meta: { mobilePriority: "secondary", mobileLabel: "Umsatz" },
         cell: (i) => <span className="font-mono tabular-nums">{formatEuro(i.getValue<number>())}</span>,
       },
     ],

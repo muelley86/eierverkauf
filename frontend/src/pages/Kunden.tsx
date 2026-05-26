@@ -36,6 +36,7 @@ export default function Kunden() {
       {
         accessorKey: "kundennummer",
         header: "Nr.",
+        meta: { mobilePriority: "secondary", mobileLabel: "Nr." },
         cell: (i) => (
           <span className="font-mono text-xs text-muted-foreground">
             {i.getValue<string>()}
@@ -45,12 +46,14 @@ export default function Kunden() {
       {
         accessorKey: "kundenname",
         header: "Name",
+        meta: { mobilePriority: "primary" },
         cell: (i) => <span className="text-ink">{i.getValue<string>()}</span>,
       },
       {
         accessorKey: "eier",
         header: "Eier",
         sortingFn: "basic",
+        meta: { mobilePriority: "secondary", mobileLabel: "Eier" },
         cell: (i) => (
           <span className="font-mono tabular-nums">{formatZahl(i.getValue<number>())}</span>
         ),
@@ -59,6 +62,7 @@ export default function Kunden() {
         accessorKey: "umsatz",
         header: "Umsatz",
         sortingFn: "basic",
+        meta: { mobilePriority: "primary" },
         cell: (i) => (
           <span className="font-mono tabular-nums">{formatEuro(i.getValue<number>())}</span>
         ),
@@ -67,6 +71,7 @@ export default function Kunden() {
         accessorKey: "positionen",
         header: "Positionen",
         sortingFn: "basic",
+        meta: { mobilePriority: "secondary", mobileLabel: "Pos." },
         cell: (i) => (
           <span className="font-mono tabular-nums text-muted-foreground">
             {formatZahl(i.getValue<number>())}
@@ -76,6 +81,7 @@ export default function Kunden() {
       {
         accessorKey: "letzter_kauf",
         header: "Letzter Kauf",
+        meta: { mobilePriority: "secondary", mobileLabel: "Letzter Kauf" },
         cell: (i) => (
           <span className="font-mono text-xs text-muted-foreground">
             {formatDatum(i.getValue<string | null>())}

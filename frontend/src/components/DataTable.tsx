@@ -194,12 +194,12 @@ export function DataTable<TData>({
                 {primaries.length > 0 && (
                   <div className="flex items-start justify-between gap-3">
                     {primaries[0] && (
-                      <div className="min-w-0 flex-1 font-display text-base text-ink leading-tight truncate">
+                      <div className="min-w-0 flex-1 font-display text-base text-ink leading-tight break-words">
                         {flexRender(primaries[0].cell.column.columnDef.cell, primaries[0].cell.getContext())}
                       </div>
                     )}
                     {primaries[1] && (
-                      <div className="shrink-0 font-mono text-sm tabular-nums text-ink">
+                      <div className="shrink-0 max-w-[45%] font-mono text-sm tabular-nums text-ink text-right break-words">
                         {flexRender(primaries[1].cell.column.columnDef.cell, primaries[1].cell.getContext())}
                       </div>
                     )}
@@ -214,10 +214,10 @@ export function DataTable<TData>({
                         (typeof headerNode === "string" ? headerNode : cell.column.id);
                       return (
                         <div key={cell.id} className="flex justify-between gap-2 min-w-0">
-                          <dt className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground truncate">
+                          <dt className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground truncate max-w-[45%] shrink-0">
                             {label}
                           </dt>
-                          <dd className="font-mono text-xs text-ink tabular-nums text-right shrink-0">
+                          <dd className="min-w-0 font-mono text-xs text-ink tabular-nums text-right break-words">
                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
                           </dd>
                         </div>

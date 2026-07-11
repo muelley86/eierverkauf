@@ -9,6 +9,8 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
 
+from .konfiguration import EIER_STUECK_CASE_SQL, berechne_eier_stueck_neu
+
 # DB-Pfad konfigurierbar via Env-Variable, sonst projektrelativ.
 _DEFAULT_DB = Path(__file__).resolve().parent.parent / "data" / "eierverkauf.db"
 DB_PATH = Path(os.environ.get("EIERVERKAUF_DB", str(_DEFAULT_DB)))
@@ -101,9 +103,10 @@ CREATE TABLE IF NOT EXISTS artikel_eier_konfiguration (
 """
 
 
-# Seed-Werte für `artikel_eier_konfiguration`. Entsprechen exakt dem hartcodierten
-# Verhalten von `berechne_eier()` vor v1.4.0 — werden idempotent via INSERT OR IGNORE
-# eingespielt, sodass ein bestehender User-Override beim Server-Update erhalten bleibt.
+# Seed-Werte für `artikel_eier_konfiguration`. Zusammen mit der Einheit-Prüfung
+# in `berechne_eier()` (Faktor greift nur bei Einheit PACK) entspricht das dem
+# hartcodierten Verhalten vor v1.4.0. Idempotent via INSERT OR IGNORE eingespielt,
+# sodass ein bestehender User-Override beim Server-Update erhalten bleibt.
 _EIER_KONFIG_DEFAULTS: tuple[tuple[str, int | None], ...] = (
     ("10er Kvp", 10),
     ("6er Kvp", 6),
@@ -216,11 +219,56 @@ def _migrate_unique_constraint(conn: sqlite3.Connection) -> bool:
     return True
 
 
+def _repariere_eier_stueck(conn: sqlite3.Connection) -> bool:
+    """Repariert einheit-unbewusst berechnete `eier_stueck`-Werte (v1.4.1).
+
+    Returns:
+        True wenn die Reparatur tatsächlich gelaufen ist,
+        False wenn alle Werte bereits konsistent waren (idempotent).
+
+    v1.4.0 wendete den Eier-Faktor allein anhand des `artikel_code` an. Dadurch
+    wurden stk-Positionen mit PackCode 110/111 (Menge zählt bereits einzelne
+    Eier) ver-10-/ver-6-facht — beim Import und bei jeder rückwirkenden
+    Neuberechnung über die Konfigurationsseite. Erkennung per NULL-sicherem
+    Vergleich gegen den korrekten CASE-Ausdruck; nur bei Abweichungen wird
+    (nach Datei-Backup) alles neu berechnet.
+    """
+    row = conn.execute(
+        "SELECT COUNT(*) AS c FROM verkaufspositionen "
+        f"WHERE eier_stueck IS NOT ({EIER_STUECK_CASE_SQL})"
+    ).fetchone()
+    abweichend = int(row["c"])
+    if abweichend == 0:
+        return False
+
+    # Datei-Backup vor der Daten-Reparatur (analog zur v1.0.4-Migration).
+    if DB_PATH.exists():
+        backup_path = DB_PATH.with_suffix(DB_PATH.suffix + ".pre-v1.4.1.bak")
+        if not backup_path.exists():
+            shutil.copy2(DB_PATH, backup_path)
+            print(f"[migration] DB-Backup angelegt: {backup_path}")
+
+    try:
+        conn.execute("BEGIN")
+        n = berechne_eier_stueck_neu(conn)
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    print(
+        f"[migration] eier_stueck einheit-bewusst neu berechnet: "
+        f"{abweichend} von {n} Zeilen korrigiert (v1.4.1)."
+    )
+    return True
+
+
 def init_db() -> None:
     """Legt das Schema idempotent an. Wird beim FastAPI-Startup aufgerufen.
 
-    Führt zusätzlich die v1.0.4-Migration (UNIQUE-Constraint um `rechnungsdatum`
-    erweitert) automatisch durch — nur wenn nötig.
+    Führt zusätzlich automatisch durch — jeweils nur wenn nötig:
+    - v1.0.4-Migration (UNIQUE-Constraint um `rechnungsdatum` erweitert)
+    - v1.4.1-Reparatur (`eier_stueck` einheit-bewusst neu berechnet;
+      benötigt die geseedete Konfig-Tabelle, daher nach dem Seed)
     """
     _ensure_parent()
     conn = get_conn()
@@ -229,6 +277,7 @@ def init_db() -> None:
         conn.commit()
         _migrate_unique_constraint(conn)
         _seed_eier_konfiguration(conn)
+        _repariere_eier_stueck(conn)
     finally:
         conn.close()
 

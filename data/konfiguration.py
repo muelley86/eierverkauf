@@ -9,6 +9,21 @@ from __future__ import annotations
 
 import sqlite3
 
+# SQL-Spiegel von `berechne_eier()` in data/importer.py — beide müssen synchron
+# bleiben! Die Einheit entscheidet, was `menge` zählt; der konfigurierbare
+# Faktor greift nur bei Einheit PACK:
+#   kg         → NULL (keine Stückzahl-Aussage)
+#   PACK       → menge × faktor(artikel_code); Faktor NULL/unbekannt → NULL
+#   stk / leer → menge × 1 (Menge zählt bereits einzelne Eier)
+EIER_STUECK_CASE_SQL = """CASE
+    WHEN LOWER(TRIM(COALESCE(einheit, ''))) = 'kg' THEN NULL
+    WHEN UPPER(TRIM(COALESCE(einheit, ''))) = 'PACK' THEN
+        (SELECT CAST(verkaufspositionen.menge * k.faktor AS INTEGER)
+           FROM artikel_eier_konfiguration k
+          WHERE k.artikel_code = verkaufspositionen.artikel_code)
+    ELSE CAST(menge AS INTEGER)
+END"""
+
 
 def lade_eier_konfig(conn: sqlite3.Connection) -> dict[str, int | None]:
     """Mapping artikel_code -> faktor (oder None)."""
@@ -16,6 +31,20 @@ def lade_eier_konfig(conn: sqlite3.Connection) -> dict[str, int | None]:
         "SELECT artikel_code, faktor FROM artikel_eier_konfiguration"
     ).fetchall()
     return {row["artikel_code"]: row["faktor"] for row in rows}
+
+
+def berechne_eier_stueck_neu(conn: sqlite3.Connection) -> int:
+    """Berechnet `eier_stueck` für alle Belege aus der aktuellen Konfiguration neu.
+
+    Returns:
+        Anzahl der neu berechneten Zeilen in `verkaufspositionen`.
+
+    Kein eigenes Commit — läuft in der Transaktion des Aufrufers.
+    """
+    cur = conn.execute(
+        f"UPDATE verkaufspositionen SET eier_stueck = {EIER_STUECK_CASE_SQL}"
+    )
+    return cur.rowcount
 
 
 def speichere_eier_konfig(
@@ -30,7 +59,6 @@ def speichere_eier_konfig(
     Eine Transaktion umschließt UPSERT + UPDATE, damit Konfig und Daten konsistent
     bleiben. Bei Fehler Rollback.
     """
-    neu_berechnet = 0
     try:
         conn.execute("BEGIN")
         for artikel_code, faktor in neu.items():
@@ -42,20 +70,7 @@ def speichere_eier_konfig(
                      aktualisiert_am = CURRENT_TIMESTAMP""",
                 (artikel_code, faktor),
             )
-            if faktor is None:
-                cur = conn.execute(
-                    "UPDATE verkaufspositionen SET eier_stueck = NULL "
-                    "WHERE artikel_code = ?",
-                    (artikel_code,),
-                )
-            else:
-                cur = conn.execute(
-                    "UPDATE verkaufspositionen "
-                    "SET eier_stueck = CAST(menge * ? AS INTEGER) "
-                    "WHERE artikel_code = ?",
-                    (faktor, artikel_code),
-                )
-            neu_berechnet += cur.rowcount
+        neu_berechnet = berechne_eier_stueck_neu(conn)
         conn.commit()
     except Exception:
         conn.rollback()
@@ -63,4 +78,9 @@ def speichere_eier_konfig(
     return neu_berechnet
 
 
-__all__ = ["lade_eier_konfig", "speichere_eier_konfig"]
+__all__ = [
+    "EIER_STUECK_CASE_SQL",
+    "lade_eier_konfig",
+    "berechne_eier_stueck_neu",
+    "speichere_eier_konfig",
+]

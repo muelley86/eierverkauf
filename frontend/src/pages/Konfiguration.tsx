@@ -17,14 +17,16 @@ interface ZeilenHinweis {
 }
 
 // Klar lesbarer Hinweistext je Artikel-Code, was der Faktor bedeutet.
+// Der Faktor greift nur bei Positionen mit Einheit PACK — stk-Positionen
+// zählen immer 1:1 als Eier, kg-Positionen nie (siehe berechne_eier()).
 const HINWEISE: Record<string, ZeilenHinweis> = {
-  "10er Kvp":         { einheit_text: "Eier pro Pack" },
-  "6er Kvp":          { einheit_text: "Eier pro Pack" },
-  "Lose 180":         { einheit_text: "Eier pro Stück" },
-  "Lose 20":          { einheit_text: "Eier pro Stück" },
-  "Lose unsortiert":  { einheit_text: "Eier pro Stück" },
-  "Gewicht (kg)":     { einheit_text: "Eier pro kg", hinweis: "Leer lassen, wenn keine Stückzahl bekannt." },
-  "Sonstige":         { einheit_text: "Eier pro Stück" },
+  "10er Kvp":         { einheit_text: "Eier pro PACK" },
+  "6er Kvp":          { einheit_text: "Eier pro PACK" },
+  "Lose 180":         { einheit_text: "Eier pro PACK", hinweis: "Greift nur bei PACK-Positionen — Stück-Positionen zählen 1:1." },
+  "Lose 20":          { einheit_text: "Eier pro PACK", hinweis: "Greift nur bei PACK-Positionen — Stück-Positionen zählen 1:1." },
+  "Lose unsortiert":  { einheit_text: "Eier pro PACK", hinweis: "Greift nur bei PACK-Positionen — Stück-Positionen zählen 1:1." },
+  "Gewicht (kg)":     { einheit_text: "Eier pro PACK", hinweis: "kg-Positionen erhalten nie eine Stückzahl. Leer lassen." },
+  "Sonstige":         { einheit_text: "Eier pro PACK", hinweis: "Greift nur bei PACK-Positionen — Stück-Positionen zählen 1:1." },
 };
 
 export default function Konfiguration() {
@@ -118,8 +120,11 @@ export default function Konfiguration() {
         <div className="mb-6 flex items-start gap-3 rounded-md border border-yolk/40 bg-yolk/10 p-4 text-sm text-ink">
           <Info className="h-5 w-5 shrink-0 text-yolk mt-0.5" aria-hidden="true" />
           <p>
-            Änderungen wirken <strong>sofort auf alle bisher importierten Belege</strong>.
-            Dashboard und Auswertungen werden automatisch mit den neuen Faktoren neu berechnet.
+            Der Faktor gilt <strong>nur für Positionen mit Einheit PACK</strong> (Menge zählt
+            Verpackungen). Stück-Positionen (stk) zählen immer 1:1 als Eier, kg-Positionen
+            erhalten nie eine Stückzahl. Änderungen wirken{" "}
+            <strong>sofort auf alle bisher importierten Belege</strong> — Dashboard und
+            Auswertungen werden automatisch mit den neuen Faktoren neu berechnet.
           </p>
         </div>
 

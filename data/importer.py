@@ -161,26 +161,38 @@ def parse_german_date(value: object) -> Optional[str]:
 
 def berechne_eier(
     menge: Optional[float],
+    einheit: Optional[str],
     artikel_code: Optional[str],
     konfig: dict[str, Optional[int]],
 ) -> Optional[int]:
-    """Anzahl Eier aus Menge × Faktor(artikel_code) berechnen.
+    """Anzahl Eier aus Menge, Einheit und Faktor(artikel_code) berechnen.
 
-    Faktoren stammen aus der `artikel_eier_konfiguration`-Tabelle und sind
-    über die UI editierbar. Defaults (Seed-Werte aus `data/db.py`):
+    Die Einheit entscheidet, was `menge` zählt — der konfigurierbare Faktor
+    (Tabelle `artikel_eier_konfiguration`, editierbar über die UI) greift
+    **nur bei Einheit PACK**:
 
-      10er Kvp       → 10
-      6er Kvp        → 6
-      Lose 180/20/u. → 1
-      Sonstige       → 1
-      Gewicht (kg)   → None (keine Stückzahl-Aussage)
+      kg          → None (Gewicht, keine Stückzahl-Aussage)
+      PACK        → menge × Faktor(artikel_code); Faktor None/unbekannt → None
+      stk / leer  → menge × 1 (Menge zählt bereits einzelne Eier —
+                    auch wenn PackCode 110/111 die Zeile dem Artikel
+                    „10er/6er Kvp" zuordnet!)
+
+    Muss synchron bleiben mit dem SQL-Spiegel `EIER_STUECK_CASE_SQL` in
+    `data/konfiguration.py` (rückwirkende Neuberechnung).
     """
-    if menge is None or artikel_code is None:
+    if menge is None:
         return None
-    faktor = konfig.get(artikel_code)
-    if faktor is None:
+    e = (einheit or "").strip().lower()
+    if e == "kg":
         return None
-    return int(menge * faktor)
+    if e == "pack":
+        if artikel_code is None:
+            return None
+        faktor = konfig.get(artikel_code)
+        if faktor is None:
+            return None
+        return int(menge * faktor)
+    return int(menge)
 
 
 def normiere_artikel(einheit: Optional[str], pack_code: Optional[int], beschreibung: str) -> str:
@@ -435,7 +447,7 @@ def _row_to_record(
 
     beschreibung = (str(row.get("Beschreibung") or "")).strip()
     artikel_code = normiere_artikel(einheit, pack_code, beschreibung)
-    eier = berechne_eier(menge, artikel_code, konfig)
+    eier = berechne_eier(menge, einheit, artikel_code, konfig)
     groesse = extrahiere_groesse(beschreibung)
     preis = parse_german_number(row.get("Preis"))
     gesamt = parse_german_number(row.get("Gesamt"))

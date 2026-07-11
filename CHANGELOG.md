@@ -7,6 +7,39 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-07-11
+
+### Behoben
+- **Eiermengen-Berechnung ver-10-/ver-6-fachte stk-Positionen mit PackCode
+  110/111** (Regression aus v1.4.0). Der Eier-Faktor hing seit dem
+  Konfigurations-Refactor nur noch am `artikel_code`; die Einheit wurde
+  ignoriert. Bei stk-Positionen zählt die Menge aber bereits einzelne Eier —
+  auch wenn der PackCode sie dem Artikel „10er/6er Kvp" zuordnet.
+  `berechne_eier()` prüft jetzt wieder die Einheit: Faktor nur bei **PACK**,
+  stk/leer → 1:1, kg → keine Stückzahl. (Beispiel Mai 2026: 79 von 395
+  Positionen betroffen, Eier-Summe +75 % zu hoch.)
+- **Rückwirkende Neuberechnung über die Konfigurationsseite** nutzte dieselbe
+  fehlerhafte Logik und verfälschte beim Speichern auch korrekt importierte
+  Alt-Daten. Die per-Artikel-UPDATEs sind durch eine einheit-bewusste
+  Gesamt-Neuberechnung ersetzt (`EIER_STUECK_CASE_SQL` in
+  `data/konfiguration.py`, SQL-Spiegel von `berechne_eier()`).
+
+### Datenmigration
+- Beim ersten Start nach dem Update werden alle `eier_stueck`-Werte
+  automatisch einheit-bewusst neu berechnet — nur, falls Abweichungen erkannt
+  werden (idempotent). Vorher wird ein DB-Backup
+  `data/eierverkauf.db.pre-v1.4.1.bak` angelegt.
+
+### Hinzugefügt
+- **Erste pytest-Testsuite** (`tests/`): Unit-Tests für
+  `berechne_eier`/`normiere_artikel`, Integrationstests für
+  Konfig-Neuberechnung, Reparatur-Migration und CSV-Import Ende-zu-Ende.
+  `pytest` neu in `requirements.txt`.
+
+### Geändert
+- Konfigurationsseite: Beschriftung stellt klar, dass die Faktoren nur für
+  Positionen mit Einheit PACK gelten (stk zählt 1:1, kg nie).
+
 ## [1.4.0] - 2026-05-26
 
 ### Hinzugefügt

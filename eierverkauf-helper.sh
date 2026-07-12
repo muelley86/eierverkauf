@@ -158,13 +158,15 @@ do_update() {
         fi
 
         echo 35; echo "# Python-Abhängigkeiten…"
-        "$APP_DIR/venv/bin/pip" install -r "$APP_DIR/requirements.txt" -q >>"$progress_log" 2>&1
+        timeout 300 "$APP_DIR/venv/bin/pip" install -r "$APP_DIR/requirements.txt" -q >>"$progress_log" 2>&1
 
+        # Kein --silent: npm-Fehler müssen im Progress-Log landen, sonst zeigt
+        # die Fehlerbox nach einem Abbruch nichts an. Timeout gegen Netz-Hänger.
         echo 55; echo "# Node.js-Abhängigkeiten…"
-        (cd "$APP_DIR/frontend" && npm ci --silent >>"$progress_log" 2>&1)
+        (cd "$APP_DIR/frontend" && timeout 600 npm ci --no-audit --no-fund >>"$progress_log" 2>&1)
 
         echo 75; echo "# Frontend bauen…"
-        (cd "$APP_DIR/frontend" && npm run build --silent >>"$progress_log" 2>&1)
+        (cd "$APP_DIR/frontend" && timeout 600 npm run build >>"$progress_log" 2>&1)
 
         echo 90; echo "# Dienst neu starten…"
         systemctl restart "$SERVICE"

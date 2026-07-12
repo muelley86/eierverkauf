@@ -840,6 +840,34 @@ cat /var/log/eierverkauf-helper.log 2>/dev/null || echo "Helper-Log nicht vorhan
 
 Diese vier Dateien zusammen reichen für die meisten Diagnosen.
 
+### 11.10 — Update bricht bei 55 % ab (Node.js-Abhängigkeiten)
+
+55 % ist der `npm ci`-Schritt. Bis v1.6.0 lief npm dort mit `--silent`, deshalb konnte die
+Fehlerbox nach dem Abbruch leer bleiben — seit v1.6.1 landet der echte npm-Fehler im
+Update-Log:
+
+```bash
+tail -30 /tmp/eierverkauf-update.log
+```
+
+Häufige Ursachen:
+
+1. **Node-Version zu alt für neue Abhängigkeiten** (Log: `EBADENGINE` / „Unsupported engine").
+   Prüfen mit `node -v`. Bei Alt-Installationen mit Node < 20.19 auf das aktuelle
+   Node 20 LTS heben:
+   ```bash
+   curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+   apt-get install -y nodejs
+   ```
+2. **Registry nicht erreichbar** (Log: `ECONNRESET`, `ETIMEDOUT`, `EAI_AGAIN`). Updates
+   brauchen Internet inkl. `registry.npmjs.org` (siehe §2) — Verbindung prüfen und das
+   Update einfach erneut ausführen.
+3. **Disk voll** (Log: `ENOSPC`) → siehe §11.8.
+
+Das Update ist gefahrlos wiederholbar: `npm ci` baut node_modules ohnehin jedes Mal neu
+auf, und die Datenbank wurde beim Abbruch automatisch aus dem Pre-Update-Backup
+wiederhergestellt. Nach behobener Ursache also einfach nochmal `eierverkauf update`.
+
 ---
 
 ## 12. Deinstallation

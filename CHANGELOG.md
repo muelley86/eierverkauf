@@ -7,6 +7,23 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.6.1] - 2026-07-12
+
+### Behoben
+- **`eierverkauf update` brach bei 55 % ab (npm ci).** Der mit v1.6.0
+  eingeführte Vitest-4-Baum zog ein verschachteltes vite 8 samt nativer
+  Rust-Binaries (rolldown, lightningcss) nach sich, die Node ≥ 20.19
+  verlangen und beim Update erstmals aus der Registry geladen werden
+  mussten. Vitest läuft jetzt in Version 3 gegen das vorhandene vite 5 —
+  keine nativen Binaries, jedes Node 20 reicht, deutlich kleinerer
+  Download. Test-API und alle 11 Tests unverändert.
+- **Update-Helper zeigt npm-Fehler jetzt an.** `npm ci`/`npm run build`
+  liefen mit `--silent`, wodurch die Fehlerbox nach einem Abbruch leer
+  blieb. Beide Schritte loggen jetzt sichtbar nach
+  `/tmp/eierverkauf-update.log` und sind mit Timeouts (600 s, pip 300 s)
+  gegen Netz-Hänger abgesichert. Neuer Troubleshooting-Abschnitt §11.10
+  in `DEPLOYMENT.md`.
+
 ## [1.6.0] - 2026-07-12
 
 ### Hinzugefügt

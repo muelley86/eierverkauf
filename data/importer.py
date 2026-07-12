@@ -196,13 +196,21 @@ def berechne_eier(
 
 
 def normiere_artikel(einheit: Optional[str], pack_code: Optional[int], beschreibung: str) -> str:
-    """Liefert einheitlichen Artikel-Code gemäß Spezifikation."""
+    """Liefert einheitlichen Artikel-Code gemäß Spezifikation.
+
+    Kvp-Artikel (PackCode 110/111) werden seit v1.5.0 je Abrechnungsart
+    getrennt: PACK-Positionen (Menge zählt Verpackungen) behalten den
+    Basis-Code „10er/6er Kvp"; pro Stück fakturierte Positionen (Einheit
+    stk oder leer — Menge zählt einzelne Eier) bekommen den Suffix „(stk)",
+    damit die Artikel-Auswertung Einheiten nicht mischt.
+    """
     b = (beschreibung or "").lower()
     e = (einheit or "").strip()
+    ist_pack = e.lower() == "pack"
     if pack_code == 110:
-        return "10er Kvp"
+        return "10er Kvp" if ist_pack else "10er Kvp (stk)"
     if pack_code == 111:
-        return "6er Kvp"
+        return "6er Kvp" if ist_pack else "6er Kvp (stk)"
     if e.lower() == "kg":
         return "Gewicht (kg)"
     if e.lower() == "stk":

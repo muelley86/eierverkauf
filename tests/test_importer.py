@@ -87,7 +87,9 @@ def test_einheit_gross_kleinschreibung_egal():
 
 
 # ---------------------------------------------------------------------------
-# normiere_artikel — Klassifikation bleibt unabhängig von der Einheit
+# normiere_artikel — Kvp-Artikel werden je Abrechnungsart getrennt (v1.5.0):
+# PACK-Positionen behalten den Basis-Code, stk-/leer-Positionen bekommen
+# den Suffix „(stk)", damit die Artikel-Auswertung Einheiten nicht mischt.
 # ---------------------------------------------------------------------------
 
 def test_pack_code_110_ist_10er_kvp():
@@ -98,9 +100,23 @@ def test_pack_code_111_ist_6er_kvp():
     assert normiere_artikel("PACK", 111, "111 Bio-Eier 6er Kvp Größe M") == "6er Kvp"
 
 
-def test_stk_mit_pack_code_bleibt_kvp_artikel():
-    # Für die Artikel-Aggregation zählt der PackCode — nicht die Einheit.
-    assert normiere_artikel("stk", 110, "110 Bio-Eier 10er Kvp Größe L") == "10er Kvp"
+def test_stk_mit_pack_code_110_ist_eigener_stk_artikel():
+    # Pro Stück fakturierte 10er-Kvp-Ware erscheint als eigene Artikel-Zeile.
+    assert normiere_artikel("stk", 110, "110 Bio-Eier 10er Kvp Größe L") == "10er Kvp (stk)"
+
+
+def test_stk_mit_pack_code_111_ist_eigener_stk_artikel():
+    assert normiere_artikel("stk", 111, "111 Bio-Eier 6er Kvp Größe M") == "6er Kvp (stk)"
+
+
+def test_leere_einheit_mit_pack_code_zaehlt_als_stk_artikel():
+    assert normiere_artikel("", 110, "110 Bio-Eier 10er Kvp Größe L") == "10er Kvp (stk)"
+    assert normiere_artikel(None, 111, "111 Bio-Eier 6er Kvp Größe M") == "6er Kvp (stk)"
+
+
+def test_einheit_pack_gross_kleinschreibung_egal_fuer_kvp():
+    assert normiere_artikel("pack", 110, "110 Bio-Eier 10er Kvp Größe L") == "10er Kvp"
+    assert normiere_artikel("Pack", 111, "111 Bio-Eier 6er Kvp Größe M") == "6er Kvp"
 
 
 def test_kg_ohne_pack_code_ist_gewicht():

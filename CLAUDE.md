@@ -81,7 +81,7 @@ Weitere Eigenheiten:
   - `PACK` + `pack_code=111` → `menge × 6` (6er-Verpackung)
   - `stk` oder leer → `menge × 1`
   - `kg` → `None` (keine Stückzahl-Aussage)
-- `normiere_artikel()` mappt auf einen festen Satz: `10er Kvp`, `6er Kvp`, `Gewicht (kg)`, `Lose 180`, `Lose 20`, `Lose unsortiert`, `Sonstige`. Alle Auswertungen aggregieren auf `artikel_code` — bei Änderungen am Mapping ändern sich Bestandsauswertungen.
+- `normiere_artikel()` mappt auf einen festen Satz: `10er Kvp`, `10er Kvp (stk)`, `6er Kvp`, `6er Kvp (stk)`, `Gewicht (kg)`, `Lose 180`, `Lose 20`, `Lose unsortiert`, `Sonstige`. Kvp-Artikel sind seit v1.5.0 nach Abrechnungsart getrennt: PackCode 110/111 + Einheit PACK → Basis-Code, sonst (stk/leer) → `(stk)`-Suffix. Alle Auswertungen aggregieren auf `artikel_code` — bei Änderungen am Mapping ändern sich Bestandsauswertungen (dann Startup-Migration in `data/db.py` ergänzen, Muster `_migriere_stk_artikel_codes`).
 - **UNIQUE-Schlüssel ab v1.0.4:** `(rechnungsdatum, rechnungsnummer, kundennummer, menge, einheit, pack_code, beschreibung)`. Duplikat-Treffer → `INSERT OR IGNORE` zählt als „übersprungen", kein Fehler.
 - Deutsche Zahlenformate: `parse_german_number("1.080,000")` → `1080.0`. Datum: `parse_german_date` akzeptiert `DD.MM.YY` **und** `DD.MM.YYYY`, zweistellige Jahre werden immer als 20YY interpretiert.
 - **Kundennummern original belassen** (`15.100.008` ≠ `15100008`) — als Text speichern, keine Punkte entfernen.

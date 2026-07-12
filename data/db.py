@@ -262,6 +262,58 @@ def _repariere_eier_stueck(conn: sqlite3.Connection) -> bool:
     return True
 
 
+def _migriere_stk_artikel_codes(conn: sqlite3.Connection) -> bool:
+    """Weist stk-/leer-Positionen mit PackCode 110/111 eigene Artikel-Codes zu (v1.5.0).
+
+    Returns:
+        True wenn die Migration tatsächlich gelaufen ist,
+        False wenn alle Artikel-Codes bereits getrennt waren (idempotent).
+
+    Bis v1.4.x ordnete `normiere_artikel()` alle Positionen mit PackCode
+    110/111 dem Artikel „10er/6er Kvp" zu — unabhängig von der Einheit. Die
+    Artikel-Auswertung mischte dadurch PACK-Mengen (Verpackungen) mit
+    stk-Mengen (einzelne Eier) in einer Zeile. Seit v1.5.0 erhalten pro Stück
+    fakturierte Positionen den Suffix „(stk)"; die Erkennung hier muss
+    synchron mit dem PACK-Kriterium in `normiere_artikel()` bleiben.
+    `eier_stueck` ist nicht betroffen (stk zählt 1:1, unabhängig vom Code).
+    """
+    nicht_pack = "UPPER(TRIM(COALESCE(einheit, ''))) != 'PACK'"
+    row = conn.execute(
+        "SELECT COUNT(*) AS c FROM verkaufspositionen "
+        f"WHERE pack_code IN (110, 111) AND {nicht_pack} "
+        "  AND artikel_code NOT LIKE '% (stk)'"
+    ).fetchone()
+    abweichend = int(row["c"])
+    if abweichend == 0:
+        return False
+
+    # Datei-Backup vor der Daten-Migration (analog zu v1.0.4 / v1.4.1).
+    if DB_PATH.exists():
+        backup_path = DB_PATH.with_suffix(DB_PATH.suffix + ".pre-v1.5.0.bak")
+        if not backup_path.exists():
+            shutil.copy2(DB_PATH, backup_path)
+            print(f"[migration] DB-Backup angelegt: {backup_path}")
+
+    try:
+        conn.execute("BEGIN")
+        for code, artikel in ((110, "10er Kvp (stk)"), (111, "6er Kvp (stk)")):
+            conn.execute(
+                "UPDATE verkaufspositionen SET artikel_code = ? "
+                f"WHERE pack_code = ? AND {nicht_pack} AND artikel_code != ?",
+                (artikel, code, artikel),
+            )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    print(
+        f"[migration] Kvp-Artikel nach Abrechnungsart getrennt: "
+        f"{abweichend} stk-/leer-Position(en) mit PackCode 110/111 auf "
+        f"eigenen „(stk)“-Artikel-Code umgestellt (v1.5.0)."
+    )
+    return True
+
+
 def init_db() -> None:
     """Legt das Schema idempotent an. Wird beim FastAPI-Startup aufgerufen.
 
@@ -269,6 +321,8 @@ def init_db() -> None:
     - v1.0.4-Migration (UNIQUE-Constraint um `rechnungsdatum` erweitert)
     - v1.4.1-Reparatur (`eier_stueck` einheit-bewusst neu berechnet;
       benötigt die geseedete Konfig-Tabelle, daher nach dem Seed)
+    - v1.5.0-Migration (stk-Positionen mit PackCode 110/111 erhalten
+      eigene Artikel-Codes „10er/6er Kvp (stk)")
     """
     _ensure_parent()
     conn = get_conn()
@@ -278,6 +332,7 @@ def init_db() -> None:
         _migrate_unique_constraint(conn)
         _seed_eier_konfiguration(conn)
         _repariere_eier_stueck(conn)
+        _migriere_stk_artikel_codes(conn)
     finally:
         conn.close()
 

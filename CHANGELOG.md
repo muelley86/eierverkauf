@@ -7,6 +7,26 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-07-11
+
+### Geändert
+- **Kvp-Artikel werden nach Abrechnungsart getrennt ausgewiesen.** Positionen
+  mit PackCode 110/111 und Einheit **PACK** (Menge zählt Verpackungen)
+  behalten die Artikel-Codes „10er Kvp"/„6er Kvp"; pro Stück fakturierte
+  Positionen (Einheit stk oder leer — Menge zählt einzelne Eier) erscheinen
+  jetzt als eigene Artikel **„10er Kvp (stk)"** und **„6er Kvp (stk)"**.
+  Vorher mischte die Artikel-Übersicht beide Einheiten in einer Zeile
+  (Beispiel Mai 2026, 10er Kvp: Menge 36.558 aus 8838 PACK + 27.720 stk —
+  als Packungszahl gelesen irreführend). Jetzt: „10er Kvp" 8838 PACK →
+  88.380 Eier, „10er Kvp (stk)" 27.720 Eier. Die Gesamtsummen ändern sich
+  nicht, `eier_stueck` bleibt unberührt.
+
+### Datenmigration
+- Beim ersten Start nach dem Update erhalten bestehende stk-/leer-Positionen
+  mit PackCode 110/111 automatisch die neuen „(stk)"-Artikel-Codes — nur,
+  falls solche Zeilen vorhanden sind (idempotent). Vorher wird ein DB-Backup
+  `data/eierverkauf.db.pre-v1.5.0.bak` angelegt.
+
 ## [1.4.1] - 2026-07-11
 
 ### Behoben

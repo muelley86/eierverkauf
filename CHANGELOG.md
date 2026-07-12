@@ -7,6 +7,14 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-07-12
+
+### Hinzugefügt
+- **Spalte „Umsatz/Ei"** (Cent je Ei) in der Belegliste auf der
+  Belege-Seite, hinter der Umsatz-Spalte und numerisch sortierbar.
+  Belege ohne Eier-Stückzahl (z. B. reine kg-Belege) zeigen „—".
+  Der Positionen-Dialog bleibt unverändert.
+
 ## [1.6.1] - 2026-07-12
 
 ### Behoben

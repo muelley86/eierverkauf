@@ -27,7 +27,7 @@ import {
   getBelege,
   getBelegPositionen,
 } from "@/api/client";
-import { formatDatum, formatEuro, formatZahl } from "@/lib/formatierung";
+import { formatCentJeEi, formatDatum, formatEuro, formatZahl } from "@/lib/formatierung";
 
 function einheitLabel(einheit: string | null, packCode: number | null): string {
   if (!einheit) return "—";
@@ -149,6 +149,18 @@ export default function Belege() {
         cell: (i) => (
           <span className="font-mono tabular-nums text-sage">
             {formatEuro(i.getValue<number>())}
+          </span>
+        ),
+      },
+      {
+        id: "umsatz_pro_ei",
+        accessorFn: (z) => (z.eier ? (z.umsatz / z.eier) * 100 : null),
+        header: "Umsatz/Ei",
+        sortingFn: "basic",
+        meta: { mobilePriority: "secondary", mobileLabel: "Umsatz/Ei" },
+        cell: (i) => (
+          <span className="font-mono tabular-nums">
+            {formatCentJeEi(i.row.original.umsatz, i.row.original.eier)}
           </span>
         ),
       },

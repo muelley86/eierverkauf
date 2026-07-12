@@ -20,7 +20,7 @@ import {
   getKundeMonate, getKundeStamm, JahresvergleichZeile, KundeStamm, MonatsZeile,
 } from "@/api/client";
 import { useZeitraum } from "@/context/ZeitraumContext";
-import { formatEuro, formatMonat, formatZahl, monatsKurz } from "@/lib/formatierung";
+import { formatCentJeEi, formatEuro, formatMonat, formatZahl, monatsKurz } from "@/lib/formatierung";
 import { AXIS_TICK, CHART_FARBEN, CHART_GRID, TOOLTIP_STYLE } from "@/lib/chart-farben";
 
 export default function KundenDetail() {
@@ -127,6 +127,7 @@ export default function KundenDetail() {
                     <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Monat</TableHead>
                     <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Eier</TableHead>
                     <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Umsatz</TableHead>
+                    <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Umsatz/Ei</TableHead>
                     <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Positionen</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -136,6 +137,7 @@ export default function KundenDetail() {
                       <TableCell>{formatMonat(m.monat)}</TableCell>
                       <TableCell className="font-mono tabular-nums">{formatZahl(m.eier)}</TableCell>
                       <TableCell className="font-mono tabular-nums">{formatEuro(m.umsatz)}</TableCell>
+                      <TableCell className="font-mono tabular-nums">{formatCentJeEi(m.umsatz, m.eier)}</TableCell>
                       <TableCell className="font-mono tabular-nums text-muted-foreground">{formatZahl(m.positionen ?? 0)}</TableCell>
                     </TableRow>
                   ))}

@@ -25,6 +25,15 @@ export function formatEuro(wert: number | null | undefined): string {
   });
 }
 
+/** Umsatz je Ei in Cent ('24,8 ct'). '—' wenn keine Eier-Stückzahl vorliegt. */
+export function formatCentJeEi(
+  umsatz: number | null | undefined,
+  eier: number | null | undefined,
+): string {
+  if (umsatz === null || umsatz === undefined || Number.isNaN(umsatz) || !eier) return "—";
+  return `${formatZahl((umsatz / eier) * 100, 1)} ct`;
+}
+
 /** ISO-Datum 'YYYY-MM-DD' -> 'DD.MM.YYYY'. */
 export function formatDatum(iso: string | null | undefined): string {
   if (!iso) return "—";

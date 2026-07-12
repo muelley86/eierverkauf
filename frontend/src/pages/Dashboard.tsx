@@ -26,6 +26,7 @@ import {
   getImportHistorie,
   getJahresvergleich,
 } from "@/api/client";
+import { artikelLabel } from "@/lib/artikel";
 import { formatDatum, formatEuro, formatZahl, monatsKurz } from "@/lib/formatierung";
 import { AXIS_TICK, CHART_FARBEN, CHART_GRID, TOOLTIP_STYLE } from "@/lib/chart-farben";
 
@@ -306,7 +307,7 @@ export default function Dashboard() {
                           {String(i + 1).padStart(2, "0")}
                         </span>
                         <span className="text-sm text-ink group-hover:text-yolk truncate">
-                          {a.artikel_code}
+                          {artikelLabel(a.artikel_code)}
                         </span>
                       </span>
                       <span className="font-mono text-sm tabular-nums text-ink shrink-0">

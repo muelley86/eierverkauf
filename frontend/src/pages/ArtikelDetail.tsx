@@ -15,7 +15,8 @@ import { ChartToggle } from "@/components/ChartToggle";
 import { PageHeader, Panel } from "@/components/PageHeader";
 import { exportExcelUrl, exportPdfUrl, getArtikelMonate, MonatsZeile } from "@/api/client";
 import { useZeitraum } from "@/context/ZeitraumContext";
-import { formatEuro, formatMonat, formatZahl } from "@/lib/formatierung";
+import { artikelLabel } from "@/lib/artikel";
+import { formatCentJeEi, formatEuro, formatMonat, formatZahl } from "@/lib/formatierung";
 import { AXIS_TICK, CHART_FARBEN, CHART_GRID, TOOLTIP_STYLE } from "@/lib/chart-farben";
 
 export default function ArtikelDetail() {
@@ -45,7 +46,7 @@ export default function ArtikelDetail() {
       <PageHeader
         back={{ to: "/artikel", label: "Zur Artikelliste" }}
         eyebrow="Artikel"
-        title={<span className="font-mono">{artikel}</span>}
+        title={<span className="font-mono">{artikelLabel(artikel)}</span>}
         actions={
           <>
             <Button asChild variant="outline" size="sm" className="border-rule">
@@ -99,6 +100,7 @@ export default function ArtikelDetail() {
                 <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Menge</TableHead>
                 <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Eier</TableHead>
                 <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Umsatz</TableHead>
+                <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Umsatz/Ei</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -108,6 +110,7 @@ export default function ArtikelDetail() {
                   <TableCell className="font-mono tabular-nums">{formatZahl(m.menge ?? 0, 2)}</TableCell>
                   <TableCell className="font-mono tabular-nums">{formatZahl(m.eier)}</TableCell>
                   <TableCell className="font-mono tabular-nums">{formatEuro(m.umsatz)}</TableCell>
+                  <TableCell className="font-mono tabular-nums">{formatCentJeEi(m.umsatz, m.eier)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

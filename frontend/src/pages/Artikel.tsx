@@ -7,6 +7,7 @@ import { PageHeader, Panel } from "@/components/PageHeader";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useZeitraum } from "@/context/ZeitraumContext";
 import { ArtikelZeile, getArtikel } from "@/api/client";
+import { artikelLabel } from "@/lib/artikel";
 import { formatEuro, formatZahl } from "@/lib/formatierung";
 
 export default function Artikel() {
@@ -37,7 +38,7 @@ export default function Artikel() {
         accessorKey: "artikel_code",
         header: "Artikel",
         meta: { mobilePriority: "primary" },
-        cell: (i) => <span className="font-mono text-xs">{i.getValue<string>()}</span>,
+        cell: (i) => <span className="font-mono text-xs">{artikelLabel(i.getValue<string>())}</span>,
       },
       {
         accessorKey: "menge",

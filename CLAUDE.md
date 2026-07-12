@@ -90,7 +90,9 @@ Weitere Eigenheiten:
 
 - `context/ZeitraumContext.tsx` ist der **globale Zeitraumfilter** — alle Auswertungs-Seiten lesen daraus und triggern API-Calls bei Änderung. Wenn neue Auswertungs-Seiten dazukommen, müssen sie den Context konsumieren, nicht eigene State-Variablen halten.
 - `api/client.ts` ist **strikt typisiert ohne `any`** — alle API-Response-Shapes als Interfaces. Neue Endpoints kommen mit ihren Typen hierher.
-- `lib/formatierung.ts` ist die einzige Quelle für deutsche Zahl-, Datums- und Währungsformatierung. Keine inline-`toLocaleString`-Aufrufe in Components.
+- `lib/formatierung.ts` ist die einzige Quelle für deutsche Zahl-, Datums- und Währungsformatierung. Keine inline-`toLocaleString`-Aufrufe in Components. `formatCentJeEi(umsatz, eier)` liefert Umsatz je Ei in Cent („24,8 ct") bzw. „—" ohne Eier-Stückzahl.
+- `lib/artikel.ts` → `artikelLabel(code)` ist das **Anzeige-Label** für Artikel-Codes (Einheit in Klammern, z. B. „10er Kvp (PACK)", „Lose 180 (stk)"). Überall verwenden, wo Artikelnamen gerendert werden; Routen/API nutzen weiter den rohen `artikel_code`. Das Mapping muss synchron zu `normiere_artikel()` in `data/importer.py` bleiben.
+- Frontend-Unit-Tests laufen mit **Vitest** (`npm run test`, Dateien `src/**/*.test.ts`) — pure Helper testen, kein jsdom-Setup vorhanden.
 - `components/ui/` enthält shadcn/ui-generierte Komponenten — bei Updates über die shadcn-CLI regenerieren, nicht von Hand patchen.
 
 **Design-System „Warm Editorial" (seit v1.1.0):**

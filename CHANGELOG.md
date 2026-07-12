@@ -7,6 +7,22 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-07-12
+
+### Hinzugefügt
+- **Einheiten-Zusatz bei Artikelnamen.** Artikel ohne Einheit im Code zeigen
+  sie jetzt in Klammern: „10er Kvp (PACK)", „6er Kvp (PACK)", „Lose 180 (stk)",
+  „Lose 20 (stk)", „Lose unsortiert (stk)". Gilt für die Artikel-Seite, den
+  Titel der Artikel-Detailseite und die Dashboard-Top-5 — reine Anzeige,
+  die gespeicherten `artikel_code`-Werte und Routen bleiben unverändert.
+- **Neue Spalte „Umsatz/Ei"** (Cent je Ei, eine Nachkommastelle) in den
+  Detailwerte-Tabellen der Artikel-Detailseite und der Kunden-Detailseite.
+  Ohne Eier-Stückzahl (z. B. reine kg-Monate) wird „—" angezeigt. Beim
+  Kunden ist der Wert Gesamtumsatz ÷ Eier-Stückzahl des Monats — Umsatz aus
+  kg-Positionen fließt mit ein.
+- **Frontend-Unit-Tests** (Vitest) für die neuen Helfer `artikelLabel` und
+  `formatCentJeEi` — erster Test-Runner im Frontend (`npm run test`).
+
 ## [1.5.0] - 2026-07-11
 
 ### Geändert

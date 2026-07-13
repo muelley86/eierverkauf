@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useZeitraum } from "@/context/ZeitraumContext";
 import { ArtikelZeile, getArtikel } from "@/api/client";
 import { artikelLabel } from "@/lib/artikel";
-import { formatEuro, formatZahl } from "@/lib/formatierung";
+import { formatCentJeEi, formatEuro, formatZahl } from "@/lib/formatierung";
 
 export default function Artikel() {
   const { von, bis } = useZeitraum();
@@ -65,6 +65,18 @@ export default function Artikel() {
         meta: { mobilePriority: "primary" },
         cell: (i) => (
           <span className="font-mono tabular-nums">{formatEuro(i.getValue<number>())}</span>
+        ),
+      },
+      {
+        id: "umsatz_pro_ei",
+        accessorFn: (z) => (z.eier ? (z.umsatz / z.eier) * 100 : null),
+        header: "Umsatz/Ei",
+        sortingFn: "basic",
+        meta: { mobilePriority: "secondary", mobileLabel: "Umsatz/Ei" },
+        cell: (i) => (
+          <span className="font-mono tabular-nums">
+            {formatCentJeEi(i.row.original.umsatz, i.row.original.eier)}
+          </span>
         ),
       },
       {

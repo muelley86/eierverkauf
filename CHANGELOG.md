@@ -7,6 +7,14 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-07-13
+
+### Hinzugefügt
+- **Spalte „Umsatz/Ei"** (Cent je Ei) im Kunden-Ranking und in der
+  Artikel-Übersicht, jeweils hinter der Umsatz-Spalte und numerisch
+  sortierbar. Zeilen ohne Eier-Stückzahl (z. B. „Gewicht (kg)") zeigen „—".
+  Damit ist die Kennzahl auf allen Übersichtstabellen verfügbar.
+
 ## [1.8.0] - 2026-07-13
 
 ### Hinzugefügt

@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DataTable } from "@/components/DataTable";
 import { useZeitraum } from "@/context/ZeitraumContext";
 import { getRanking, RankingZeile } from "@/api/client";
-import { formatEuro, formatZahl } from "@/lib/formatierung";
+import { formatCentJeEi, formatEuro, formatZahl } from "@/lib/formatierung";
 import { cn } from "@/lib/utils";
 import { AXIS_TICK, CHART_FARBEN, CHART_GRID, TOOLTIP_STYLE } from "@/lib/chart-farben";
 
@@ -71,6 +71,18 @@ export default function Ranking() {
         sortingFn: "basic",
         meta: { mobilePriority: "secondary", mobileLabel: "Umsatz" },
         cell: (i) => <span className="font-mono tabular-nums">{formatEuro(i.getValue<number>())}</span>,
+      },
+      {
+        id: "umsatz_pro_ei",
+        accessorFn: (z) => (z.eier ? (z.umsatz / z.eier) * 100 : null),
+        header: "Umsatz/Ei",
+        sortingFn: "basic",
+        meta: { mobilePriority: "secondary", mobileLabel: "Umsatz/Ei" },
+        cell: (i) => (
+          <span className="font-mono tabular-nums">
+            {formatCentJeEi(i.row.original.umsatz, i.row.original.eier)}
+          </span>
+        ),
       },
     ],
     [],

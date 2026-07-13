@@ -3,6 +3,8 @@ Positionen mit Eier-Stückzahl (kg-Positionen ohne ``eier_stueck`` bleiben auße
 
 Alle Daten synthetisch.
 """
+from pathlib import Path
+
 import pytest
 
 import data.db as db
@@ -120,6 +122,76 @@ def test_import_loeschen_nutzt_index_statt_tablescan(tmp_db):
     ).fetchall()
     plan_text = " ".join(str(tuple(r)) for r in plan)
     assert "idx_import" in plan_text, f"Query-Plan nutzt keinen Index: {plan_text}"
+
+
+def test_import_loeschen_loescht_in_batches(tmp_db, monkeypatch):
+    # Arrange: mehr Zeilen als eine Batch-Größe, plus zweiter Import als Kontrolle
+    monkeypatch.setattr(queries, "LOESCH_BATCH", 2)
+    tmp_db.execute(
+        "INSERT INTO imports (id, import_datum, dateiname) VALUES (1, '2026-07-13', 'a.csv')"
+    )
+    tmp_db.execute(
+        "INSERT INTO imports (id, import_datum, dateiname) VALUES (2, '2026-07-13', 'b.csv')"
+    )
+    for i in range(5):
+        tmp_db.execute(
+            """INSERT INTO verkaufspositionen
+                 (import_id, rechnungsdatum, rechnungsnummer, kundennummer, kundenname, menge)
+               VALUES (1, '2026-07-01', ?, '10001', 'Testkunde', 1)""",
+            (f"R-{i}",),
+        )
+    tmp_db.execute(
+        """INSERT INTO verkaufspositionen
+             (import_id, rechnungsdatum, rechnungsnummer, kundennummer, kundenname, menge)
+           VALUES (2, '2026-07-02', 'R-99', '10002', 'Anderer Kunde', 1)"""
+    )
+    for i in range(3):
+        tmp_db.execute(
+            "INSERT INTO import_zeilen_protokoll (import_id, csv_zeile, status, grund) "
+            "VALUES (1, ?, 'fehler', 'Test')",
+            (i + 1,),
+        )
+    tmp_db.commit()
+
+    # Act
+    geloeschte = queries.import_loeschen(1)
+
+    # Assert: Batch-Schleife läuft bis zum Ende, fremder Import bleibt unberührt
+    assert geloeschte == 1
+    conn = db.get_conn()
+    try:
+        assert conn.execute(
+            "SELECT COUNT(*) FROM verkaufspositionen WHERE import_id = 1"
+        ).fetchone()[0] == 0
+        assert conn.execute(
+            "SELECT COUNT(*) FROM import_zeilen_protokoll WHERE import_id = 1"
+        ).fetchone()[0] == 0
+        assert conn.execute(
+            "SELECT COUNT(*) FROM verkaufspositionen WHERE import_id = 2"
+        ).fetchone()[0] == 1
+        assert conn.execute("SELECT COUNT(*) FROM imports").fetchone()[0] == 1
+    finally:
+        conn.close()
+
+
+def test_import_loeschen_stutzt_wal_datei(tmp_db):
+    # Arrange
+    tmp_db.execute(
+        "INSERT INTO imports (id, import_datum, dateiname) VALUES (1, '2026-07-13', 'a.csv')"
+    )
+    tmp_db.execute(
+        """INSERT INTO verkaufspositionen
+             (import_id, rechnungsdatum, rechnungsnummer, kundennummer, kundenname, menge)
+           VALUES (1, '2026-07-01', 'R-1', '10001', 'Testkunde', 1)"""
+    )
+    tmp_db.commit()
+
+    # Act
+    queries.import_loeschen(1)
+
+    # Assert: Checkpoint TRUNCATE hat das Write-Ahead-Log zurückgestutzt
+    wal = Path(str(db.DB_PATH) + "-wal")
+    assert not wal.exists() or wal.stat().st_size == 0
 
 
 def test_jahresvergleich_eier_umsatz_je_vergleichsjahr(tmp_db):

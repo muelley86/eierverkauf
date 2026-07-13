@@ -341,12 +341,42 @@ def import_historie() -> list[dict]:
         conn.close()
 
 
+# Zeilen je Lösch-Transaktion: kurz genug, dass parallele Auswertungs-Queries
+# zwischen den Batches I/O bekommen und das Write-Ahead-Log klein bleibt.
+LOESCH_BATCH = 20_000
+
+
 def import_loeschen(import_id: int) -> int:
-    """Löscht einen Import inkl. zugehöriger Verkaufspositionen (CASCADE)."""
+    """Löscht einen Import inkl. Verkaufspositionen und Protokollzeilen — häppchenweise.
+
+    Eine monolithische CASCADE-Transaktion schreibt bei großen Imports jede
+    geänderte Seite von Tabelle + Indizes ins WAL (wächst auf ~DB-Größe) und
+    sättigt beim anschließenden Checkpoint minutenlang das Storage — die App
+    wirkt blockiert. Deshalb bewusst nicht-atomar: Kind-Tabellen zuerst in
+    Batches, die ``imports``-Zeile zuletzt. Bricht der Vorgang ab, bleibt der
+    Import in der Historie sichtbar und erneutes Löschen räumt die Reste weg
+    (das FK-CASCADE auf der letzten Zeile ist zusätzliches Sicherheitsnetz).
+
+    Returns:
+        Anzahl gelöschter ``imports``-Zeilen (0 wenn unbekannte ID).
+    """
     conn = get_conn()
     try:
+        for tabelle in ("verkaufspositionen", "import_zeilen_protokoll"):
+            while True:
+                cur = conn.execute(
+                    f"DELETE FROM {tabelle} WHERE rowid IN ("
+                    f"  SELECT rowid FROM {tabelle} WHERE import_id = ? LIMIT ?)",
+                    (import_id, LOESCH_BATCH),
+                )
+                conn.commit()
+                if cur.rowcount < LOESCH_BATCH:
+                    break
         cur = conn.execute("DELETE FROM imports WHERE id = ?", (import_id,))
         conn.commit()
+        # Best effort: WAL sofort zurückstutzen; bei aktiven Lesern übernimmt
+        # später der Autocheckpoint.
+        conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
         return cur.rowcount
     finally:
         conn.close()

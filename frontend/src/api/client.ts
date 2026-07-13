@@ -284,7 +284,9 @@ export async function getImportDetail(id: number): Promise<ImportDetail> {
 }
 
 export async function deleteImport(id: number): Promise<void> {
-  await api.delete(`/imports/${id}`);
+  // Große Löschungen laufen häppchenweise und dürfen länger dauern als das
+  // globale 60-s-Timeout.
+  await api.delete(`/imports/${id}`, { timeout: 300_000 });
 }
 
 // Konfiguration: Eier-pro-Artikel-Faktoren -----------------------------------

@@ -7,6 +7,27 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.11.3] - 2026-07-13
+
+### Behoben
+- **Minutenlange App-Blockade direkt nach dem Import-Löschen.** Der WAL-Modus
+  aus v1.11.2 hat die Dauer-Blockade behoben, aber die Löschung lief weiter
+  als eine einzige Riesen-Transaktion: Bei großen Imports wuchs das
+  Write-Ahead-Log auf annähernd Datenbank-Größe und der anschließende
+  Checkpoint sättigte das Storage minutenlang — alle Auswertungs-Queries
+  verhungerten am I/O. Die Löschung läuft jetzt **häppchenweise** (20.000
+  Zeilen je Transaktion, Verkaufspositionen und Protokoll zuerst, der
+  Import-Eintrag zuletzt) und stutzt das WAL danach sofort zurück. Bricht
+  der Vorgang ab, bleibt der Import in der Historie sichtbar und kann
+  erneut gelöscht werden.
+- **Lösch-Button ohne Rückmeldung.** Während der Löschung zeigt der Button
+  jetzt einen Lade-Spinner und ist gesperrt (kein versehentliches
+  Doppel-Löschen); das Frontend wartet bis zu 5 Minuten statt nach 60 s
+  fälschlich „Löschen fehlgeschlagen" zu melden.
+
+### Geändert
+- WAL-Datei wird über `journal_size_limit` auf maximal 64 MB gedeckelt.
+
 ## [1.11.2] - 2026-07-13
 
 ### Behoben

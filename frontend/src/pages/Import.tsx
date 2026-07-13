@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { FileRejection, useDropzone } from "react-dropzone";
-import { AlertTriangle, FileSpreadsheet, Info, Trash2, UploadCloud } from "lucide-react";
+import { AlertTriangle, FileSpreadsheet, Info, Loader2, Trash2, UploadCloud } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +24,7 @@ export default function Import() {
   const [historie, setHistorie] = useState<ImportProtokollEintrag[]>([]);
   const [importiert, setImportiert] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loeschtId, setLoeschtId] = useState<number | null>(null);
 
   const ladeHistorie = useCallback(async () => {
     try {
@@ -81,12 +82,15 @@ export default function Import() {
 
   const loeschen = async (id: number) => {
     if (!confirm("Diesen Import inkl. aller Positionen wirklich löschen?")) return;
+    setLoeschtId(id);
     try {
       await deleteImport(id);
       toast.success("Import gelöscht");
       await ladeHistorie();
     } catch (e) {
       toast.error("Löschen fehlgeschlagen", { description: String(e) });
+    } finally {
+      setLoeschtId(null);
     }
   };
 
@@ -265,9 +269,18 @@ export default function Import() {
                           variant="ghost"
                           size="icon"
                           onClick={() => loeschen(h.id)}
-                          aria-label={`Import ${h.dateiname} löschen`}
+                          disabled={loeschtId !== null}
+                          aria-label={
+                            loeschtId === h.id
+                              ? `Import ${h.dateiname} wird gelöscht`
+                              : `Import ${h.dateiname} löschen`
+                          }
                         >
-                          <Trash2 className="h-4 w-4 text-brick" />
+                          {loeschtId === h.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                          ) : (
+                            <Trash2 className="h-4 w-4 text-brick" />
+                          )}
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -293,10 +306,19 @@ export default function Import() {
                     <button
                       type="button"
                       onClick={() => loeschen(h.id)}
-                      className="shrink-0 inline-flex items-center justify-center h-11 w-11 rounded-md text-brick hover:bg-brick/10 active:scale-95 transition"
-                      aria-label={`Import ${h.dateiname} löschen`}
+                      disabled={loeschtId !== null}
+                      className="shrink-0 inline-flex items-center justify-center h-11 w-11 rounded-md text-brick hover:bg-brick/10 active:scale-95 transition disabled:pointer-events-none disabled:opacity-50"
+                      aria-label={
+                        loeschtId === h.id
+                          ? `Import ${h.dateiname} wird gelöscht`
+                          : `Import ${h.dateiname} löschen`
+                      }
                     >
-                      <Trash2 className="h-4 w-4" />
+                      {loeschtId === h.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
                     </button>
                   </div>
                   <div className="font-mono text-[11px] text-muted-foreground">

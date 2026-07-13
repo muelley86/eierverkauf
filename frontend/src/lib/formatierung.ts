@@ -34,6 +34,23 @@ export function formatCentJeEi(
   return `${formatZahl((umsatz / eier) * 100, 1)} ct`;
 }
 
+/**
+ * Brutto/Retouren-Unterzeile für KPI-Karten ('Verkauft 573.066 · Retouren -50.274').
+ *
+ * Liefert null, wenn es im Zeitraum keine Retouren gab (oder Werte fehlen) —
+ * die Karte zeigt dann wie bisher nur den Netto-Wert. Der Formatter bestimmt
+ * die Einheit (formatZahl für Eier, formatEuro für Umsatz).
+ */
+export function formatBruttoRetouren(
+  brutto: number | null | undefined,
+  retouren: number | null | undefined,
+  formatter: (wert: number) => string,
+): string | null {
+  if (brutto === null || brutto === undefined || Number.isNaN(brutto)) return null;
+  if (!retouren || Number.isNaN(retouren)) return null;
+  return `Verkauft ${formatter(brutto)} · Retouren ${formatter(retouren)}`;
+}
+
 /** ISO-Datum 'YYYY-MM-DD' -> 'DD.MM.YYYY'. */
 export function formatDatum(iso: string | null | undefined): string {
   if (!iso) return "—";

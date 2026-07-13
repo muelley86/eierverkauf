@@ -1,5 +1,10 @@
 import { describe, expect, test } from "vitest";
-import { formatCentJeEi } from "./formatierung";
+import {
+  formatBruttoRetouren,
+  formatCentJeEi,
+  formatEuro,
+  formatZahl,
+} from "./formatierung";
 
 describe("formatCentJeEi", () => {
   test("formatiert Umsatz je Ei in Cent mit einer Nachkommastelle", () => {
@@ -25,5 +30,36 @@ describe("formatCentJeEi", () => {
   test("liefert Platzhalter ohne Umsatz-Wert", () => {
     expect(formatCentJeEi(null, 100)).toBe("—");
     expect(formatCentJeEi(undefined, 100)).toBe("—");
+  });
+});
+
+describe("formatBruttoRetouren", () => {
+  test("liefert null ohne Retouren im Zeitraum", () => {
+    expect(formatBruttoRetouren(573066, 0, formatZahl)).toBeNull();
+  });
+
+  test("liefert null bei fehlenden Werten", () => {
+    expect(formatBruttoRetouren(null, -50274, formatZahl)).toBeNull();
+    expect(formatBruttoRetouren(undefined, -50274, formatZahl)).toBeNull();
+    expect(formatBruttoRetouren(573066, null, formatZahl)).toBeNull();
+    expect(formatBruttoRetouren(573066, undefined, formatZahl)).toBeNull();
+  });
+
+  test("zeigt die Zeile auch bei Brutto 0 (Zeitraum nur mit Retouren)", () => {
+    expect(formatBruttoRetouren(0, -20, formatZahl)).toBe(
+      `Verkauft ${formatZahl(0)} · Retouren ${formatZahl(-20)}`,
+    );
+  });
+
+  test("setzt Brutto und Retouren mit dem Zahl-Formatter zusammen", () => {
+    expect(formatBruttoRetouren(573066, -50274, formatZahl)).toBe(
+      `Verkauft ${formatZahl(573066)} · Retouren ${formatZahl(-50274)}`,
+    );
+  });
+
+  test("funktioniert mit dem Euro-Formatter", () => {
+    expect(formatBruttoRetouren(74.8, -15, formatEuro)).toBe(
+      `Verkauft ${formatEuro(74.8)} · Retouren ${formatEuro(-15)}`,
+    );
   });
 });

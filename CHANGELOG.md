@@ -7,6 +7,18 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.14.0] - 2026-07-13
+
+### Hinzugefügt
+- **Brutto/Retouren-Ausweis im Dashboard.** Die Eier- und die Umsatz-Karte
+  zeigen eine Unterzeile „Verkauft … · Retouren …", sobald es im gewählten
+  Zeitraum Retouren/Gutschriften gab — sonst bleibt die Ansicht unverändert.
+  Damit ist der Abgleich mit Brutto-Reports der Warenwirtschaft direkt in
+  der App möglich (die großen Kennzahlen bleiben Netto). Der
+  `/api/dashboard`-Endpoint liefert dafür vier neue additive Felder
+  (`brutto_eier`, `retouren_eier`, `brutto_umsatz`, `retouren_umsatz`);
+  ältere Frontends ignorieren sie. Keine Datenmigration nötig.
+
 ## [1.13.0] - 2026-07-13
 
 ### Behoben

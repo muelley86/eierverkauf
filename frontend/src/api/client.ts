@@ -17,6 +17,12 @@ export interface DashboardKPIs {
   umsatz: number;
   anzahl_kunden: number;
   anzahl_positionen: number;
+  /** Verkäufe ohne Retouren (Brutto) — für den Beleg-Abgleich. */
+  brutto_eier: number;
+  /** Retouren/Gutschriften als negativer Wert; 0 wenn keine im Zeitraum. */
+  retouren_eier: number;
+  brutto_umsatz: number;
+  retouren_umsatz: number;
 }
 
 export interface KundeTop {

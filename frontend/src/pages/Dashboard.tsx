@@ -27,7 +27,13 @@ import {
   getJahresvergleich,
 } from "@/api/client";
 import { artikelLabel } from "@/lib/artikel";
-import { formatDatum, formatEuro, formatZahl, monatsKurz } from "@/lib/formatierung";
+import {
+  formatBruttoRetouren,
+  formatDatum,
+  formatEuro,
+  formatZahl,
+  monatsKurz,
+} from "@/lib/formatierung";
 import { AXIS_TICK, CHART_FARBEN, CHART_GRID, TOOLTIP_STYLE } from "@/lib/chart-farben";
 
 // ---------------------------------------------------------------------------
@@ -156,6 +162,13 @@ export default function Dashboard() {
             sparkline={sparkEier}
             sparklineFarbe={CHART_FARBEN.yolk}
             delta={deltaEier ?? undefined}
+            hinweis={
+              formatBruttoRetouren(
+                daten.kpis.brutto_eier,
+                daten.kpis.retouren_eier,
+                formatZahl,
+              ) ?? undefined
+            }
             illustration={<EggCarton />}
             className="lg:col-span-8"
           />
@@ -167,6 +180,13 @@ export default function Dashboard() {
               sparkline={sparkUmsatz}
               sparklineFarbe={CHART_FARBEN.sage}
               delta={deltaUmsatz ?? undefined}
+              hinweis={
+                formatBruttoRetouren(
+                  daten.kpis.brutto_umsatz,
+                  daten.kpis.retouren_umsatz,
+                  formatEuro,
+                ) ?? undefined
+              }
             />
             <div className="grid grid-cols-2 gap-4">
               <KPICard

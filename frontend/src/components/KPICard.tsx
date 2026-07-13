@@ -97,7 +97,13 @@ export function KPICard({
         >
           {wert}
         </div>
-        <div className="mt-4 sm:mt-6 flex items-center gap-3 flex-wrap">
+        {/* pr reserviert die Ecke der absolut positionierten Sparkline, sonst läuft der Hinweis darunter. */}
+        <div
+          className={cn(
+            "mt-4 sm:mt-6 flex items-center gap-3 flex-wrap",
+            sparkline && sparkline.length > 1 && "pr-32 sm:pr-48",
+          )}
+        >
           {delta && (
             <span className={delta.richtung === "down" ? "delta-down" : "delta-up"}>
               {delta.richtung === "down" ? "▾" : "▴"} {delta.wert}
@@ -151,7 +157,15 @@ export function KPICard({
         </span>
       )}
       {hinweis && (
-        <p className="text-sm text-muted-foreground leading-snug">{hinweis}</p>
+        <p
+          className={cn(
+            "text-sm text-muted-foreground leading-snug",
+            // pr reserviert die Ecke der absolut positionierten Sparkline.
+            sparkline && sparkline.length > 1 && "pr-28",
+          )}
+        >
+          {hinweis}
+        </p>
       )}
       {sparkline && sparkline.length > 1 && (
         <div

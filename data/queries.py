@@ -28,14 +28,24 @@ def _row_to_dict(row) -> dict:
 # ---------------------------------------------------------------------------
 
 def dashboard_kpis(von: Optional[str], bis: Optional[str]) -> dict:
-    """KPI-Kacheln: Gesamteier, Umsatz, Anzahl Kunden, Anzahl Positionen."""
+    """KPI-Kacheln: Gesamteier, Umsatz, Anzahl Kunden, Anzahl Positionen.
+
+    Die Summen sind Netto (Retouren/Gutschriften stehen als negative
+    Positionen in der Tabelle). Für den Beleg-Abgleich gegen Brutto-Reports
+    der Warenwirtschaft werden Brutto und Retouren zusätzlich ausgewiesen —
+    je Kennzahl gilt: brutto + retouren = netto (retouren sind negativ).
+    """
     wh, params = _zeitraum_filter(von, bis)
     sql = f"""
         SELECT
             COALESCE(SUM(eier_stueck), 0)              AS gesamt_eier,
             COALESCE(SUM(gesamt), 0)                   AS umsatz,
             COUNT(DISTINCT kundennummer)               AS anzahl_kunden,
-            COUNT(*)                                   AS anzahl_positionen
+            COUNT(*)                                   AS anzahl_positionen,
+            COALESCE(SUM(CASE WHEN eier_stueck > 0 THEN eier_stueck END), 0) AS brutto_eier,
+            COALESCE(SUM(CASE WHEN eier_stueck < 0 THEN eier_stueck END), 0) AS retouren_eier,
+            COALESCE(SUM(CASE WHEN gesamt > 0 THEN gesamt END), 0)           AS brutto_umsatz,
+            COALESCE(SUM(CASE WHEN gesamt < 0 THEN gesamt END), 0)           AS retouren_umsatz
         FROM verkaufspositionen
         {wh}
     """

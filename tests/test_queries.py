@@ -194,6 +194,47 @@ def test_import_loeschen_stutzt_wal_datei(tmp_db):
     assert not wal.exists() or wal.stat().st_size == 0
 
 
+def test_dashboard_kpis_weist_brutto_und_retouren_aus(tmp_db):
+    # Arrange: Verkäufe (100 Eier / 74,80 €) plus zwei Gutschriften —
+    # eine mit Eier-Stückzahl (−20 Eier / −5,00 €), eine kg-Gutschrift
+    # ohne Stückzahl (−10,00 €, zählt nur beim Umsatz)
+    _gemischte_positionen(tmp_db)
+    _insert(tmp_db, datum="2026-07-08", nr="G-1", menge=-2, einheit="PACK",
+            pack_code=110, eier_stueck=-20, artikel_code="10er Kvp",
+            beschreibung="gutschrift", gesamt=-5.00)
+    _insert(tmp_db, datum="2026-07-09", nr="G-2", menge=-4, einheit="kg",
+            pack_code=None, eier_stueck=None, artikel_code="Gewicht (kg)",
+            beschreibung="kg-gutschrift", gesamt=-10.00)
+
+    # Act
+    kpis = queries.dashboard_kpis(None, None)
+
+    # Assert: Netto bleibt wie bisher, Brutto/Retouren kommen additiv dazu
+    assert kpis["gesamt_eier"] == 80
+    assert kpis["umsatz"] == pytest.approx(59.80)
+    assert kpis["brutto_eier"] == 100
+    assert kpis["retouren_eier"] == -20
+    assert kpis["brutto_umsatz"] == pytest.approx(74.80)
+    assert kpis["retouren_umsatz"] == pytest.approx(-15.00)
+    # Invariante je Kennzahl: brutto + retouren = netto
+    assert kpis["brutto_eier"] + kpis["retouren_eier"] == kpis["gesamt_eier"]
+    assert kpis["brutto_umsatz"] + kpis["retouren_umsatz"] == pytest.approx(kpis["umsatz"])
+
+
+def test_dashboard_kpis_ohne_retouren_liefert_retouren_von_0(tmp_db):
+    # Arrange: nur positive Positionen
+    _gemischte_positionen(tmp_db)
+
+    # Act
+    kpis = queries.dashboard_kpis(None, None)
+
+    # Assert: Retouren-Felder 0, Brutto = Netto
+    assert kpis["retouren_eier"] == 0
+    assert kpis["retouren_umsatz"] == 0
+    assert kpis["brutto_eier"] == kpis["gesamt_eier"] == 100
+    assert kpis["brutto_umsatz"] == pytest.approx(kpis["umsatz"])
+
+
 def test_jahresvergleich_eier_umsatz_je_vergleichsjahr(tmp_db):
     # Arrange
     _gemischte_positionen(tmp_db)

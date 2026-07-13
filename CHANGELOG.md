@@ -7,6 +7,13 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-07-13
+
+### Hinzugefügt
+- **Spalte „Umsatz/Ei"** (Cent je Ei) in der Kundenliste auf der
+  Kunden-Seite, hinter der Umsatz-Spalte und numerisch sortierbar.
+  Kunden ohne Eier-Stückzahl (z. B. reine kg-Käufe) zeigen „—".
+
 ## [1.7.0] - 2026-07-12
 
 ### Hinzugefügt

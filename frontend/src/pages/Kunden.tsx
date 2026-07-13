@@ -7,7 +7,7 @@ import { PageHeader, Panel } from "@/components/PageHeader";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useZeitraum } from "@/context/ZeitraumContext";
 import { getKunden, KundenZeile } from "@/api/client";
-import { formatDatum, formatEuro, formatZahl } from "@/lib/formatierung";
+import { formatCentJeEi, formatDatum, formatEuro, formatZahl } from "@/lib/formatierung";
 
 export default function Kunden() {
   const { von, bis } = useZeitraum();
@@ -65,6 +65,18 @@ export default function Kunden() {
         meta: { mobilePriority: "primary" },
         cell: (i) => (
           <span className="font-mono tabular-nums">{formatEuro(i.getValue<number>())}</span>
+        ),
+      },
+      {
+        id: "umsatz_pro_ei",
+        accessorFn: (z) => (z.eier ? (z.umsatz / z.eier) * 100 : null),
+        header: "Umsatz/Ei",
+        sortingFn: "basic",
+        meta: { mobilePriority: "secondary", mobileLabel: "Umsatz/Ei" },
+        cell: (i) => (
+          <span className="font-mono tabular-nums">
+            {formatCentJeEi(i.row.original.umsatz, i.row.original.eier)}
+          </span>
         ),
       },
       {

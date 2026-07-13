@@ -60,9 +60,11 @@ docker compose up --build           # http://localhost:8050
 
 - `db.py`: SQLite-Pfad steuerbar über `EIERVERKAUF_DB`, sonst `data/eierverkauf.db` relativ zum Repo. `init_db()` läuft beim Lifespan-Startup und ist idempotent.
 - **Schema-Migration ab v1.0.4** (in `_migrate_unique_constraint`): UNIQUE-Constraint auf `verkaufspositionen` enthält jetzt `rechnungsdatum`. SQLite kann Constraints nicht in-place ändern → Rebuild via temporärer Tabelle, automatisches DB-Backup nach `data/eierverkauf.db.pre-v1.0.4.bak`. Wenn `SCHEMA_SQL` und der Migrations-`CREATE`-Block geändert werden, **müssen beide synchron bleiben** (Kommentar markiert die Stelle).
+- **Schema-Migration ab v1.13.0** (in `_migrate_key_lauf`, gleiches Rebuild-Muster): ersetzt den Inline-UNIQUE durch die Spalte `key_lauf` + UNIQUE-Index `ux_vkp_dedup`; Bestandszeilen werden je Duplikat-Schlüssel per `ROW_NUMBER` durchnummeriert, Backup nach `….pre-v1.13.0.bak` (inkl. `wal_checkpoint(TRUNCATE)` vor der Datei-Kopie — sonst fehlt der Kopie ungecheckpointeter WAL-Inhalt).
 - `importer.py` ist die einzige Komplexitäts-Konzentration im Backend — siehe nächster Abschnitt.
 - `queries.py` ist reine SQL-Schicht ohne ORM. Zeitraumfilter via `_zeitraum_filter(von, bis, prefix=…)` — `prefix` muss `WHERE` oder `AND` sein je nachdem, ob schon eine WHERE-Klausel existiert.
 - **Vorjahres-Vergleichsmuster** (seit v1.1.0): `/api/dashboard` liefert zusätzlich `vorjahres_kpis: DashboardKPIs | null` für denselben Zeitraum exakt 12 Monate zurückversetzt (`_ein_jahr_zurueck`-Helper in `api/auswertung_router.py`). Frontend nutzt das für Delta-Pillen. Das Feld ist **nullable und additiv** — ältere Frontend-Builds brechen nicht, weil sie es einfach ignorieren. Pattern für künftige Vergleichs-Endpoints: nullable Vorjahres-Sektion in die Response, nicht neue Endpoints.
+- **Netto-Semantik** (wichtig für Beleg-Abgleiche): Retouren/Gutschriften stehen als **negative Positionen** (`menge`/`eier_stueck`/`gesamt` < 0) in `verkaufspositionen` — alle `SUM`-Aggregate sind daher Netto. Brutto-Reports der Warenwirtschaft liegen in Retouren-Monaten darüber; das ist kein Fehler (DEPLOYMENT.md §11.14). `dashboard_kpis()` weist seit v1.14.0 zusätzlich `brutto_eier`/`retouren_eier`/`brutto_umsatz`/`retouren_umsatz` aus (Invariante: `brutto + retouren = netto`); das Dashboard zeigt daraus eine Unterzeile, nur wenn Retouren ≠ 0.
 
 ### CSV-Importer (`data/importer.py`) — kritische Invarianten
 
@@ -82,7 +84,7 @@ Weitere Eigenheiten:
   - `stk` oder leer → `menge × 1`
   - `kg` → `None` (keine Stückzahl-Aussage)
 - `normiere_artikel()` mappt auf einen festen Satz: `10er Kvp`, `10er Kvp (stk)`, `6er Kvp`, `6er Kvp (stk)`, `Gewicht (kg)`, `Lose 180`, `Lose 20`, `Lose unsortiert`, `Sonstige`. Kvp-Artikel sind seit v1.5.0 nach Abrechnungsart getrennt: PackCode 110/111 + Einheit PACK → Basis-Code, sonst (stk/leer) → `(stk)`-Suffix. Alle Auswertungen aggregieren auf `artikel_code` — bei Änderungen am Mapping ändern sich Bestandsauswertungen (dann Startup-Migration in `data/db.py` ergänzen, Muster `_migriere_stk_artikel_codes`).
-- **UNIQUE-Schlüssel ab v1.0.4:** `(rechnungsdatum, rechnungsnummer, kundennummer, menge, einheit, pack_code, beschreibung)`. Duplikat-Treffer → `INSERT OR IGNORE` zählt als „übersprungen", kein Fehler.
+- **Duplikat-Erkennung ab v1.13.0:** UNIQUE-Index `ux_vkp_dedup` über `(rechnungsdatum, rechnungsnummer, kundennummer, menge, einheit, pack_code, beschreibung, key_lauf)` mit **COALESCE-Normalisierung** — ein Inline-Constraint würde Zeilen mit NULL-Feldern (z. B. ohne Pack-Code) nie deduplizieren, weil SQLite NULLs in UNIQUE als paarweise verschieden behandelt. `key_lauf` nummeriert identische Vorkommen innerhalb einer Datei (n-tes identisches Vorkommen = n), damit echte Doppel-Positionen einer Rechnung importierbar bleiben und Re-Imports trotzdem idempotent sind. **Der Zähler-Schlüssel in `import_csv()` muss exakt der COALESCE-Normalisierung des Index entsprechen** (`None` → `''` bzw. `-1` bei `pack_code`). Duplikat-Treffer → `INSERT OR IGNORE` zählt als „übersprungen", kein Fehler.
 - Deutsche Zahlenformate: `parse_german_number("1.080,000")` → `1080.0`. Datum: `parse_german_date` akzeptiert `DD.MM.YY` **und** `DD.MM.YYYY`, zweistellige Jahre werden immer als 20YY interpretiert.
 - **Kundennummern original belassen** (`15.100.008` ≠ `15100008`) — als Text speichern, keine Punkte entfernen.
 
@@ -90,7 +92,7 @@ Weitere Eigenheiten:
 
 - `context/ZeitraumContext.tsx` ist der **globale Zeitraumfilter** — alle Auswertungs-Seiten lesen daraus und triggern API-Calls bei Änderung. Wenn neue Auswertungs-Seiten dazukommen, müssen sie den Context konsumieren, nicht eigene State-Variablen halten.
 - `api/client.ts` ist **strikt typisiert ohne `any`** — alle API-Response-Shapes als Interfaces. Neue Endpoints kommen mit ihren Typen hierher.
-- `lib/formatierung.ts` ist die einzige Quelle für deutsche Zahl-, Datums- und Währungsformatierung. Keine inline-`toLocaleString`-Aufrufe in Components. `formatCentJeEi(umsatz, eier)` liefert Umsatz je Ei in Cent („24,8 ct") bzw. „—" ohne Eier-Stückzahl.
+- `lib/formatierung.ts` ist die einzige Quelle für deutsche Zahl-, Datums- und Währungsformatierung. Keine inline-`toLocaleString`-Aufrufe in Components. `formatCentJeEi(umsatz, eier)` liefert Umsatz je Ei in Cent („24,8 ct") bzw. „—" ohne Eier-Stückzahl. `formatBruttoRetouren(brutto, retouren, formatter)` baut die Dashboard-Unterzeile „Verkauft … · Retouren …" und liefert `null` ohne Retouren (Karte bleibt dann unverändert).
 - `lib/artikel.ts` → `artikelLabel(code)` ist das **Anzeige-Label** für Artikel-Codes (Einheit in Klammern, z. B. „10er Kvp (PACK)", „Lose 180 (stk)"). Überall verwenden, wo Artikelnamen gerendert werden; Routen/API nutzen weiter den rohen `artikel_code`. Das Mapping muss synchron zu `normiere_artikel()` in `data/importer.py` bleiben.
 - Frontend-Unit-Tests laufen mit **Vitest** (`npm run test`, Dateien `src/**/*.test.ts`) — pure Helper testen, kein jsdom-Setup vorhanden.
 - `components/ui/` enthält shadcn/ui-generierte Komponenten — bei Updates über die shadcn-CLI regenerieren, nicht von Hand patchen.
@@ -111,7 +113,7 @@ Weitere Eigenheiten:
   - `components/PageHeader.tsx` → `<PageHeader eyebrow="…" title="…" subtitle="…" />`. Rendert standardmäßig die `ZeitraumFilter`-Pille rechts; mit `withZeitraumFilter={false}` ausschaltbar (z. B. auf Jahresvergleich/Import-Seiten). Optional `exportHref` für dezenten Download-Icon-Button.
   - `components/PageHeader.tsx`'s `<Panel>` ist der **einzige Card-Wrapper** — `eyebrow`, `title`, `actions`, Children im `<div className="p-6">`. Eigene Cards (`rounded-xl border …`) bedeuten Drift zur einheitlichen Optik.
   - `components/ZeitraumFilter.tsx` → Pill mit Quick-Range-Erkennung (Dieser Monat / Letztes Jahr / Eigener Zeitraum). Wird vom `PageHeader` automatisch eingebunden, nur in Ausnahmefällen einzeln rendern.
-  - `components/KPICard.tsx` → Hero-Variante (8/12-Spalten, 88–112 px Wertgröße) + Default-Variante. `wertFarbe="ink|yolk|sage"`, `sparkline: number[]` (optional, sitzt absolute in der rechten unteren Ecke), `delta: { wert, richtung }`.
+  - `components/KPICard.tsx` → Hero-Variante (8/12-Spalten, 88–112 px Wertgröße) + Default-Variante. `wertFarbe="ink|yolk|sage"`, `sparkline: number[]` (optional, sitzt absolute in der rechten unteren Ecke), `delta: { wert, richtung }`, `hinweis?: string` (Unterzeile unter dem Wert; reserviert bei aktiver Sparkline automatisch deren Ecke per Padding — nicht entfernen, sonst überlappt der Text).
 - **Charts**: Recharts mit `ResponsiveContainer`. Achsenlinien/Tick-Striche entfernt für ruhigeres Bild (`axisLine={false} tickLine={false}`). Grid via `<CartesianGrid stroke="#E4D9BB" strokeDasharray="3 3" />`. Tooltip-Style einheitlich `background: "#FAF5E6", border: "1px solid #E4D9BB", borderRadius: 8, fontFamily: "JetBrains Mono"`.
 
 **Tabellen-Sortierung — kritische Invariante:**
@@ -125,7 +127,7 @@ In `ColumnDef<…>[]` jeder TanStack-Table v8 muss für **Zahlen-Spalten** expli
 
 ## Versions- und Release-Hygiene
 
-Aktuelle Version: `1.1.0`. Bei jedem Release müssen **drei Stellen synchron** angepasst werden — sonst läuft `eierverkauf status` falsch oder die Swagger-UI zeigt eine veraltete Versions-Nummer:
+Die aktuelle Versionsnummer steht in der Datei `VERSION` (hier nicht duplizieren — sie driftet sonst). Bei jedem Release müssen **drei Stellen synchron** angepasst werden — sonst läuft `eierverkauf status` falsch oder die Swagger-UI zeigt eine veraltete Versions-Nummer:
 
 1. `VERSION` (Plaintext-Datei, vom Helper-Script gelesen)
 2. `CHANGELOG.md` (Keep-a-Changelog-Format; `[Unreleased]` → neue Version mit Hinzugefügt/Geändert/Behoben/Hinweise-Sektionen)

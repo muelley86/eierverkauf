@@ -973,6 +973,41 @@ Kontrolle: `curl -sI http://localhost:8050/ | grep -i cache-control`.
 Sofort-Hilfe in alten Versionen bzw. beim ersten Aufruf nach dem v1.12.2-Update:
 Hard-Reload im Browser (Strg+F5 bzw. Cmd+Shift+R).
 
+### 11.13 — App kurz zäh während CSV-Import oder Import-Löschung (CPU-Fenster)
+
+Symptom: Direkt während ein Upload verarbeitet oder ein Import gelöscht wird
+(besonders unmittelbar nach einem Update-Neustart), brauchen die Auswertungs-Seiten
+15–20 s statt < 0,1 s. Erkennungsmerkmal gegenüber §11.11/§11.12: **statische
+Auslieferung bleibt schnell, nur DB-lesende API-Endpunkte sind langsam** —
+
+```bash
+curl -so /dev/null -w "index:     %{time_total}s\n" http://<server-ip>:8050/
+curl -so /dev/null -w "dashboard: %{time_total}s\n" http://<server-ip>:8050/api/dashboard
+# index schnell + dashboard langsam = CPU-Fenster (dieser Abschnitt)
+# beides langsam/Timeout       = VPN-Strecke (§11.12)
+```
+
+Ursache: CSV-Parsing (Pandas) und der Insert-/Delete-Burst sind CPU-lastig; auf dem
+klein dimensionierten LXC konkurrieren die Lese-Requests währenddessen um die CPU.
+Es ist **keine Datenbank-Blockade** — WAL-Modus verhindert, dass Schreib-Transaktionen
+Leser sperren (Kontrolle wie in §11.11). Der Zustand heilt sich selbst, sobald der
+Import/die Löschung durch ist. Kein Handlungsbedarf; erst wenn die Zähigkeit **ohne**
+laufenden Import/Löschung auftritt, nach §11.11/§11.12 diagnostizieren.
+
+### 11.14 — Zahlen weichen von Warenwirtschafts-Reports ab (Brutto vs. Netto)
+
+Symptom: Ein Monat zeigt in der App deutlich weniger Eier/Umsatz als der
+Rechnungspositionen-Report der Warenwirtschaft — typischerweise nur in Monaten
+mit Retouren/Gutschriften.
+
+Das ist **kein Fehler**: Die App verbucht Retouren/Gutschriften als negative
+Positionen im Liefermonat (Leistungsdatum) und zeigt überall **Netto**-Werte.
+Brutto-Reports der Warenwirtschaft („Verkauft") liegen in Retouren-Monaten
+entsprechend darüber. Seit v1.14.0 zeigt das Dashboard in solchen Monaten unter
+der Eier- und der Umsatz-Kennzahl die Unterzeile „Verkauft … · Retouren …" —
+damit lässt sich der Beleg-Abgleich direkt in der App machen:
+Netto (große Zahl) = Verkauft (brutto) + Retouren (negativ).
+
 ---
 
 ## 12. Deinstallation

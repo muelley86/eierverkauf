@@ -73,6 +73,44 @@ def test_belege_uebersicht_eier_umsatz_bei_gemischtem_beleg(tmp_db):
     assert beleg["eier_umsatz"] == pytest.approx(24.80)
 
 
+def test_import_loeschen_entfernt_positionen_und_protokoll(tmp_db):
+    # Arrange: Import mit Positionen und Protokollzeile
+    tmp_db.execute(
+        "INSERT INTO imports (id, import_datum, dateiname) VALUES (1, '2026-07-13', 'test.csv')"
+    )
+    tmp_db.execute(
+        """INSERT INTO verkaufspositionen
+             (import_id, rechnungsdatum, rechnungsnummer, kundennummer, kundenname, menge)
+           VALUES (1, '2026-07-01', 'R-1', '10001', 'Testkunde', 10)"""
+    )
+    tmp_db.execute(
+        "INSERT INTO import_zeilen_protokoll (import_id, csv_zeile, status, grund) VALUES (1, 5, 'fehler', 'Test')"
+    )
+    tmp_db.commit()
+
+    # Act
+    geloeschte = queries.import_loeschen(1)
+
+    # Assert: Cascade räumt Positionen und Protokoll mit ab
+    assert geloeschte == 1
+    conn = db.get_conn()
+    try:
+        assert conn.execute("SELECT COUNT(*) FROM verkaufspositionen").fetchone()[0] == 0
+        assert conn.execute("SELECT COUNT(*) FROM import_zeilen_protokoll").fetchone()[0] == 0
+    finally:
+        conn.close()
+
+
+def test_import_loeschen_nutzt_index_statt_tablescan(tmp_db):
+    # Assert: Cascade-Pfad hat einen Index auf import_id (sonst Full-Table-Scan,
+    # der die App bei großen Beständen blockiert)
+    plan = tmp_db.execute(
+        "EXPLAIN QUERY PLAN DELETE FROM verkaufspositionen WHERE import_id = 1"
+    ).fetchall()
+    plan_text = " ".join(str(tuple(r)) for r in plan)
+    assert "idx_import" in plan_text, f"Query-Plan nutzt keinen Index: {plan_text}"
+
+
 def test_jahresvergleich_eier_umsatz_je_vergleichsjahr(tmp_db):
     # Arrange
     _gemischte_positionen(tmp_db)

@@ -77,6 +77,10 @@ CREATE TABLE IF NOT EXISTS verkaufspositionen (
 CREATE INDEX IF NOT EXISTS idx_datum   ON verkaufspositionen(rechnungsdatum);
 CREATE INDEX IF NOT EXISTS idx_kunde   ON verkaufspositionen(kundennummer);
 CREATE INDEX IF NOT EXISTS idx_artikel ON verkaufspositionen(artikel_code);
+-- Ohne diesen Index macht die ON-DELETE-CASCADE-Löschung eines Imports einen
+-- Full-Table-Scan über alle Verkaufspositionen (Import-Löschung blockiert dann
+-- auf großen Beständen die komplette App).
+CREATE INDEX IF NOT EXISTS idx_import  ON verkaufspositionen(import_id);
 
 -- Pro übersprungene/fehlerhafte Zeile ein Eintrag mit Rohdaten und Grund.
 -- Erlaubt nachträgliche Diagnose über die Importhistorie (Detail-Seite).

@@ -7,6 +7,21 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.11.1] - 2026-07-13
+
+### Behoben
+- **Import-Löschung konnte die App blockieren.** Die CASCADE-Löschung der
+  Verkaufspositionen eines Imports lief ohne Index auf `import_id` und
+  erzwang dadurch einen Full-Table-Scan über den gesamten Bestand — auf
+  großen Datenbeständen mit langsamem Storage blockierte das die App
+  minutenlang (Browser-Timeout). Neuer Index `idx_import` beschleunigt die
+  Löschung auf die Zeilen des betroffenen Imports.
+
+### Datenmigration
+- Der Index `idx_import` auf `verkaufspositionen(import_id)` wird beim
+  ersten Start nach dem Update automatisch angelegt (idempotent über
+  `init_db()`, kein manueller Eingriff nötig).
+
 ## [1.11.0] - 2026-07-13
 
 ### Geändert

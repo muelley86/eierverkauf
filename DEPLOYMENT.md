@@ -489,6 +489,7 @@ eierverkauf restore
 Öffnet eine Auswahl der vorhandenen Backups. Du wählst eines aus, der Helper:
 - Stoppt den Service
 - Kopiert das Backup nach `data/eierverkauf.db`
+- Entfernt alte WAL-Dateien (`eierverkauf.db-wal`/`-shm`)
 - Setzt die Rechte (`eierverkauf:eierverkauf`)
 - Startet den Service neu
 
@@ -496,9 +497,15 @@ Wenn du das manuell machen willst:
 ```bash
 systemctl stop eierverkauf
 cp /pfad/zum/backup.db /opt/eierverkauf/data/eierverkauf.db
+rm -f /opt/eierverkauf/data/eierverkauf.db-wal /opt/eierverkauf/data/eierverkauf.db-shm
 chown eierverkauf:eierverkauf /opt/eierverkauf/data/eierverkauf.db
 systemctl start eierverkauf
 ```
+
+> **Warum das `rm -f`?** Seit v1.11.2 läuft die Datenbank im WAL-Modus
+> (Write-Ahead-Log). Die Dateien `eierverkauf.db-wal`/`-shm` gehören zur
+> **alten** Datenbank — bleiben sie nach dem Zurückkopieren liegen, spielt
+> SQLite deren Inhalt in das frisch wiederhergestellte Backup ein.
 
 ### 7.6 — Backup-Retention (Alte Backups aufräumen)
 

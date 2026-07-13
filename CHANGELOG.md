@@ -7,6 +7,32 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.11.2] - 2026-07-13
+
+### Behoben
+- **App-Blockade beim Import-Löschen — tatsächliche Ursache behoben.** Die
+  Datenbank lief im SQLite-Standard-Journal-Modus, in dem eine
+  Schreib-Transaktion (z. B. die Lösch-Cascade) alle Leser blockiert. Da alle
+  Requests über den begrenzten Threadpool eines einzelnen uvicorn-Workers
+  laufen und das Frontend Requests bis 60 s offen hält, liefen die Slots
+  voll und die App nahm nichts mehr an — bis zum Neustart. Die Datenbank
+  läuft jetzt im **WAL-Modus** (`journal_mode=WAL`, `busy_timeout=10000`,
+  `synchronous=NORMAL`): Leser blockieren nie mehr auf Schreibern, die App
+  bleibt auch während langer Lösch-/Schreibvorgänge bedienbar. (Der Index
+  aus v1.11.1 bleibt sinnvoll, war aber nicht die Ursache.)
+- **CSV-Upload konnte den kompletten Server einfrieren.** Die beiden
+  Upload-Endpoints waren `async def`, riefen aber blockierendes
+  pandas/SQLite direkt auf dem Event-Loop auf — während eines Imports war
+  die App nicht erreichbar. Sie laufen jetzt als synchrone Handler im
+  Threadpool.
+
+### Hinweise
+- Der WAL-Modus wird beim ersten Start automatisch und dauerhaft aktiviert;
+  die neuen Dateien `eierverkauf.db-wal` und `eierverkauf.db-shm` neben der
+  Datenbank sind normal. Beim Zurückspielen eines Backups müssen diese
+  Dateien entfernt werden — `eierverkauf restore` und der Update-Rollback
+  machen das jetzt automatisch (manuelles Vorgehen: DEPLOYMENT.md §7.5).
+
 ## [1.11.1] - 2026-07-13
 
 ### Behoben

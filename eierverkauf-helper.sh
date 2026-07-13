@@ -185,6 +185,9 @@ do_update() {
         log "Update fehlgeschlagen (Code $rc) — Rollback"
         systemctl stop "$SERVICE" 2>/dev/null || true
         cp -f "$backup_file" "$DB_FILE"
+        # Altes Write-Ahead-Log entfernen, sonst spielt SQLite es in die
+        # wiederhergestellte DB ein (App läuft seit v1.11.2 im WAL-Modus).
+        rm -f "$DB_FILE-wal" "$DB_FILE-shm"
         systemctl start "$SERVICE" 2>/dev/null || true
         local log_tail
         log_tail=$(tail -15 "$progress_log" 2>/dev/null || echo "(kein Log)")
@@ -230,6 +233,9 @@ do_restore() {
 
     systemctl stop "$SERVICE"
     cp -f "$sel" "$DB_FILE"
+    # Altes Write-Ahead-Log entfernen, sonst spielt SQLite es in die
+    # wiederhergestellte DB ein (App läuft seit v1.11.2 im WAL-Modus).
+    rm -f "$DB_FILE-wal" "$DB_FILE-shm"
     systemctl start "$SERVICE"
     msg "Wiederherstellung" "Wiederhergestellt: $(basename "$sel")"
 }

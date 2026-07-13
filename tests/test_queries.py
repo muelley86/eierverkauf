@@ -73,6 +73,17 @@ def test_belege_uebersicht_eier_umsatz_bei_gemischtem_beleg(tmp_db):
     assert beleg["eier_umsatz"] == pytest.approx(24.80)
 
 
+def test_get_conn_laeuft_im_wal_modus(tmp_db):
+    # Assert: WAL + busy_timeout sind Pflicht — im Rollback-Journal-Modus
+    # blockiert eine Schreib-Transaktion alle Leser und die App friert ein
+    conn = db.get_conn()
+    try:
+        assert conn.execute("PRAGMA journal_mode").fetchone()[0] == "wal"
+        assert conn.execute("PRAGMA busy_timeout").fetchone()[0] == 10000
+    finally:
+        conn.close()
+
+
 def test_import_loeschen_entfernt_positionen_und_protokoll(tmp_db):
     # Arrange: Import mit Positionen und Protokollzeile
     tmp_db.execute(

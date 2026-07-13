@@ -21,11 +21,19 @@ def _ensure_parent() -> None:
 
 
 def get_conn() -> sqlite3.Connection:
-    """Liefert eine neue SQLite-Connection mit Foreign-Key-Enforcement und Row-Factory."""
+    """Liefert eine neue SQLite-Connection mit Foreign-Key-Enforcement und Row-Factory.
+
+    WAL-Modus ist Pflicht: Im Standard-Rollback-Journal blockiert eine
+    Schreib-Transaktion (z. B. Import-Löschung) alle Leser, wodurch der
+    uvicorn-Threadpool volläuft und die komplette App unerreichbar wird.
+    """
     _ensure_parent()
     conn = sqlite3.connect(str(DB_PATH))
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
+    conn.execute("PRAGMA journal_mode = WAL")
+    conn.execute("PRAGMA busy_timeout = 10000")
+    conn.execute("PRAGMA synchronous = NORMAL")
     return conn
 
 

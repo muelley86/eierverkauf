@@ -27,7 +27,7 @@ def _save_upload(file: UploadFile) -> Path:
 
 
 @router.post("/import")
-async def upload_import(file: UploadFile = File(...)) -> dict:
+def upload_import(file: UploadFile = File(...)) -> dict:
     if not file.filename:
         raise HTTPException(status_code=400, detail="Keine Datei übermittelt.")
     target = _save_upload(file)
@@ -42,7 +42,7 @@ async def upload_import(file: UploadFile = File(...)) -> dict:
 
 
 @router.post("/import/preview")
-async def upload_preview(file: UploadFile = File(...)) -> dict:
+def upload_preview(file: UploadFile = File(...)) -> dict:
     """Liefert die ersten 10 Zeilen einer CSV ohne sie zu importieren."""
     if not file.filename:
         raise HTTPException(status_code=400, detail="Keine Datei übermittelt.")

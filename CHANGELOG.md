@@ -7,6 +7,16 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.12.1] - 2026-07-13
+
+### Behoben
+- **Seiten-Reload auf Unterseiten lieferte 404.** Ein Reload (oder direkter
+  Aufruf) von `/import`, `/kunden/…` usw. zeigte `{"detail":"Not Found"}`
+  statt der App — die Client-Routen des React-Routers existieren nicht als
+  Dateien im Frontend-Build. Unbekannte Pfade liefern jetzt `index.html`
+  (SPA-Fallback), das Routing übernimmt der Browser. `api/`- und
+  `assets/`-Pfade behalten ihr echtes 404, damit Fehler sichtbar bleiben.
+
 ## [1.12.0] - 2026-07-13
 
 ### Behoben

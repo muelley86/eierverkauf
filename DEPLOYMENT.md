@@ -935,6 +935,35 @@ Optional für schnellere Log-Sichtbarkeit bei Bestandsinstallationen: in der
 systemd-Unit (`systemctl edit eierverkauf`) `Environment=PYTHONUNBUFFERED=1`
 ergänzen. Seit v1.12.0 flushen die relevanten Logzeilen aber auch ohne das.
 
+### 11.12 — App hängt nur bei den Nutzern, Server lokal schnell (VPN-Strecke)
+
+Symptom: Alle Checks aus §11.11 sind im LXC unauffällig (API lokal < 0,1 s), aber im
+Browser der Nutzer hängt die App minutenlang oder bleibt leer — und „heilt" sich nach
+einigen Minuten von selbst. Betrifft mehrere Geräte gleichzeitig.
+
+Ursache in der Praxis: Die Clients erreichen den Server **über eine VPN-Strecke**
+(Standort-Kopplung bzw. Road-Warrior-Clients wie FortiClient/WireGuard). Stockt der
+Tunnel oder der Internet-Uplink des Server-Standorts, wirkt die App tot — App und
+Datenbank sind daran unbeteiligt.
+
+Diagnose vom Client aus:
+
+```bash
+# Latenz: 1–5 ms = LAN; 30–60 ms = Tunnel/WAN-Umweg; Ausreißer/Timeouts = Strecke stockt
+ping <server-ip>
+
+# Läuft der Verkehr durchs VPN? (macOS; Windows: route print)
+netstat -rn | grep "^default"     # default auf utun*/wg* → alles geht durch den Tunnel
+
+# Zeitmessung wie in §11.11 — im Fehlerfall vom Client UND im LXC vergleichen
+curl -so /dev/null -w "%{http_code} %{time_total}s\n" http://<server-ip>:8050/api/health
+```
+
+Maßnahmen: VPN-Endpunkt und Uplink des Server-Standorts prüfen (MTU beachten —
+WireGuard-Standard 1420, hinter PPPoE ggf. niedriger; Keepalive setzen), Split-Tunnel-
+Ausnahmen für lokale Netze konfigurieren, oder — wenn die Nutzer überwiegend am anderen
+Standort arbeiten — den LXC per Backup/Restore (§7) an deren Standort umziehen.
+
 **Symptom „leere Seite direkt nach einem Update":** Bis v1.12.1 cachten Browser
 die `index.html` heuristisch und zeigten nach einem Update minutenlang die alte
 Startseite, deren Bundle-Verweise nach dem Rebuild ins Leere liefen — die Seite

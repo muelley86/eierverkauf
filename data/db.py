@@ -96,7 +96,15 @@ CREATE TABLE IF NOT EXISTS verkaufspositionen (
     beschreibung TEXT,
     preis_einheit REAL,
     gesamt REAL,
-    UNIQUE(rechnungsdatum, rechnungsnummer, kundennummer, menge, einheit, pack_code, beschreibung)
+    -- key_lauf: Vorkommens-Index identischer Positionen innerhalb einer Datei
+    -- (1 = erstes Vorkommen). Erlaubt zwei vollständig identische Positionen
+    -- derselben Rechnung (z. B. zwei gleiche Lieferungen am selben Tag), ohne
+    -- die Duplikat-Erkennung beim Re-Import derselben Datei zu verlieren.
+    -- Die Duplikat-Erkennung selbst läuft über den UNIQUE-Index
+    -- ux_vkp_dedup (siehe _UX_VKP_DEDUP_SQL) — NICHT über ein Inline-UNIQUE,
+    -- weil SQLite NULLs im Constraint als paarweise verschieden behandelt und
+    -- Positionen ohne Pack-Code sonst nie dedupliziert würden.
+    key_lauf INTEGER NOT NULL DEFAULT 1
 );
 
 CREATE INDEX IF NOT EXISTS idx_datum   ON verkaufspositionen(rechnungsdatum);
@@ -147,6 +155,26 @@ _EIER_KONFIG_DEFAULTS: tuple[tuple[str, int | None], ...] = (
 )
 
 
+# Duplikat-Erkennung für den Import (INSERT OR IGNORE): UNIQUE-Index mit
+# COALESCE, weil SQLite NULLs in UNIQUE-Constraints als paarweise verschieden
+# behandelt — Positionen ohne Pack-Code (lose Eier, kg) würden mit einem
+# Inline-Constraint bei jedem Re-Import erneut eingefügt. Wird NICHT in
+# SCHEMA_SQL angelegt, sondern nach den Migrationen (Alt-Schemata haben die
+# Spalte key_lauf noch nicht). Muss synchron zum Zähler-Schlüssel in
+# data/importer.py (import_csv) bleiben.
+_UX_VKP_DEDUP_SQL = """
+CREATE UNIQUE INDEX IF NOT EXISTS ux_vkp_dedup ON verkaufspositionen (
+    rechnungsdatum,
+    COALESCE(rechnungsnummer, ''),
+    kundennummer,
+    menge,
+    COALESCE(einheit, ''),
+    COALESCE(pack_code, -1),
+    COALESCE(beschreibung, ''),
+    key_lauf
+)
+"""
+
 # Spalten-Reihenfolge der `verkaufspositionen`-Tabelle (für `INSERT … SELECT`
 # in der Migration und für Schema-Vergleich). Muss synchron mit `SCHEMA_SQL`
 # oben bleiben.
@@ -182,7 +210,11 @@ def _migrate_unique_constraint(conn: sqlite3.Connection) -> bool:
     table_sql = row["sql"] or ""
     # UNIQUE-Klausel extrahieren und prüfen, ob `rechnungsdatum` darin enthalten ist.
     match = re.search(r"unique\s*\(([^)]+)\)", table_sql, re.IGNORECASE)
-    if match and "rechnungsdatum" in match.group(1).lower():
+    if match is None:
+        # Kein Inline-UNIQUE mehr: Schema ist v1.13.0+ (Duplikat-Erkennung
+        # läuft über den Index ux_vkp_dedup) — nichts zu tun.
+        return False
+    if "rechnungsdatum" in match.group(1).lower():
         return False  # Schema bereits aktuell.
 
     # --- Migration durchführen. ---
@@ -239,6 +271,112 @@ def _migrate_unique_constraint(conn: sqlite3.Connection) -> bool:
         conn.commit()
         print(f"[migration] verkaufspositionen UNIQUE-Constraint auf v1.0.4 erweitert "
               f"({n} Zeilen migriert).")
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.execute("PRAGMA foreign_keys = ON")
+
+    return True
+
+
+def _migrate_key_lauf(conn: sqlite3.Connection) -> bool:
+    """Stellt Duplikat-Erkennung auf `key_lauf` + UNIQUE-Index um (v1.13.0).
+
+    Returns:
+        True wenn der Tabellen-Rebuild tatsächlich gelaufen ist,
+        False wenn das Schema bereits aktuell war (idempotent).
+
+    Behebt zwei Löcher im alten Inline-UNIQUE-Constraint:
+
+    1. Zwei vollständig identische Positionen derselben Rechnung (z. B. zwei
+       gleiche Lieferungen am selben Tag) waren nicht unterscheidbar —
+       `INSERT OR IGNORE` verwarf die zweite Zeile. `key_lauf` nummeriert
+       identische Vorkommen innerhalb einer Import-Datei (1, 2, …).
+    2. SQLite behandelt NULLs in UNIQUE-Constraints als paarweise verschieden —
+       Positionen ohne Pack-Code wurden beim Re-Import nie als Duplikat
+       erkannt und still verdoppelt. Der Ersatz-Index `ux_vkp_dedup`
+       normalisiert NULL-Felder per COALESCE.
+
+    Bestandszeilen werden je Schlüssel per ROW_NUMBER durchnummeriert, damit
+    bereits vorhandene NULL-Altlast-Doubletten die Index-Anlage nicht sprengen.
+    SQLite erlaubt keine in-place-Constraint-Änderung — daher Tabellen-Rebuild
+    wie bei v1.0.4.
+    """
+    if conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='index' AND name='ux_vkp_dedup'"
+    ).fetchone():
+        return False  # Schema bereits aktuell.
+
+    spalten = {r[1] for r in conn.execute("PRAGMA table_info(verkaufspositionen)")}
+    if "key_lauf" in spalten:
+        # Frische DB: SCHEMA_SQL hat die Tabelle schon im Zielzustand angelegt,
+        # nur der Index fehlt noch. Kein Rebuild nötig.
+        conn.execute(_UX_VKP_DEDUP_SQL)
+        conn.commit()
+        return False
+
+    # 1) Backup der DB-Datei (nur wenn echte Datei, nicht Memory-DB).
+    if DB_PATH.exists():
+        backup_path = DB_PATH.with_suffix(DB_PATH.suffix + ".pre-v1.13.0.bak")
+        if not backup_path.exists():
+            # WAL erst in die Haupt-Datei checkpointen — sonst fehlen der
+            # Datei-Kopie alle noch nicht übernommenen Commits aus der
+            # -wal-Datei und das Backup wäre unvollständig.
+            conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+            shutil.copy2(DB_PATH, backup_path)
+            print(f"[migration] DB-Backup angelegt: {backup_path}")
+
+    # 2) FOREIGN_KEYS temporär aus (sonst löscht das DROP zugehörige imports).
+    conn.execute("PRAGMA foreign_keys = OFF")
+    try:
+        conn.execute("BEGIN")
+        # Spalten-Definitionen identisch zur SCHEMA_SQL oben — wenn dort etwas
+        # geändert wird, hier mitziehen!
+        conn.execute("""
+            CREATE TABLE verkaufspositionen_new (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                import_id INTEGER REFERENCES imports(id) ON DELETE CASCADE,
+                rechnungsdatum TEXT NOT NULL,
+                rechnungsnummer TEXT,
+                kundennummer TEXT NOT NULL,
+                kundenname TEXT NOT NULL,
+                menge REAL NOT NULL,
+                einheit TEXT,
+                pack_code INTEGER,
+                eier_stueck INTEGER,
+                artikel_code TEXT,
+                groesse TEXT,
+                beschreibung TEXT,
+                preis_einheit REAL,
+                gesamt REAL,
+                key_lauf INTEGER NOT NULL DEFAULT 1
+            )
+        """)
+        # Bestandszeilen je Duplikat-Schlüssel durchnummerieren (fast immer 1;
+        # >1 nur bei NULL-Altlast-Doubletten aus früheren Re-Imports).
+        cols = ", ".join(_VKP_COLUMNS)
+        conn.execute(
+            f"INSERT INTO verkaufspositionen_new ({cols}, key_lauf) "
+            f"SELECT {cols}, ROW_NUMBER() OVER ("
+            "    PARTITION BY rechnungsdatum, COALESCE(rechnungsnummer, ''),"
+            "        kundennummer, menge, COALESCE(einheit, ''),"
+            "        COALESCE(pack_code, -1), COALESCE(beschreibung, '')"
+            "    ORDER BY id"
+            ") FROM verkaufspositionen"
+        )
+        n = conn.execute("SELECT COUNT(*) AS c FROM verkaufspositionen_new").fetchone()["c"]
+        conn.execute("DROP TABLE verkaufspositionen")
+        conn.execute("ALTER TABLE verkaufspositionen_new RENAME TO verkaufspositionen")
+        # Indizes waren an die alte Tabelle gebunden — neu anlegen.
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_datum   ON verkaufspositionen(rechnungsdatum)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_kunde   ON verkaufspositionen(kundennummer)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_artikel ON verkaufspositionen(artikel_code)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_import  ON verkaufspositionen(import_id)")
+        conn.execute(_UX_VKP_DEDUP_SQL)
+        conn.commit()
+        print(f"[migration] verkaufspositionen auf key_lauf + ux_vkp_dedup "
+              f"umgestellt (v1.13.0, {n} Zeilen migriert).")
     except Exception:
         conn.rollback()
         raise
@@ -348,6 +486,8 @@ def init_db() -> None:
 
     Führt zusätzlich automatisch durch — jeweils nur wenn nötig:
     - v1.0.4-Migration (UNIQUE-Constraint um `rechnungsdatum` erweitert)
+    - v1.13.0-Migration (UNIQUE-Constraint um `key_lauf` erweitert, damit
+      identische Doppel-Positionen einer Rechnung importierbar sind)
     - v1.4.1-Reparatur (`eier_stueck` einheit-bewusst neu berechnet;
       benötigt die geseedete Konfig-Tabelle, daher nach dem Seed)
     - v1.5.0-Migration (stk-Positionen mit PackCode 110/111 erhalten
@@ -359,6 +499,7 @@ def init_db() -> None:
         conn.executescript(SCHEMA_SQL)
         conn.commit()
         _migrate_unique_constraint(conn)
+        _migrate_key_lauf(conn)
         _seed_eier_konfiguration(conn)
         _repariere_eier_stueck(conn)
         _migriere_stk_artikel_codes(conn)

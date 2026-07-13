@@ -7,6 +7,41 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.13.0] - 2026-07-13
+
+### Behoben
+- **Identische Doppel-Positionen einer Rechnung wurden beim Import verworfen.**
+  Enthielt eine Rechnung zwei vollständig identische Positionen (gleicher Tag,
+  gleiche Menge, gleiche Beschreibung — z. B. zwei gleiche Lieferungen am
+  selben Tag), erkannte der UNIQUE-Schlüssel die zweite Zeile fälschlich als
+  Duplikat — die Monatsauswertung fiel entsprechend zu niedrig aus. Der
+  Schlüssel enthält jetzt einen Vorkommens-Index (`key_lauf`): das n-te
+  identische Vorkommen innerhalb einer Datei wird als eigenständige Position
+  gespeichert.
+- **Positionen ohne Pack-Code wurden beim Re-Import still verdoppelt.**
+  SQLite behandelt NULL-Werte in UNIQUE-Constraints als paarweise verschieden —
+  ein erneuter Upload derselben CSV fügte deshalb alle Zeilen ohne Pack-Code
+  (lose Eier, kg-Positionen) erneut ein statt sie als Duplikat zu überspringen.
+  Die Duplikat-Erkennung läuft jetzt über einen UNIQUE-Index mit
+  COALESCE-Normalisierung; Re-Imports sind damit vollständig idempotent.
+
+### Datenmigration
+- Beim ersten Start nach dem Update wird `verkaufspositionen` automatisch
+  umgebaut (neue Spalte `key_lauf`, Duplikat-Erkennung über den neuen Index
+  `ux_vkp_dedup`). Vorher wird ein Datei-Backup
+  `eierverkauf.db.pre-v1.13.0.bak` angelegt (inkl. WAL-Checkpoint).
+  Bestandszeilen werden je Duplikat-Schlüssel durchnummeriert.
+
+### Hinweise
+- Früher verworfene Doppel-Positionen werden nicht automatisch
+  wiederhergestellt: Nach dem Update einmalig die betroffenen CSV-Dateien
+  erneut hochladen — nur die fehlenden Zeilen werden nachimportiert, alles
+  andere wird als Duplikat übersprungen.
+- Wichtig für Beleg-Abgleiche: Die App zeigt **Netto**-Werte (Verkäufe
+  abzüglich Retouren/Gutschriften im Liefermonat). In Monaten mit Retouren
+  liegen Brutto-Verkaufszahlen aus der Warenwirtschaft deutlich über den
+  Netto-Werten der App — das ist korrekt und kein Fehler.
+
 ## [1.12.2] - 2026-07-13
 
 ### Behoben

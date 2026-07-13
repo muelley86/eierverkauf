@@ -19,6 +19,7 @@ Robustheit:
 from __future__ import annotations
 
 import re
+from collections import Counter
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -557,21 +558,40 @@ def import_csv(file_path: str | Path, dateiname: str) -> ImportErgebnis:
         importiert = 0
         uebersprungen = 0
         protokoll_duplikat: list[Tuple[int, str, str]] = []
+        # Vorkommens-Zähler je Duplikat-Schlüssel innerhalb dieser Datei: das
+        # n-te identische Vorkommen bekommt key_lauf = n. Zwei echte
+        # Doppel-Positionen einer Rechnung bleiben so unterscheidbar; ein
+        # Re-Import derselben Datei erzeugt dieselben Lauf-Nummern und wird
+        # weiterhin vollständig als Duplikat erkannt. Die None-Normalisierung
+        # muss exakt dem COALESCE im Index ux_vkp_dedup (data/db.py,
+        # _UX_VKP_DEDUP_SQL) entsprechen, sonst gruppieren Python und SQLite
+        # unterschiedlich.
+        key_zaehler: Counter = Counter()
 
         for zeile, rec in records:
+            key = (
+                rec["rechnungsdatum"],
+                rec["rechnungsnummer"] if rec["rechnungsnummer"] is not None else "",
+                rec["kundennummer"],
+                rec["menge"],
+                rec["einheit"] if rec["einheit"] is not None else "",
+                rec["pack_code"] if rec["pack_code"] is not None else -1,
+                rec["beschreibung"] if rec["beschreibung"] is not None else "",
+            )
+            key_zaehler[key] += 1
             cur.execute(
                 """INSERT OR IGNORE INTO verkaufspositionen
                      (import_id, rechnungsdatum, rechnungsnummer, kundennummer, kundenname,
                       menge, einheit, pack_code, eier_stueck, artikel_code, groesse,
-                      beschreibung, preis_einheit, gesamt)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                      beschreibung, preis_einheit, gesamt, key_lauf)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     import_id,
                     rec["rechnungsdatum"], rec["rechnungsnummer"],
                     rec["kundennummer"], rec["kundenname"],
                     rec["menge"], rec["einheit"], rec["pack_code"], rec["eier_stueck"],
                     rec["artikel_code"], rec["groesse"], rec["beschreibung"],
-                    rec["preis_einheit"], rec["gesamt"],
+                    rec["preis_einheit"], rec["gesamt"], key_zaehler[key],
                 ),
             )
             if cur.rowcount == 1:
@@ -579,8 +599,8 @@ def import_csv(file_path: str | Path, dateiname: str) -> ImportErgebnis:
             else:
                 uebersprungen += 1
                 # Bei INSERT OR IGNORE: rowcount=0 → Duplikat-Treffer.
-                # Schlüssel ab v1.0.4: (rechnungsdatum, rechnungsnummer, kundennummer,
-                # menge, einheit, pack_code, beschreibung).
+                # Schlüssel ab v1.13.0: (rechnungsdatum, rechnungsnummer, kundennummer,
+                # menge, einheit, pack_code, beschreibung, key_lauf).
                 grund = (
                     f"Duplikat (Datum {rec.get('rechnungsdatum')}, "
                     f"R-Nr {rec.get('rechnungsnummer') or '∅'}, "

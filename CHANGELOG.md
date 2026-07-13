@@ -7,6 +7,48 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.12.0] - 2026-07-13
+
+### Behoben
+- **Timeout-Fehler beim Import-Löschen strukturell beseitigt.** Der
+  Lösch-Endpoint wartete synchron auf die komplette Löschung — auf
+  langsamem Server-Storage dauert die bei großen Imports über 5 Minuten,
+  sodass jedes Frontend-Timeout ablief („AxiosError: Time Out"), obwohl
+  die Löschung serverseitig durchlief. Die Löschung startet jetzt als
+  **Hintergrund-Aufgabe** und der Endpoint antwortet sofort. Die Historie
+  zeigt den laufenden Vorgang mit Spinner an (auch nach Seiten-Reload)
+  und aktualisiert sich automatisch, bis der Eintrag verschwunden ist.
+- **Auswertungen bleiben während der Löschung bedienbar:** Die Löschung
+  drosselt sich selbst — nach jedem Batch (jetzt 5.000 statt 20.000 Zeilen)
+  pausiert sie so lange, wie der Batch gedauert hat (gedeckelt auf 2 s).
+  Auf langsamem Server-Storage bekommen Lese-Abfragen dadurch echte
+  I/O-Fenster statt einer wirkungslosen 50-ms-Pause.
+- Löschungen laufen strikt nacheinander (ein Schreiber zur Zeit) — zwei
+  parallel angestoßene Löschungen konnten sich zuvor gegenseitig mit
+  „database is locked" abbrechen.
+- Die Import-Seite meldet „Import gelöscht" nur noch, wenn der Eintrag
+  wirklich aus der Historie verschwunden ist. Schlägt die
+  Hintergrund-Löschung fehl, erscheint stattdessen ein Fehler-Hinweis
+  mit Aufforderung zum erneuten Löschen (vorher: falscher Erfolgs-Toast).
+- Ist der WAL-Modus wider Erwarten nicht aktiv (z. B. Datenbank auf einem
+  Netz-Dateisystem), erscheint jetzt eine deutliche Warnung im Journal
+  statt stillem Rückfall in den blockierenden Journal-Modus. Die
+  WAL-Umschaltung wartet zudem mit vollem busy_timeout (10 s statt 5 s
+  Connect-Default) auf konkurrierende Verbindungen.
+
+### Geändert
+- `DELETE /api/imports/{id}` antwortet mit `{"geloescht_geplant": true}`
+  statt der Anzahl gelöschter Einträge; läuft bereits eine Löschung
+  desselben Imports, kommt HTTP 409. `GET /api/imports` liefert additiv
+  `wird_geloescht` je Eintrag.
+- Abschluss und Fehler der Hintergrund-Löschung werden mit Dauer in
+  Sekunden geloggt (ungepuffert, sofort in `journalctl` sichtbar).
+
+### Hinweise
+- Zur Server-Diagnose (WAL-Status, Storage-Latenz, Lösch-Dauer) siehe den
+  neuen Kommando-Block in DEPLOYMENT.md §11.11 — wichtigster Check:
+  `sqlite3 eierverkauf.db "PRAGMA journal_mode;"` muss `wal` liefern.
+
 ## [1.11.3] - 2026-07-13
 
 ### Behoben

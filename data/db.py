@@ -20,6 +20,11 @@ def _ensure_parent() -> None:
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 
+# Einmal-Flag: WAL-Warnung nur beim ersten betroffenen get_conn() loggen,
+# sonst flutet jede Query das Journal.
+_wal_warnung_ausgegeben = False
+
+
 def get_conn() -> sqlite3.Connection:
     """Liefert eine neue SQLite-Connection mit Foreign-Key-Enforcement und Row-Factory.
 
@@ -27,12 +32,21 @@ def get_conn() -> sqlite3.Connection:
     Schreib-Transaktion (z. B. Import-Löschung) alle Leser, wodurch der
     uvicorn-Threadpool volläuft und die komplette App unerreichbar wird.
     """
+    global _wal_warnung_ausgegeben
     _ensure_parent()
     conn = sqlite3.connect(str(DB_PATH))
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
-    conn.execute("PRAGMA journal_mode = WAL")
+    # busy_timeout VOR der WAL-Umschaltung: die braucht kurz exklusiven Zugriff
+    # und liefe sonst nur mit dem 5-s-Default von sqlite3.connect().
     conn.execute("PRAGMA busy_timeout = 10000")
+    modus = conn.execute("PRAGMA journal_mode = WAL").fetchone()[0]
+    if modus != "wal" and not _wal_warnung_ausgegeben:
+        _wal_warnung_ausgegeben = True
+        print(f"[db] WARNUNG: WAL-Modus nicht aktiv (journal_mode={modus}). "
+              "Schreib-Transaktionen blockieren alle Leser — Dateisystem "
+              f"von {DB_PATH} prüfen (WAL braucht lokales Storage mit mmap).",
+              flush=True)
     conn.execute("PRAGMA synchronous = NORMAL")
     # WAL-Datei nach Checkpoints wieder auf max. 64 MB stutzen (nicht
     # persistent, muss pro Connection gesetzt werden).

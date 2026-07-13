@@ -1,6 +1,7 @@
 """Alle SQL-Abfragen für Auswertungen. Reine Datenzugriffsschicht."""
 from __future__ import annotations
 
+import time
 from typing import Optional
 
 from .db import get_conn
@@ -343,7 +344,19 @@ def import_historie() -> list[dict]:
 
 # Zeilen je Lösch-Transaktion: kurz genug, dass parallele Auswertungs-Queries
 # zwischen den Batches I/O bekommen und das Write-Ahead-Log klein bleibt.
-LOESCH_BATCH = 20_000
+LOESCH_BATCH = 5_000
+
+# Obergrenze der Atempause zwischen den Batches. Die Pause selbst ist adaptiv
+# (so lang wie der Batch, 50 %-Duty-Cycle): auf schnellem Storage Mikro-Pausen,
+# auf gesättigtem Storage echte I/O-Fenster für Leser. Zeigt das Dauer-Logging
+# Batch-Dauern über dem Cap, LOESCH_BATCH weiter senken statt den Cap anheben
+# (sonst kippt der Duty-Cycle zulasten der Leser).
+LOESCH_PAUSE_MAX = 2.0
+
+
+def _loesch_pause(batch_dauer: float) -> float:
+    """Adaptive Atempause: so lang wie der Batch selbst, gedeckelt auf LOESCH_PAUSE_MAX."""
+    return min(max(batch_dauer, 0.0), LOESCH_PAUSE_MAX)
 
 
 def import_loeschen(import_id: int) -> int:
@@ -364,6 +377,7 @@ def import_loeschen(import_id: int) -> int:
     try:
         for tabelle in ("verkaufspositionen", "import_zeilen_protokoll"):
             while True:
+                start = time.perf_counter()
                 cur = conn.execute(
                     f"DELETE FROM {tabelle} WHERE rowid IN ("
                     f"  SELECT rowid FROM {tabelle} WHERE import_id = ? LIMIT ?)",
@@ -372,6 +386,7 @@ def import_loeschen(import_id: int) -> int:
                 conn.commit()
                 if cur.rowcount < LOESCH_BATCH:
                     break
+                time.sleep(_loesch_pause(time.perf_counter() - start))
         cur = conn.execute("DELETE FROM imports WHERE id = ?", (import_id,))
         conn.commit()
         # Best effort: WAL sofort zurückstutzen; bei aktiven Lesern übernimmt

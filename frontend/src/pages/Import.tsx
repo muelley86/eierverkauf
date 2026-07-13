@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { FileRejection, useDropzone } from "react-dropzone";
 import { AlertTriangle, FileSpreadsheet, Info, Loader2, Trash2, UploadCloud } from "lucide-react";
@@ -35,6 +35,34 @@ export default function Import() {
   }, []);
 
   useEffect(() => { void ladeHistorie(); }, [ladeHistorie]);
+
+  // Solange eine Hintergrund-Löschung läuft, Historie regelmäßig nachladen.
+  // Erfolg erst melden, wenn die Zeile wirklich aus der Historie verschwunden
+  // ist — kippt nur das Flag und die Zeile bleibt, ist die Löschung
+  // serverseitig fehlgeschlagen (partielle Daten, erneut löschen nötig).
+  const laeuftLoeschung = historie.some((h) => h.wird_geloescht);
+  const vorherInLoeschung = useRef<number[]>([]);
+
+  useEffect(() => {
+    const inLoeschung = historie.filter((h) => h.wird_geloescht).map((h) => h.id);
+    for (const id of vorherInLoeschung.current) {
+      if (inLoeschung.includes(id)) continue;
+      if (historie.some((h) => h.id === id)) {
+        toast.error("Löschung unvollständig", {
+          description: "Der Import ist noch (teilweise) vorhanden — bitte erneut löschen.",
+        });
+      } else {
+        toast.success("Import gelöscht");
+      }
+    }
+    vorherInLoeschung.current = inLoeschung;
+  }, [historie]);
+
+  useEffect(() => {
+    if (!laeuftLoeschung) return;
+    const timer = setInterval(() => { void ladeHistorie(); }, 4_000);
+    return () => clearInterval(timer);
+  }, [laeuftLoeschung, ladeHistorie]);
 
   const onDrop = useCallback(async (files: File[]) => {
     const file = files[0];
@@ -85,7 +113,13 @@ export default function Import() {
     setLoeschtId(id);
     try {
       await deleteImport(id);
-      toast.success("Import gelöscht");
+      toast.info("Löschung läuft im Hintergrund", {
+        description: "Der Eintrag verschwindet aus der Historie, sobald alles entfernt ist.",
+      });
+      // Sofort als "in Löschung" vormerken: schlägt die Hintergrund-Löschung
+      // fehl, bevor ein Reload das wird_geloescht-Flag je gesehen hat, würde
+      // der Ergebnis-Effekt sie sonst nie bemerken (kein Toast, Zeile bleibt).
+      vorherInLoeschung.current = [...vorherInLoeschung.current, id];
       await ladeHistorie();
     } catch (e) {
       toast.error("Löschen fehlgeschlagen", { description: String(e) });
@@ -269,14 +303,14 @@ export default function Import() {
                           variant="ghost"
                           size="icon"
                           onClick={() => loeschen(h.id)}
-                          disabled={loeschtId !== null}
+                          disabled={loeschtId !== null || h.wird_geloescht}
                           aria-label={
-                            loeschtId === h.id
+                            loeschtId === h.id || h.wird_geloescht
                               ? `Import ${h.dateiname} wird gelöscht`
                               : `Import ${h.dateiname} löschen`
                           }
                         >
-                          {loeschtId === h.id ? (
+                          {loeschtId === h.id || h.wird_geloescht ? (
                             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                           ) : (
                             <Trash2 className="h-4 w-4 text-brick" />
@@ -306,15 +340,15 @@ export default function Import() {
                     <button
                       type="button"
                       onClick={() => loeschen(h.id)}
-                      disabled={loeschtId !== null}
+                      disabled={loeschtId !== null || h.wird_geloescht}
                       className="shrink-0 inline-flex items-center justify-center h-11 w-11 rounded-md text-brick hover:bg-brick/10 active:scale-95 transition disabled:pointer-events-none disabled:opacity-50"
                       aria-label={
-                        loeschtId === h.id
+                        loeschtId === h.id || h.wird_geloescht
                           ? `Import ${h.dateiname} wird gelöscht`
                           : `Import ${h.dateiname} löschen`
                       }
                     >
-                      {loeschtId === h.id ? (
+                      {loeschtId === h.id || h.wird_geloescht ? (
                         <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                       ) : (
                         <Trash2 className="h-4 w-4" />

@@ -134,6 +134,8 @@ export interface ImportProtokollEintrag {
   zeilen_importiert: number;
   zeilen_uebersprungen: number;
   zeilen_fehlerhaft: number;
+  /** true solange die Hintergrund-Löschung dieses Imports läuft. */
+  wird_geloescht: boolean;
 }
 
 export interface ImportErgebnis {
@@ -284,9 +286,9 @@ export async function getImportDetail(id: number): Promise<ImportDetail> {
 }
 
 export async function deleteImport(id: number): Promise<void> {
-  // Große Löschungen laufen häppchenweise und dürfen länger dauern als das
-  // globale 60-s-Timeout.
-  await api.delete(`/imports/${id}`, { timeout: 300_000 });
+  // Antwort kommt sofort — die eigentliche Löschung läuft serverseitig im
+  // Hintergrund (Status: wird_geloescht in der Historie).
+  await api.delete(`/imports/${id}`);
 }
 
 // Konfiguration: Eier-pro-Artikel-Faktoren -----------------------------------

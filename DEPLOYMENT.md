@@ -875,6 +875,66 @@ Das Update ist gefahrlos wiederholbar: `npm ci` baut node_modules ohnehin jedes 
 auf, und die Datenbank wurde beim Abbruch automatisch aus dem Pre-Update-Backup
 wiederhergestellt. Nach behobener Ursache also einfach nochmal `eierverkauf update`.
 
+### 11.11 — App hängt während/nach Import-Löschung (Performance-Diagnose)
+
+Seit v1.12.0 läuft die Import-Löschung im Hintergrund und der Lösch-Button antwortet
+sofort. Wirkt die App **während** der Hintergrund-Löschung trotzdem zäh oder hängen
+andere Seiten, den folgenden Block durchgehen (alle Checks sind read-only):
+
+```bash
+# 1. WAL-Modus aktiv? MUSS "wal" liefern — sonst blockiert jede
+#    Schreib-Transaktion alle Leser (häufigste Ursache für Komplett-Hänger).
+sqlite3 "file:/opt/eierverkauf/data/eierverkauf.db?mode=ro" "PRAGMA journal_mode;"
+
+# 2. WAL-/SHM-Dateien vorhanden und wie groß? (-wal dauerhaft > 100 MB = auffällig)
+ls -lh /opt/eierverkauf/data/eierverkauf.db*
+
+# 3. Lösch-Index vorhanden? "idx_import" muss in der Liste stehen
+#    (wird beim App-Start angelegt — fehlt er, Dienst neu starten).
+sqlite3 "file:/opt/eierverkauf/data/eierverkauf.db?mode=ro" \
+  "SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='verkaufspositionen';"
+
+# 4. Storage-Typ: Netz-Dateisysteme (nfs, cifs, 9p) vertragen kein WAL —
+#    die DB muss auf lokalem Storage (ext4, xfs, zfs) liegen.
+findmnt -T /opt/eierverkauf/data
+
+# 5. Sync-Write-Latenz messen (SQLite committet mit fsync; > 50 ms je Write
+#    = sehr langsames Storage, Löschungen dauern dann entsprechend):
+dd if=/dev/zero of=/opt/eierverkauf/data/.iotest bs=8k count=500 oflag=dsync 2>&1 | tail -1
+rm /opt/eierverkauf/data/.iotest
+
+# 6. Lösch-Dauer und WAL-Warnungen im Journal (seit v1.12.0 mit Dauer-Angabe):
+journalctl -u eierverkauf --since "-7 days" | grep -iE "wal|locked|Löschung"
+```
+
+Live-Beobachtung während einer Test-Löschung (drei Terminals):
+
+```bash
+# Bleibt die API ansprechbar? (sollte durchgehend ~200 in < 1 s liefern)
+watch -n1 'curl -so /dev/null -w "%{http_code} %{time_total}s\n" http://localhost:8050/api/health'
+
+# I/O-Auslastung (w_await und %util hoch = Storage gesättigt)
+iostat -x 1
+
+# WAL-Wachstum (stetig wachsend über mehrere 100 MB = Checkpoint kommt nicht nach)
+watch -n2 'ls -lh /opt/eierverkauf/data/eierverkauf.db-wal'
+```
+
+Einordnung der Ergebnisse:
+
+1. **`journal_mode` ≠ `wal`** → DB liegt auf ungeeignetem Dateisystem (Check 4) oder die
+   Datei ist schreibgeschützt. Beheben, Dienst neu starten — die App schaltet beim
+   Start automatisch auf WAL um und warnt seit v1.12.0 im Journal, wenn das scheitert.
+2. **Batch-Dauern im Journal > 2 s** bzw. Check 5 sehr langsam → Storage ist das
+   Nadelöhr. Die Löschung drosselt sich seit v1.12.0 selbst (Pause = Batch-Dauer),
+   die App bleibt bedienbar — die Löschung selbst darf dann aber Minuten dauern.
+3. **Alles unauffällig, App hängt trotzdem** → Logs sammeln (§11.9) und mit der
+   beobachteten Uhrzeit melden.
+
+Optional für schnellere Log-Sichtbarkeit bei Bestandsinstallationen: in der
+systemd-Unit (`systemctl edit eierverkauf`) `Environment=PYTHONUNBUFFERED=1`
+ergänzen. Seit v1.12.0 flushen die relevanten Logzeilen aber auch ohne das.
+
 ---
 
 ## 12. Deinstallation

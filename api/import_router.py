@@ -3,15 +3,54 @@ from __future__ import annotations
 
 import shutil
 import tempfile
+import threading
+import time
+import traceback
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, File, HTTPException, UploadFile
 
 from data import queries
 from data.importer import import_csv, vorschau
 
 router = APIRouter(tags=["import"])
+
+# Laufende Hintergrund-Löschungen. Prozesslokal genügt: die App läuft mit
+# genau einem uvicorn-Worker. Geht der Prozess mitten in einer Löschung
+# unter, bleibt der Import in der Historie sichtbar und kann erneut
+# gelöscht werden (import_loeschen ist wiederholbar).
+_loeschungen_lock = threading.Lock()
+_loeschungen_laufen: set[int] = set()
+
+# Serialisiert die eigentliche Löscharbeit: SQLite verträgt nur einen Schreiber,
+# ein zweiter bricht beim Transaktions-Upgrade sofort mit "database is locked"
+# ab (der busy-Handler greift dort nicht). Der 409-Guard im Endpoint deckt nur
+# dieselbe Import-ID.
+_loesch_arbeit_lock = threading.Lock()
+
+
+def _loesche_im_hintergrund(import_id: int) -> None:
+    """Führt die häppchenweise Löschung aus und räumt den Lauf-Status auf.
+
+    ``flush=True`` bei allen Logzeilen: unter systemd ist stdout blockgepuffert,
+    ohne Flush erscheinen die Zeilen in journalctl erst verspätet.
+    """
+    start = time.perf_counter()
+    try:
+        with _loesch_arbeit_lock:
+            geloeschte = queries.import_loeschen(import_id)
+        dauer = time.perf_counter() - start
+        print(f"[import] Hintergrund-Löschung von Import {import_id} "
+              f"abgeschlossen ({geloeschte} Eintrag, {dauer:.1f} s).", flush=True)
+    except Exception:
+        dauer = time.perf_counter() - start
+        print(f"[import] Hintergrund-Löschung von Import {import_id} "
+              f"nach {dauer:.1f} s fehlgeschlagen:", flush=True)
+        traceback.print_exc()
+    finally:
+        with _loeschungen_lock:
+            _loeschungen_laufen.discard(import_id)
 
 # Upload-Verzeichnis: relativ zum Arbeitsverzeichnis (im Betrieb /opt/eierverkauf/uploads/).
 UPLOAD_DIR = Path("uploads")
@@ -61,7 +100,13 @@ def upload_preview(file: UploadFile = File(...)) -> dict:
 
 @router.get("/imports")
 def liste_imports() -> list[dict]:
-    return queries.import_historie()
+    """Importhistorie, additiv ergänzt um den Hintergrund-Lösch-Status."""
+    with _loeschungen_lock:
+        laufend = set(_loeschungen_laufen)
+    return [
+        {**eintrag, "wird_geloescht": eintrag["id"] in laufend}
+        for eintrag in queries.import_historie()
+    ]
 
 
 @router.get("/imports/{import_id}")
@@ -85,8 +130,19 @@ def import_detail(import_id: int) -> dict:
 
 
 @router.delete("/imports/{import_id}")
-def loesche_import(import_id: int) -> dict:
-    geloeschte = queries.import_loeschen(import_id)
-    if geloeschte == 0:
+def loesche_import(import_id: int, background_tasks: BackgroundTasks) -> dict:
+    """Stößt die Löschung an und antwortet sofort.
+
+    Große Löschungen dauern auf langsamem Storage Minuten — synchron gewartet
+    liefe jedes Frontend-Timeout ab. Die eigentliche Arbeit läuft daher als
+    BackgroundTask im Threadpool; den Fortschritt zeigt ``wird_geloescht``
+    in der Historie.
+    """
+    if queries.import_eintrag(import_id) is None:
         raise HTTPException(status_code=404, detail="Import nicht gefunden.")
-    return {"geloescht": geloeschte}
+    with _loeschungen_lock:
+        if import_id in _loeschungen_laufen:
+            raise HTTPException(status_code=409, detail="Löschung läuft bereits.")
+        _loeschungen_laufen.add(import_id)
+    background_tasks.add_task(_loesche_im_hintergrund, import_id)
+    return {"geloescht_geplant": True}

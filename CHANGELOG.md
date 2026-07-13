@@ -7,6 +7,26 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.12.2] - 2026-07-13
+
+### Behoben
+- **Leere/alte Seite direkt nach jedem Server-Update.** `index.html` wurde
+  ohne `Cache-Control` ausgeliefert — Browser zeigten nach einem Update
+  minutenlang die alte gecachte Startseite, deren Bundle-Verweise nach dem
+  Rebuild ins Leere liefen (Seite baute sich nicht auf und „heilte" sich
+  nach ein paar Minuten von selbst). Dieses Muster steckte hinter den
+  wiederholten „App hängt nach dem Löschen"-Meldungen: Der Test fand
+  jeweils direkt nach einem Update statt; Datenbank und Löschung waren
+  nachweislich schnell (Produktions-Messung: 0,1 s bei WAL-Modus aktiv).
+  `index.html` wird jetzt mit `Cache-Control: no-cache` ausgeliefert
+  (Browser revalidiert per ETag, praktisch kostenlos), die gehashten
+  Bundles unter `assets/` mit `max-age=31536000, immutable`.
+
+### Hinweise
+- Einmalig nach dem Update auf v1.12.2 ist noch ein Hard-Reload nötig
+  (Strg+F5 bzw. Cmd+Shift+R), damit der Browser die letzte alte
+  index.html verwirft — danach nie wieder.
+
 ## [1.12.1] - 2026-07-13
 
 ### Behoben

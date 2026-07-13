@@ -45,6 +45,28 @@ def test_kunden_route_mit_punkten_liefert_index_html(client):
     assert 'id="root"' in antwort.text
 
 
+def test_index_html_wird_nicht_gecacht(client):
+    # Ohne no-cache zeigt der Browser nach einem Server-Update minutenlang die
+    # alte index.html (heuristische Cache-Frische) — deren Bundle-Verweise nach
+    # dem Rebuild ins Leere laufen (leere Seite direkt nach jedem Update).
+    for pfad in ("/", "/import"):
+        antwort = client.get(pfad)
+
+        assert antwort.status_code == 200
+        assert antwort.headers.get("cache-control") == "no-cache"
+
+
+def test_assets_sind_unveraenderlich_cachebar(client):
+    # Vite-Bundles tragen einen Content-Hash im Namen — sie dürfen (und sollen)
+    # dauerhaft gecacht werden.
+    bundle = next((_DIST / "assets").glob("index-*.js")).name
+
+    antwort = client.get(f"/assets/{bundle}")
+
+    assert antwort.status_code == 200
+    assert "immutable" in antwort.headers.get("cache-control", "")
+
+
 def test_unbekannter_api_pfad_bleibt_404(client):
     antwort = client.get("/api/gibtsnicht")
 

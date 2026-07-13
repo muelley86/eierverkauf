@@ -935,6 +935,15 @@ Optional für schnellere Log-Sichtbarkeit bei Bestandsinstallationen: in der
 systemd-Unit (`systemctl edit eierverkauf`) `Environment=PYTHONUNBUFFERED=1`
 ergänzen. Seit v1.12.0 flushen die relevanten Logzeilen aber auch ohne das.
 
+**Symptom „leere Seite direkt nach einem Update":** Bis v1.12.1 cachten Browser
+die `index.html` heuristisch und zeigten nach einem Update minutenlang die alte
+Startseite, deren Bundle-Verweise nach dem Rebuild ins Leere liefen — die Seite
+baute sich nicht auf und funktionierte nach ein paar Minuten „von selbst" wieder.
+Seit v1.12.2 verhindert `Cache-Control: no-cache` auf `index.html` das dauerhaft;
+Kontrolle: `curl -sI http://localhost:8050/ | grep -i cache-control`.
+Sofort-Hilfe in alten Versionen bzw. beim ersten Aufruf nach dem v1.12.2-Update:
+Hard-Reload im Browser (Strg+F5 bzw. Cmd+Shift+R).
+
 ---
 
 ## 12. Deinstallation

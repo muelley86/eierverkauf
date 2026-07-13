@@ -27,7 +27,7 @@ async def lifespan(_app: FastAPI):
 app = FastAPI(
     title="Eierverkauf-Auswertung",
     description="Auswertung von Eierverkäufen (Kerba Bio-Ei GbR).",
-    version="1.12.1",
+    version="1.12.2",
     lifespan=lifespan,
 )
 
@@ -52,8 +52,17 @@ def health() -> dict:
     return {"status": "ok"}
 
 
+# Gehashte Vite-Bundles ändern bei jeder Änderung den Dateinamen → dauerhaft
+# cachebar. Alles andere (v. a. index.html) muss der Browser bei jedem Aufruf
+# revalidieren (ETag/304), sonst zeigt er nach einem Server-Update minutenlang
+# die alte index.html mit toten Bundle-Verweisen — leere Seite direkt nach
+# jedem Update, die sich nach Ablauf der Cache-Heuristik „von selbst" heilt.
+_CACHE_ASSETS = "public, max-age=31536000, immutable"
+_CACHE_REVALIDATE = "no-cache"
+
+
 class SPAStaticFiles(StaticFiles):
-    """StaticFiles mit SPA-Fallback für den React-BrowserRouter.
+    """StaticFiles mit SPA-Fallback und Cache-Headern für den React-BrowserRouter.
 
     Client-Routen (/import, /kunden/15.100.008, …) existieren nicht als
     Dateien — ohne Fallback liefert ein Seiten-Reload dort ein 404-JSON.
@@ -66,11 +75,16 @@ class SPAStaticFiles(StaticFiles):
 
     async def get_response(self, path: str, scope):  # type: ignore[override]
         try:
-            return await super().get_response(path, scope)
+            response = await super().get_response(path, scope)
         except StarletteHTTPException as exc:
             if exc.status_code == 404 and not path.startswith(("api/", "assets/")):
-                return await super().get_response("index.html", scope)
-            raise
+                response = await super().get_response("index.html", scope)
+            else:
+                raise
+        response.headers["Cache-Control"] = (
+            _CACHE_ASSETS if path.startswith("assets/") else _CACHE_REVALIDATE
+        )
+        return response
 
 
 # Frontend-Build statisch ausliefern, falls vorhanden.

@@ -46,6 +46,8 @@ export interface KundenZeile {
   kundenname: string;
   eier: number;
   umsatz: number;
+  /** Umsatz nur aus Positionen mit Eier-Stückzahl (Basis für Umsatz/Ei). */
+  eier_umsatz: number;
   positionen: number;
   letzter_kauf: string | null;
 }
@@ -62,6 +64,8 @@ export interface MonatsZeile {
   monat: string;
   eier: number;
   umsatz: number;
+  /** Umsatz nur aus Positionen mit Eier-Stückzahl (Basis für Umsatz/Ei). */
+  eier_umsatz: number;
   positionen?: number;
   menge?: number;
 }
@@ -74,6 +78,9 @@ export interface JahresvergleichZeile {
   jahr_umsatz: number;
   vorjahr_umsatz: number;
   differenz_umsatz: number;
+  /** Umsatz nur aus Positionen mit Eier-Stückzahl (Basis für Umsatz/Ei). */
+  jahr_eier_umsatz: number;
+  vorjahr_eier_umsatz: number;
 }
 
 export interface ArtikelZeile {
@@ -81,6 +88,8 @@ export interface ArtikelZeile {
   menge: number;
   eier: number;
   umsatz: number;
+  /** Umsatz nur aus Positionen mit Eier-Stückzahl (Basis für Umsatz/Ei). */
+  eier_umsatz: number;
   positionen: number;
 }
 
@@ -89,6 +98,8 @@ export interface RankingZeile {
   kundenname: string;
   eier: number;
   umsatz: number;
+  /** Umsatz nur aus Positionen mit Eier-Stückzahl (Basis für Umsatz/Ei). */
+  eier_umsatz: number;
 }
 
 export interface BelegeZeile {
@@ -99,6 +110,8 @@ export interface BelegeZeile {
   kundenname: string;
   eier: number;
   umsatz: number;
+  /** Umsatz nur aus Positionen mit Eier-Stückzahl (Basis für Umsatz/Ei). */
+  eier_umsatz: number;
   positionen: number;
 }
 

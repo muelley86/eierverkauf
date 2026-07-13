@@ -137,7 +137,7 @@ export default function KundenDetail() {
                       <TableCell>{formatMonat(m.monat)}</TableCell>
                       <TableCell className="font-mono tabular-nums">{formatZahl(m.eier)}</TableCell>
                       <TableCell className="font-mono tabular-nums">{formatEuro(m.umsatz)}</TableCell>
-                      <TableCell className="font-mono tabular-nums">{formatCentJeEi(m.umsatz, m.eier)}</TableCell>
+                      <TableCell className="font-mono tabular-nums">{formatCentJeEi(m.eier_umsatz, m.eier)}</TableCell>
                       <TableCell className="font-mono tabular-nums text-muted-foreground">{formatZahl(m.positionen ?? 0)}</TableCell>
                     </TableRow>
                   ))}

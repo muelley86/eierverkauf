@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { PageHeader, Panel } from "@/components/PageHeader";
 import { exportExcelUrl, exportPdfUrl, getJahresvergleich, JahresvergleichZeile } from "@/api/client";
-import { formatZahl, monatsKurz } from "@/lib/formatierung";
+import { formatCentJeEi, formatZahl, monatsKurz } from "@/lib/formatierung";
 import { AXIS_TICK, CHART_FARBEN, CHART_GRID, TOOLTIP_STYLE } from "@/lib/chart-farben";
 
 export default function Jahresvergleich() {
@@ -127,6 +127,8 @@ export default function Jahresvergleich() {
                 <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground text-right">{jahr}</TableHead>
                 <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground text-right">Δ Stück</TableHead>
                 <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground text-right">Δ %</TableHead>
+                <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground text-right">Umsatz/Ei {jahr - 1}</TableHead>
+                <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground text-right">Umsatz/Ei {jahr}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -144,6 +146,12 @@ export default function Jahresvergleich() {
                     <TableCell className={`font-mono tabular-nums text-right ${deltaKlasse}`}>
                       {d.vorjahr > 0 ? `${prozent > 0 ? "+" : ""}${formatZahl(prozent, 1)} %` : "—"}
                     </TableCell>
+                    <TableCell className="font-mono tabular-nums text-right">
+                      {formatCentJeEi(d.vorjahr_eier_umsatz, d.vorjahr)}
+                    </TableCell>
+                    <TableCell className="font-mono tabular-nums text-right">
+                      {formatCentJeEi(d.jahr_eier_umsatz, d.jahr)}
+                    </TableCell>
                   </TableRow>
                 );
               })}
@@ -156,6 +164,12 @@ export default function Jahresvergleich() {
                   {summe("differenz") > 0 ? "+" : ""}{formatZahl(summe("differenz"))}
                 </TableCell>
                 <TableCell />
+                <TableCell className="font-mono tabular-nums text-right">
+                  {formatCentJeEi(summe("vorjahr_eier_umsatz"), summe("vorjahr"))}
+                </TableCell>
+                <TableCell className="font-mono tabular-nums text-right">
+                  {formatCentJeEi(summe("jahr_eier_umsatz"), summe("jahr"))}
+                </TableCell>
               </TableRow>
             </TableBody>
           </Table>

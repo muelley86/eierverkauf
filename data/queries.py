@@ -95,6 +95,7 @@ def kunden_uebersicht(von: Optional[str], bis: Optional[str]) -> list[dict]:
         SELECT kundennummer, kundenname,
                COALESCE(SUM(eier_stueck), 0) AS eier,
                COALESCE(SUM(gesamt), 0)      AS umsatz,
+               COALESCE(SUM(CASE WHEN eier_stueck IS NOT NULL THEN gesamt END), 0) AS eier_umsatz,
                COUNT(*)                       AS positionen,
                MAX(rechnungsdatum)            AS letzter_kauf
         FROM verkaufspositionen
@@ -115,6 +116,7 @@ def kunde_monate(kundennummer: str, von: Optional[str], bis: Optional[str]) -> l
         SELECT substr(rechnungsdatum, 1, 7) AS monat,
                COALESCE(SUM(eier_stueck), 0) AS eier,
                COALESCE(SUM(gesamt), 0)      AS umsatz,
+               COALESCE(SUM(CASE WHEN eier_stueck IS NOT NULL THEN gesamt END), 0) AS eier_umsatz,
                COUNT(*)                       AS positionen
         FROM verkaufspositionen
         WHERE kundennummer = ?
@@ -135,7 +137,8 @@ def kunde_jahresvergleich(kundennummer: str, jahr: int) -> list[dict]:
         SELECT CAST(substr(rechnungsdatum, 6, 2) AS INTEGER) AS monat,
                CAST(substr(rechnungsdatum, 1, 4) AS INTEGER) AS jahr,
                COALESCE(SUM(eier_stueck), 0) AS eier,
-               COALESCE(SUM(gesamt), 0)      AS umsatz
+               COALESCE(SUM(gesamt), 0)      AS umsatz,
+               COALESCE(SUM(CASE WHEN eier_stueck IS NOT NULL THEN gesamt END), 0) AS eier_umsatz
         FROM verkaufspositionen
         WHERE kundennummer = ?
           AND substr(rechnungsdatum, 1, 4) IN (?, ?)
@@ -150,15 +153,18 @@ def kunde_jahresvergleich(kundennummer: str, jahr: int) -> list[dict]:
 
     daten: dict[int, dict] = {m: {"monat": m, "jahr": 0.0, "vorjahr": 0.0,
                                   "jahr_umsatz": 0.0, "vorjahr_umsatz": 0.0,
+                                  "jahr_eier_umsatz": 0.0, "vorjahr_eier_umsatz": 0.0,
                                   "differenz": 0.0, "differenz_umsatz": 0.0} for m in range(1, 13)}
     for r in rows:
         m = r["monat"]
         if r["jahr"] == jahr:
             daten[m]["jahr"] = float(r["eier"])
             daten[m]["jahr_umsatz"] = float(r["umsatz"])
+            daten[m]["jahr_eier_umsatz"] = float(r["eier_umsatz"])
         else:
             daten[m]["vorjahr"] = float(r["eier"])
             daten[m]["vorjahr_umsatz"] = float(r["umsatz"])
+            daten[m]["vorjahr_eier_umsatz"] = float(r["eier_umsatz"])
     for d in daten.values():
         d["differenz"] = d["jahr"] - d["vorjahr"]
         d["differenz_umsatz"] = d["jahr_umsatz"] - d["vorjahr_umsatz"]
@@ -176,6 +182,7 @@ def artikel_uebersicht(von: Optional[str], bis: Optional[str]) -> list[dict]:
                COALESCE(SUM(menge), 0)       AS menge,
                COALESCE(SUM(eier_stueck), 0) AS eier,
                COALESCE(SUM(gesamt), 0)      AS umsatz,
+               COALESCE(SUM(CASE WHEN eier_stueck IS NOT NULL THEN gesamt END), 0) AS eier_umsatz,
                COUNT(*)                       AS positionen
         FROM verkaufspositionen
         {wh}
@@ -195,7 +202,8 @@ def artikel_monate(code: str, von: Optional[str], bis: Optional[str]) -> list[di
         SELECT substr(rechnungsdatum, 1, 7) AS monat,
                COALESCE(SUM(menge), 0)       AS menge,
                COALESCE(SUM(eier_stueck), 0) AS eier,
-               COALESCE(SUM(gesamt), 0)      AS umsatz
+               COALESCE(SUM(gesamt), 0)      AS umsatz,
+               COALESCE(SUM(CASE WHEN eier_stueck IS NOT NULL THEN gesamt END), 0) AS eier_umsatz
         FROM verkaufspositionen
         WHERE artikel_code = ?
         {wh}
@@ -228,6 +236,7 @@ def belege_uebersicht(von: Optional[str], bis: Optional[str]) -> list[dict]:
                kundenname,
                COALESCE(SUM(eier_stueck), 0) AS eier,
                COALESCE(SUM(gesamt), 0)      AS umsatz,
+               COALESCE(SUM(CASE WHEN eier_stueck IS NOT NULL THEN gesamt END), 0) AS eier_umsatz,
                COUNT(*)                       AS positionen
         FROM verkaufspositionen
         {wh}
@@ -267,7 +276,8 @@ def ranking(von: Optional[str], bis: Optional[str], sort: str = "menge") -> list
     sql = f"""
         SELECT kundennummer, kundenname,
                COALESCE(SUM(eier_stueck), 0) AS eier,
-               COALESCE(SUM(gesamt), 0)      AS umsatz
+               COALESCE(SUM(gesamt), 0)      AS umsatz,
+               COALESCE(SUM(CASE WHEN eier_stueck IS NOT NULL THEN gesamt END), 0) AS eier_umsatz
         FROM verkaufspositionen
         {wh}
         GROUP BY kundennummer, kundenname
@@ -286,7 +296,8 @@ def jahresvergleich(jahr: int) -> list[dict]:
         SELECT CAST(substr(rechnungsdatum, 6, 2) AS INTEGER) AS monat,
                CAST(substr(rechnungsdatum, 1, 4) AS INTEGER) AS jahr,
                COALESCE(SUM(eier_stueck), 0) AS eier,
-               COALESCE(SUM(gesamt), 0)      AS umsatz
+               COALESCE(SUM(gesamt), 0)      AS umsatz,
+               COALESCE(SUM(CASE WHEN eier_stueck IS NOT NULL THEN gesamt END), 0) AS eier_umsatz
         FROM verkaufspositionen
         WHERE substr(rechnungsdatum, 1, 4) IN (?, ?)
         GROUP BY monat, jahr
@@ -299,15 +310,18 @@ def jahresvergleich(jahr: int) -> list[dict]:
         conn.close()
     daten: dict[int, dict] = {m: {"monat": m, "jahr": 0.0, "vorjahr": 0.0,
                                   "jahr_umsatz": 0.0, "vorjahr_umsatz": 0.0,
+                                  "jahr_eier_umsatz": 0.0, "vorjahr_eier_umsatz": 0.0,
                                   "differenz": 0.0, "differenz_umsatz": 0.0} for m in range(1, 13)}
     for r in rows:
         m = r["monat"]
         if r["jahr"] == jahr:
             daten[m]["jahr"] = float(r["eier"])
             daten[m]["jahr_umsatz"] = float(r["umsatz"])
+            daten[m]["jahr_eier_umsatz"] = float(r["eier_umsatz"])
         else:
             daten[m]["vorjahr"] = float(r["eier"])
             daten[m]["vorjahr_umsatz"] = float(r["umsatz"])
+            daten[m]["vorjahr_eier_umsatz"] = float(r["eier_umsatz"])
     for d in daten.values():
         d["differenz"] = d["jahr"] - d["vorjahr"]
         d["differenz_umsatz"] = d["jahr_umsatz"] - d["vorjahr_umsatz"]

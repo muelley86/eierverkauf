@@ -7,6 +7,26 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.11.0] - 2026-07-13
+
+### Geändert
+- **Umsatz/Ei zählt nur noch Umsatz aus Positionen mit Eier-Stückzahl.**
+  Bisher floss auf allen Seiten der gesamte Zeilen-Umsatz in die Kennzahl —
+  inklusive kg-Positionen ohne Eier —, wodurch der Wert bei gemischten
+  Kunden, Belegen oder Monaten zu hoch ausfiel. Die APIs liefern dafür das
+  neue additive Feld `eier_umsatz` (bzw. `jahr_eier_umsatz`/
+  `vorjahr_eier_umsatz` im Jahresvergleich); die Umsatz-Spalten selbst
+  zeigen weiterhin den vollen Umsatz. Betrifft Kunden, Belege, Ranking,
+  Artikel, Jahresvergleich sowie die Monats-Tabellen der Detailseiten.
+
+## [1.10.0] - 2026-07-13
+
+### Hinzugefügt
+- **Zwei Spalten „Umsatz/Ei"** (Cent je Ei, eine pro Vergleichsjahr) in der
+  Monatstabelle des Jahresvergleichs, hinter den Delta-Spalten, inklusive
+  gewichtetem Durchschnitt in der Summenzeile. Monate ohne Eier-Stückzahl
+  zeigen „—".
+
 ## [1.9.0] - 2026-07-13
 
 ### Hinzugefügt

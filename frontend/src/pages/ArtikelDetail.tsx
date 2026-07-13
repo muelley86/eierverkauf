@@ -110,7 +110,7 @@ export default function ArtikelDetail() {
                   <TableCell className="font-mono tabular-nums">{formatZahl(m.menge ?? 0, 2)}</TableCell>
                   <TableCell className="font-mono tabular-nums">{formatZahl(m.eier)}</TableCell>
                   <TableCell className="font-mono tabular-nums">{formatEuro(m.umsatz)}</TableCell>
-                  <TableCell className="font-mono tabular-nums">{formatCentJeEi(m.umsatz, m.eier)}</TableCell>
+                  <TableCell className="font-mono tabular-nums">{formatCentJeEi(m.eier_umsatz, m.eier)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

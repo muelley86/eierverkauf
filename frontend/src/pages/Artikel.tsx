@@ -69,13 +69,13 @@ export default function Artikel() {
       },
       {
         id: "umsatz_pro_ei",
-        accessorFn: (z) => (z.eier ? (z.umsatz / z.eier) * 100 : null),
+        accessorFn: (z) => (z.eier ? (z.eier_umsatz / z.eier) * 100 : null),
         header: "Umsatz/Ei",
         sortingFn: "basic",
         meta: { mobilePriority: "secondary", mobileLabel: "Umsatz/Ei" },
         cell: (i) => (
           <span className="font-mono tabular-nums">
-            {formatCentJeEi(i.row.original.umsatz, i.row.original.eier)}
+            {formatCentJeEi(i.row.original.eier_umsatz, i.row.original.eier)}
           </span>
         ),
       },

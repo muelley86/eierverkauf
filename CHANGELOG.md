@@ -16,6 +16,8 @@ dem gewählten Zeitraum. Außerdem lässt sich nach einem oder mehreren Kunden
 filtern.
 
 ### Behoben
+- Siebenstellige Eierzahl in der großen Kennzahl-Karte brach auf dem Desktop
+  in zwei Zeilen um; die Schriftgröße richtet sich jetzt nach der Kartenbreite.
 - **Übersichts-Grafik ignorierte den Zeitraum.** Sie zeigte immer Januar bis
   Dezember des Jahres von „bis" — „Dieser Monat" oder „Dieses Quartal" änderten
   nur die Kennzahlen. Jetzt zeigt sie genau den gewählten Zeitraum,
@@ -54,7 +56,9 @@ filtern.
   oder fest per `granularitaet`,
   positionsgleicher Vorjahreszeitraum; ohne Filter über den gesamten Bestand).
 - Jahresvergleich: Summenzeile zeigt jetzt auch Δ %.
-- Dunkelmodus nach Systemeinstellung, inklusive Diagrammfarben.
+- Dunkelmodus inklusive Diagrammfarben: folgt der Systemeinstellung, lässt
+  sich aber per Schalter umstellen („Dunkles Design“ unten in der Seitenleiste,
+  auf dem Handy Mond/Sonne oben rechts). Die Wahl bleibt gespeichert.
 - Buchenhof-Logo in der Navigation, Baum-Icon als Favicon und im PDF-Export.
 
 ### Geändert

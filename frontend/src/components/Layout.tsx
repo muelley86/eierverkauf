@@ -16,6 +16,7 @@ import { ReactNode, useEffect, useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import wortmarke from "@/assets/buchenhof-wortmarke.png";
+import { FarbschemaUmschalter } from "@/components/FarbschemaUmschalter";
 
 interface NavItem {
   to: string;
@@ -94,6 +95,9 @@ function DesktopSidebar() {
         <Marke />
       </div>
       <ChromeNav />
+      <div className="mt-auto border-t border-white/10 px-3 py-4">
+        <FarbschemaUmschalter variante="zeile" />
+      </div>
     </aside>
   );
 }
@@ -115,6 +119,9 @@ function MobileTopBar({ onMenuOpen }: { onMenuOpen: () => void }) {
       </button>
       <div className="flex h-14 items-center">
         <Marke kompakt />
+      </div>
+      <div className="-mr-2 ml-auto">
+        <FarbschemaUmschalter variante="icon" />
       </div>
     </header>
   );

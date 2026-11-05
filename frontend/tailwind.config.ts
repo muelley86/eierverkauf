@@ -4,8 +4,8 @@ import type { Config } from "tailwindcss";
 const farbe = (variable: string) => `rgb(var(${variable}) / <alpha-value>)`;
 
 const config: Config = {
-  // Dunkelmodus folgt der Systemeinstellung (prefers-color-scheme).
-  darkMode: "media",
+  // Dunkelmodus über data-theme auf <html> (Umschalter + Systemeinstellung, lib/farbschema.ts).
+  darkMode: ["selector", '[data-theme="dunkel"]'],
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
   theme: {
     container: {

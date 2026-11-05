@@ -5,6 +5,7 @@
  * gelesen; `useChartFarben()` rendert bei Wechsel des Farbschemas neu.
  */
 import { useEffect, useMemo, useState } from "react";
+import { abonniereSchema } from "@/lib/farbschema";
 
 export interface ChartFarben {
   /** Eier-Reihen (Linie/Balken). */
@@ -40,8 +41,6 @@ const VARIABLEN: Record<keyof ChartFarben, string> = {
   flaeche: "--chart-flaeche",
 };
 
-const DUNKEL_QUERY = "(prefers-color-scheme: dark)";
-
 export function leseChartFarben(): ChartFarben {
   if (typeof window === "undefined") return HELL;
   const stil = getComputedStyle(document.documentElement);
@@ -59,15 +58,14 @@ export interface ChartStil {
   raster: { stroke: string; strokeDasharray: string };
 }
 
-/** Farben + abgeleitete Recharts-Stile; folgt Hell/Dunkel der Systemeinstellung. */
+/** Farben + abgeleitete Recharts-Stile; folgt dem Hell/Dunkel-Umschalter. */
 export function useChartFarben(): ChartStil {
   const [farben, setFarben] = useState<ChartFarben>(leseChartFarben);
 
   useEffect(() => {
-    const mq = window.matchMedia(DUNKEL_QUERY);
-    const aktualisieren = () => setFarben(leseChartFarben());
-    mq.addEventListener("change", aktualisieren);
-    return () => mq.removeEventListener("change", aktualisieren);
+    // Ein Lesen beim Einhängen deckt einen Wechsel zwischen erstem Render und Effekt ab.
+    setFarben(leseChartFarben());
+    return abonniereSchema(() => setFarben(leseChartFarben()));
   }, []);
 
   return useMemo(

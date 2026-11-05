@@ -89,13 +89,14 @@ export function KPICard({
         className,
       )}
     >
-      <div className={cn("flex flex-col gap-2", isHero ? "p-6 sm:p-8" : "p-5")}>
+      {/* Hero-Wert skaliert mit der Kartenbreite (cqi), nicht mit dem Viewport — sonst bricht „3.590.551" um. */}
+      <div className={cn("flex flex-col gap-2", isHero ? "p-6 [container-type:inline-size] sm:p-8" : "p-5")}>
         <span className="text-sm font-medium text-muted-foreground">{titel}</span>
         <div
           className={cn(
             "kpi-value break-words",
             isHero
-              ? "mt-2 text-[clamp(2.75rem,10vw,6.5rem)] text-brand-strong"
+              ? "mt-2 text-[clamp(2.5rem,15cqi,6.5rem)] text-brand-strong"
               : "text-3xl sm:text-4xl",
             !isHero && FARB_KLASSEN[wertFarbe],
           )}

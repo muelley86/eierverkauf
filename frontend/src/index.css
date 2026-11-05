@@ -68,37 +68,36 @@
     --font-sans: 'Inter Variable', system-ui, sans-serif;
   }
 
-  @media (prefers-color-scheme: dark) {
-    :root {
-      color-scheme: dark;
+  /* Dunkel: per Umschalter oder Systemeinstellung, siehe src/lib/farbschema.ts */
+  :root[data-theme="dunkel"] {
+    color-scheme: dark;
 
-      --brand: 181 213 86;
-      --brand-strong: 197 224 122;  /* #C5E07A */
-      --brand-soft: 47 54 34;
-      --brand-foreground: 33 35 30;
-      --chrome: 20 21 22;
-      --chrome-foreground: 237 237 235;
-      --canvas: 27 28 29;
-      --surface: 36 38 40;
-      --ink: 237 237 235;
-      --rule: 54 57 60;
-      --positive: 181 213 86;
-      --negative: 255 122 87;
+    --brand: 181 213 86;
+    --brand-strong: 197 224 122;  /* #C5E07A */
+    --brand-soft: 47 54 34;
+    --brand-foreground: 33 35 30;
+    --chrome: 20 21 22;
+    --chrome-foreground: 237 237 235;
+    --canvas: 27 28 29;
+    --surface: 36 38 40;
+    --ink: 237 237 235;
+    --rule: 54 57 60;
+    --positive: 181 213 86;
+    --negative: 255 122 87;
 
-      --chart-eier: #B5D556;
-      --chart-eier-flaeche: #B5D556;
-      --chart-umsatz: #C9CDCD;
-      --chart-vorjahr: #6B7072;
-      --chart-raster: #36393C;
-      --chart-text: #A3A8A8;
-      --chart-flaeche: #242628;
+    --chart-eier: #B5D556;
+    --chart-eier-flaeche: #B5D556;
+    --chart-umsatz: #C9CDCD;
+    --chart-vorjahr: #6B7072;
+    --chart-raster: #36393C;
+    --chart-text: #A3A8A8;
+    --chart-flaeche: #242628;
 
-      --secondary: 46 49 52;
-      --muted: 46 49 52;
-      --muted-foreground: 163 168 168;
-      --input: 70 74 78;
-      --destructive-foreground: 27 28 29;
-    }
+    --secondary: 46 49 52;
+    --muted: 46 49 52;
+    --muted-foreground: 163 168 168;
+    --input: 70 74 78;
+    --destructive-foreground: 27 28 29;
   }
 }
 

@@ -31,7 +31,7 @@ async def lifespan(_app: FastAPI):
 app = FastAPI(
     title="Eierverkauf-Auswertung",
     description="Auswertung von Eierverkäufen (Kerba Bio-Ei GbR).",
-    version="1.16.4",
+    version="1.16.5",
     lifespan=lifespan,
 )
 
@@ -59,7 +59,9 @@ app.include_router(konfiguration_router, prefix="/api")
 
 @app.get("/api/health")
 def health() -> dict:
-    return {"status": "ok"}
+    # Version für die Anzeige in der Sidebar: zeigt, was der Server wirklich
+    # ausführt (nicht, womit das Frontend gebaut wurde).
+    return {"status": "ok", "version": app.version}
 
 
 # Gehashte Vite-Bundles ändern bei jeder Änderung den Dateinamen → dauerhaft

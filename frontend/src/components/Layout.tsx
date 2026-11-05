@@ -17,6 +17,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { cn } from "@/lib/utils";
 import wortmarke from "@/assets/buchenhof-wortmarke.png";
 import { FarbschemaUmschalter } from "@/components/FarbschemaUmschalter";
+import { AppVersion } from "@/components/AppVersion";
 
 interface NavItem {
   to: string;
@@ -97,6 +98,7 @@ function DesktopSidebar() {
       <ChromeNav />
       <div className="mt-auto border-t border-white/10 px-3 py-4">
         <FarbschemaUmschalter variante="zeile" />
+        <AppVersion className="mt-2 px-3.5 text-chrome-foreground/50" />
       </div>
     </aside>
   );
@@ -251,6 +253,7 @@ export function Layout() {
               </NavLink>
             ))}
           </div>
+          <AppVersion className="px-6 pb-2 text-muted-foreground" />
         </SheetContent>
       </Sheet>
     </div>

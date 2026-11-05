@@ -235,6 +235,16 @@ function params(z: Zeitraum, extra: Record<string, string | number | undefined> 
 // Endpunkte
 // ---------------------------------------------------------------------------
 
+export interface HealthResponse {
+  status: string;
+  version: string;
+}
+
+export async function getHealth(): Promise<HealthResponse> {
+  const { data } = await api.get<HealthResponse>("/health");
+  return data;
+}
+
 export async function getDashboard(z: Zeitraum): Promise<DashboardResponse> {
   const { data } = await api.get<DashboardResponse>(`/dashboard?${params(z)}`);
   return data;

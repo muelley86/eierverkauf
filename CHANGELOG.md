@@ -7,6 +7,14 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.16.5] - 2026-11-05
+
+### Hinzugefügt
+- **Versionsnummer in der App.** Unter dem Schalter „Dunkles Design" in der
+  Sidebar (mobil unten im „Mehr"-Menü) steht die laufende Version.
+  `GET /api/health` liefert dafür zusätzlich `version` — angezeigt wird also,
+  was der Server wirklich ausführt, nicht womit das Frontend gebaut wurde.
+
 ## [1.16.4] - 2026-11-05
 
 ### Geändert
@@ -926,7 +934,8 @@ hochladen.
   - Dev-Setup-Scripts für Windows (`dev-setup.ps1`, `dev-start.ps1`) und macOS/Linux.
   - Docker Compose für vollständige Integrationstests inkl. PDF-Export.
 
-[Unreleased]: https://github.com/muelley86/eierverkauf/compare/v1.16.4...HEAD
+[Unreleased]: https://github.com/muelley86/eierverkauf/compare/v1.16.5...HEAD
+[1.16.5]: https://github.com/muelley86/eierverkauf/compare/v1.16.4...v1.16.5
 [1.16.4]: https://github.com/muelley86/eierverkauf/compare/v1.16.3...v1.16.4
 [1.16.3]: https://github.com/muelley86/eierverkauf/compare/v1.16.2...v1.16.3
 [1.16.2]: https://github.com/muelley86/eierverkauf/compare/v1.16.1...v1.16.2

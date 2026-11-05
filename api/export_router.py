@@ -56,7 +56,9 @@ def _zeitraumvergleich(von: Optional[str], bis: Optional[str]) -> list[dict]:
     if not (von and bis):
         raise HTTPException(status_code=400, detail="Parameter 'von' und 'bis' erforderlich.")
     try:
-        daten = verlauf.zeitraum_verlauf(date.fromisoformat(von), date.fromisoformat(bis))
+        daten = verlauf.zeitraum_verlauf(
+            date.fromisoformat(von), date.fromisoformat(bis), granularitaet="monat"
+        )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return verlauf.zeitraumvergleich_zeilen(daten)

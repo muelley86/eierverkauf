@@ -46,14 +46,15 @@ def dashboard(
 def zeitraum_verlauf(
     von: Optional[date] = Query(None),
     bis: Optional[date] = Query(None),
+    granularitaet: Optional[Literal["tag", "woche", "monat"]] = Query(None),
 ) -> dict:
     """Verlauf im Zeitraum + positionsgleicher Vorjahreszeitraum.
 
-    Speist die Übersichts-Grafik und die Seite „Zeitraumvergleich".
-    Auflösung automatisch (Tag/Woche/Monat), siehe ``data.verlauf``.
+    Speist die Übersichts-Grafik (Auflösung automatisch) und die Seite
+    „Zeitraumvergleich" (``granularitaet=monat``), siehe ``data.verlauf``.
     """
     try:
-        return verlauf.zeitraum_verlauf(von, bis)
+        return verlauf.zeitraum_verlauf(von, bis, granularitaet)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 

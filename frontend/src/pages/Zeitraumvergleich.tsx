@@ -10,14 +10,12 @@ import {
 } from "@/components/VergleichsAnsicht";
 import { useZeitraum } from "@/context/ZeitraumContext";
 import { exportExcelUrl, exportPdfUrl, getVerlauf, ZeitraumVerlauf } from "@/api/client";
-import { formatDatum, VerlaufGranularitaet } from "@/lib/formatierung";
+import { formatDatum } from "@/lib/formatierung";
 import { zeilenAusVerlauf } from "@/lib/vergleich";
 
-const ERSTE_SPALTE: Record<VerlaufGranularitaet, string> = {
-  tag: "Tag",
-  woche: "Woche",
-  monat: "Monat",
-};
+// Vergleichsebene ist immer der Monat (wie beim Jahresvergleich); der erste
+// und letzte Monat können angebrochen sein, wenn der Zeitraum mitten im Monat beginnt/endet.
+const VERGLEICHSEBENE = "monat";
 
 const BESCHRIFTUNG = { labelAktuell: "Zeitraum", labelVorjahr: "Vorjahr" };
 
@@ -35,7 +33,7 @@ export default function Zeitraumvergleich() {
   useEffect(() => {
     let ab = false;
     setLoading(true);
-    getVerlauf({ von, bis })
+    getVerlauf({ von, bis }, VERGLEICHSEBENE)
       .then((v) => { if (!ab) setVerlauf(v); })
       .catch((e) => toast.error("Zeitraumvergleich konnte nicht geladen werden", { description: String(e) }))
       .finally(() => { if (!ab) setLoading(false); });
@@ -43,13 +41,12 @@ export default function Zeitraumvergleich() {
   }, [von, bis]);
 
   const zeilen = useMemo(() => (verlauf ? zeilenAusVerlauf(verlauf) : []), [verlauf]);
-  const ersteSpalte = ERSTE_SPALTE[verlauf?.granularitaet ?? "monat"];
 
   return (
     <div className="max-w-[1400px] space-y-4 md:space-y-6">
       <PageHeader
         title="Zeitraumvergleich"
-        subtitle="Gewählter Zeitraum im Vergleich zum selben Zeitraum ein Jahr früher."
+        subtitle="Gewählter Zeitraum im Vergleich zum selben Zeitraum ein Jahr früher, Monat für Monat."
       />
 
       <Panel
@@ -69,7 +66,7 @@ export default function Zeitraumvergleich() {
 
       <Panel>
         {loading ? <Skeleton className="h-72" /> : (
-          <VergleichsTabelle zeilen={zeilen} ersteSpalte={ersteSpalte} {...BESCHRIFTUNG} />
+          <VergleichsTabelle zeilen={zeilen} ersteSpalte="Monat" {...BESCHRIFTUNG} />
         )}
       </Panel>
     </div>

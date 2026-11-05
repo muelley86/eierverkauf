@@ -287,8 +287,12 @@ export async function getBelegPositionen(
   return data;
 }
 
-export async function getVerlauf(z: Zeitraum): Promise<ZeitraumVerlauf> {
-  const { data } = await api.get<ZeitraumVerlauf>(`/verlauf?${params(z)}`);
+/** Ohne `granularitaet` wählt das Backend Tag/Woche/Monat nach Zeitraumlänge. */
+export async function getVerlauf(
+  z: Zeitraum,
+  granularitaet?: VerlaufGranularitaet,
+): Promise<ZeitraumVerlauf> {
+  const { data } = await api.get<ZeitraumVerlauf>(`/verlauf?${params(z, { granularitaet })}`);
   return data;
 }
 

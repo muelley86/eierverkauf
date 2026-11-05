@@ -228,9 +228,45 @@ def test_export_zeitraumvergleich_excel_enthaelt_buckets(client):
     assert antwort.status_code == 200
     ws = load_workbook(BytesIO(antwort.content)).active
     zeilen = list(ws.iter_rows(min_row=4, values_only=True))
-    assert zeilen[1][:4] == ("02.11.2026", 80, 100, 20)
+    assert zeilen[0][:4] == ("Nov 2026", 80, 100, 20)
 
 
 def test_export_zeitraumvergleich_ohne_zeitraum_ist_400(client):
     antwort = client.get("/api/export/excel?typ=zeitraumvergleich")
     assert antwort.status_code == 400
+
+
+def test_verlauf_feste_granularitaet_monat_auch_bei_kurzem_zeitraum(client):
+    # Arrange: 2 Monate (automatisch wäre "tag")
+    _position("2026-09-15", 10, 1.0, "R-1")
+    _position("2026-10-02", 20, 2.0, "R-2")
+
+    # Act
+    body = client.get(
+        "/api/verlauf?von=2026-09-10&bis=2026-10-05&granularitaet=monat"
+    ).json()
+
+    # Assert: erster Monat beginnt bei von, zweiter am Monatsersten
+    assert body["granularitaet"] == "monat"
+    assert [p["start"] for p in body["punkte"]] == ["2026-09-10", "2026-10-01"]
+    assert [p["eier"] for p in body["punkte"]] == [10, 20]
+
+
+def test_verlauf_unbekannte_granularitaet_ist_422(client):
+    antwort = client.get("/api/verlauf?von=2026-09-01&bis=2026-09-30&granularitaet=jahr")
+    assert antwort.status_code == 422
+
+
+def test_export_zeitraumvergleich_immer_monatlich(client):
+    # Arrange
+    from io import BytesIO
+    from openpyxl import load_workbook
+    _position("2026-09-02", 100, 30.0, "R-1")
+
+    # Act: 30 Tage — automatisch wären es 30 Tageszeilen
+    antwort = client.get("/api/export/excel?typ=zeitraumvergleich&von=2026-09-01&bis=2026-09-30")
+
+    # Assert
+    ws = load_workbook(BytesIO(antwort.content)).active
+    zeilen = [z for z in ws.iter_rows(min_row=4, values_only=True) if z[0]]
+    assert [z[0] for z in zeilen] == ["Sep 2026"]

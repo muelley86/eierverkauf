@@ -30,8 +30,9 @@ dem gewählten Zeitraum.
 - **Seite „Zeitraumvergleich"** (über dem Jahresvergleich): vergleicht den oben
   rechts gewählten Zeitraum mit demselben Zeitraum ein Jahr früher — Diagramm
   und Tabelle wie beim Jahresvergleich (Δ Stück, Δ %, Umsatz je Ei,
-  Summenzeile), nach Tagen, Wochen oder Monaten. Excel- und PDF-Export.
-- Endpoint `GET /api/verlauf?von&bis` (Auflösung Tag/Woche/Monat,
+  Summenzeile), Monat für Monat. Excel- und PDF-Export.
+- Endpoint `GET /api/verlauf?von&bis` (Auflösung Tag/Woche/Monat automatisch
+  oder fest per `granularitaet`,
   positionsgleicher Vorjahreszeitraum; ohne Filter über den gesamten Bestand).
 - Jahresvergleich: Summenzeile zeigt jetzt auch Δ %.
 - Dunkelmodus nach Systemeinstellung, inklusive Diagrammfarben.

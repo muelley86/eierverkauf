@@ -130,12 +130,17 @@ def _zeitraum_dict(von: date, bis: date) -> dict:
     return {"von": von.isoformat(), "bis": bis.isoformat()}
 
 
-def zeitraum_verlauf(von: Optional[date], bis: Optional[date]) -> dict:
+def zeitraum_verlauf(
+    von: Optional[date],
+    bis: Optional[date],
+    granularitaet: Optional[Granularitaet] = None,
+) -> dict:
     """Verlauf im Zeitraum plus positionsgleicher Vorjahreszeitraum.
 
-    Basis für Dashboard-Grafik und Seite „Zeitraumvergleich". Ohne
-    Zeitraum-Filter läuft der Verlauf über den gesamten Bestand und
-    ``vorjahr_*`` / ``vorjahreszeitraum`` sind ``None``.
+    Basis für Dashboard-Grafik (Auflösung automatisch) und Seite
+    „Zeitraumvergleich" (fest ``"monat"``). Ohne Zeitraum-Filter läuft der
+    Verlauf über den gesamten Bestand und ``vorjahr_*`` /
+    ``vorjahreszeitraum`` sind ``None``.
 
     Raises:
         ValueError: wenn ``von`` nach ``bis`` liegt.
@@ -144,12 +149,13 @@ def zeitraum_verlauf(von: Optional[date], bis: Optional[date]) -> dict:
         raise ValueError("„von“ liegt nach „bis“.")
     zeitraum = _effektiver_zeitraum(von, bis)
     if zeitraum is None:
-        return {"granularitaet": "monat", "punkte": [], "zeitraum": None, "vorjahreszeitraum": None}
+        return {"granularitaet": granularitaet or "monat", "punkte": [],
+                "zeitraum": None, "vorjahreszeitraum": None}
     start, ende = zeitraum
     if start > ende:
         raise ValueError("Zeitraum enthält keine Daten.")
 
-    granularitaet = waehle_granularitaet(start, ende)
+    granularitaet = granularitaet or waehle_granularitaet(start, ende)
     aktuell = _buckets(start, ende, granularitaet)
     mit_vorjahr = bool(von or bis)
     vj_start, vj_ende = ein_jahr_zurueck(start), ein_jahr_zurueck(ende)

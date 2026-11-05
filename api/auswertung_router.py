@@ -30,9 +30,11 @@ def dashboard(
     """
     aktuell = queries.dashboard_kpis(_iso(von), _iso(bis))
     vj_von, vj_bis = verlauf.ein_jahr_zurueck(von), verlauf.ein_jahr_zurueck(bis)
+    # Nur vergleichen, wenn jede gesetzte Grenze auch verschiebbar ist.
+    verschiebbar = (von is None or vj_von is not None) and (bis is None or vj_bis is not None)
     vorjahres_kpis = (
         queries.dashboard_kpis(_iso(vj_von), _iso(vj_bis))
-        if (vj_von or vj_bis) else None
+        if (vj_von or vj_bis) and verschiebbar else None
     )
     return {
         "kpis": aktuell,

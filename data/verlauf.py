@@ -10,7 +10,7 @@ Export.
 """
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import MINYEAR, date, timedelta
 from typing import Literal, Optional
 
 from utils.formatierung import monatsname
@@ -100,8 +100,12 @@ def verlauf_label(start_iso: str, granularitaet: Granularitaet) -> str:
 
 
 def ein_jahr_zurueck(d: Optional[date]) -> Optional[date]:
-    """Schiebt ein Datum um genau ein Jahr zurück. 29.02. → 28.02."""
-    if d is None:
+    """Schiebt ein Datum um genau ein Jahr zurück. 29.02. → 28.02.
+
+    ``None`` im Jahr 1 (kein Vorjahr darstellbar) — kommt nur bei
+    unsinnigen Eingaben vor, darf aber keinen 500er auslösen.
+    """
+    if d is None or d.year <= MINYEAR:
         return None
     try:
         return d.replace(year=d.year - 1)
@@ -157,8 +161,8 @@ def zeitraum_verlauf(
 
     granularitaet = granularitaet or waehle_granularitaet(start, ende)
     aktuell = _buckets(start, ende, granularitaet)
-    mit_vorjahr = bool(von or bis)
     vj_start, vj_ende = ein_jahr_zurueck(start), ein_jahr_zurueck(ende)
+    mit_vorjahr = bool(von or bis) and vj_start is not None and vj_ende is not None
     vorjahr = _buckets(vj_start, vj_ende, granularitaet) if mit_vorjahr else []
 
     def _vj(i: int, feld: str) -> Optional[float]:

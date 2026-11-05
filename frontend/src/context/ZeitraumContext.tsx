@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from "react";
-import { isoDatumLokal } from "@/lib/datum";
+import { isoDatumLokal, pruefeZeitraum } from "@/lib/datum";
 
 /**
  * Globaler Zeitraumfilter (Von/Bis). Default: laufendes Jahr.
@@ -36,7 +36,11 @@ function loadInitial(): { von: string; bis: string } {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as { von?: string; bis?: string };
-      if (parsed.von && parsed.bis) return { von: parsed.von, bis: parsed.bis };
+      // Ungültige Altwerte (z. B. Zwischenstand beim Tippen) verwerfen,
+      // sonst scheitert jede Abfrage nach dem Neuladen.
+      if (parsed.von && parsed.bis && pruefeZeitraum(parsed.von, parsed.bis) === null) {
+        return { von: parsed.von, bis: parsed.bis };
+      }
     }
   } catch {
     /* ignore */

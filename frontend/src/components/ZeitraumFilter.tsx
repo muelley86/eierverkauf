@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { useZeitraum } from "@/context/ZeitraumContext";
 import { Button } from "@/components/ui/button";
@@ -5,7 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatDatum } from "@/lib/formatierung";
-import { isoDatumLokal } from "@/lib/datum";
+import { isoDatumLokal, pruefeZeitraum } from "@/lib/datum";
 import { cn } from "@/lib/utils";
 
 /** Liefert das aktuelle ISO-Datum (Tag-genau, lokale Zeitzone). */
@@ -32,9 +33,28 @@ function aktuelleRange(von: string, bis: string): string {
   return "Eigener Zeitraum";
 }
 
+/**
+ * Lokaler Entwurf der Datumsfelder: Eingaben werden erst global übernommen,
+ * wenn sie einen gültigen Zeitraum ergeben (sonst Hinweis statt API-Fehler).
+ * Ändert sich der Zeitraum von außen (Schnellwahl), wird der Entwurf ersetzt.
+ */
+function useZeitraumEntwurf(von: string, bis: string, setRange: (von: string, bis: string) => void) {
+  const [entwurf, setEntwurf] = useState({ von, bis });
+  useEffect(() => setEntwurf({ von, bis }), [von, bis]);
+  const fehler = pruefeZeitraum(entwurf.von, entwurf.bis);
+
+  const aendern = (neuVon: string, neuBis: string) => {
+    setEntwurf({ von: neuVon, bis: neuBis });
+    if (pruefeZeitraum(neuVon, neuBis) === null) setRange(neuVon, neuBis);
+  };
+
+  return { von: entwurf.von, bis: entwurf.bis, fehler, aendern };
+}
+
 export function ZeitraumFilter({ className }: { className?: string }) {
   const z = useZeitraum();
   const rangeLabel = aktuelleRange(z.von, z.bis);
+  const entwurf = useZeitraumEntwurf(z.von, z.bis, z.setRange);
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -59,8 +79,10 @@ export function ZeitraumFilter({ className }: { className?: string }) {
           <Input
             id="zr-von"
             type="date"
-            value={z.von}
-            onChange={(e) => z.setVon(e.target.value)}
+            value={entwurf.von}
+            onChange={(e) => entwurf.aendern(e.target.value, entwurf.bis)}
+            aria-invalid={entwurf.fehler !== null}
+            aria-describedby={entwurf.fehler ? "zr-fehler" : undefined}
           />
         </div>
         <div className="space-y-2">
@@ -68,10 +90,17 @@ export function ZeitraumFilter({ className }: { className?: string }) {
           <Input
             id="zr-bis"
             type="date"
-            value={z.bis}
-            onChange={(e) => z.setBis(e.target.value)}
+            value={entwurf.bis}
+            onChange={(e) => entwurf.aendern(entwurf.von, e.target.value)}
+            aria-invalid={entwurf.fehler !== null}
+            aria-describedby={entwurf.fehler ? "zr-fehler" : undefined}
           />
         </div>
+        {entwurf.fehler && (
+          <p id="zr-fehler" role="alert" className="text-xs text-negative">
+            {entwurf.fehler}
+          </p>
+        )}
         <div className="grid grid-cols-2 gap-2 pt-2">
           <Button size="sm" variant="secondary" onClick={z.dieserMonat}>Dieser Monat</Button>
           <Button size="sm" variant="secondary" onClick={z.diesesQuartal}>Quartal</Button>

@@ -270,3 +270,14 @@ def test_export_zeitraumvergleich_immer_monatlich(client):
     ws = load_workbook(BytesIO(antwort.content)).active
     zeilen = [z for z in ws.iter_rows(min_row=4, values_only=True) if z[0]]
     assert [z[0] for z in zeilen] == ["Sep 2026"]
+
+
+def test_ein_jahr_zurueck_im_jahr_1_liefert_none():
+    from data.verlauf import ein_jahr_zurueck
+    assert ein_jahr_zurueck(date(1, 9, 1)) is None
+
+
+def test_dashboard_mit_jahr_1_liefert_200_ohne_vorjahr(client):
+    antwort = client.get("/api/dashboard?von=0001-09-01&bis=2026-09-30")
+    assert antwort.status_code == 200
+    assert antwort.json()["vorjahres_kpis"] is None

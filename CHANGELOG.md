@@ -25,6 +25,14 @@ dem gewählten Zeitraum.
   lokale Mitternacht nach UTC um; in MEZ begann „Dieses Jahr" so am 31.12.
   des Vorjahres. Gespeicherte Zeiträume werden einmalig auf „Dieses Jahr"
   zurückgesetzt.
+- **Fehler 422 beim Eintippen eines eigenen Zeitraums.** Jeder Zwischenstand
+  der Datumsfelder (z. B. „Von" kurzzeitig nach „Bis", Jahr „0002" beim Tippen)
+  wurde sofort abgefragt; der Zeitraumvergleich meldete dann „konnte nicht
+  geladen werden". Eingaben werden jetzt erst übernommen, wenn sie einen
+  gültigen Zeitraum ergeben (Jahre 2000–2099, Von ≤ Bis); sonst erscheint ein
+  Hinweis unter den Feldern. Ungültige gespeicherte Zeiträume werden beim
+  Laden verworfen, und das Jahr 1 löst in der Übersicht keinen Serverfehler
+  mehr aus.
 
 ### Hinzugefügt
 - **Seite „Zeitraumvergleich"** (über dem Jahresvergleich): vergleicht den oben

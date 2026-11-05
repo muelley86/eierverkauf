@@ -144,8 +144,15 @@ function VerlaufChart({ verlauf }: { verlauf: ZeitraumVerlauf }) {
             tick={achse}
             axisLine={false}
             tickLine={false}
-            interval="preserveStartEnd"
-            minTickGap={20}
+            // Ausdünnen vom Ende her in gleichmäßigem Takt: „preserveStartEnd"
+            // erzwang das letzte Label zusätzlich zum Takt ab Start — dadurch
+            // fehlten Apr/Mai vor „Jun 26" (Lücke von drei Monaten).
+            interval="preserveEnd"
+            // Kleiner Abstand, damit 12 Monatslabels auf Desktop vollständig passen.
+            minTickGap={8}
+            // Flächen-Punkte liegen sonst exakt am Rand; Recharts rückt die
+            // Randbeschriftung dann nach innen und verdrängt die Nachbarn.
+            padding={{ left: 18, right: 18 }}
           />
           <YAxis
             tickFormatter={(v: number) => formatZahl(v)}

@@ -31,7 +31,7 @@ async def lifespan(_app: FastAPI):
 app = FastAPI(
     title="Eierverkauf-Auswertung",
     description="Auswertung von Eierverkäufen (Kerba Bio-Ei GbR).",
-    version="1.16.2",
+    version="1.16.3",
     lifespan=lifespan,
 )
 

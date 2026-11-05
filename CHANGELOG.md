@@ -7,6 +7,16 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.16.3] - 2026-11-05
+
+### Behoben
+- **Monatsbeschriftungen in der Übersichts-Grafik fehlten.** Bei knapper
+  Breite zeigte die Achse nur jeden zweiten Monat ab Start und erzwang
+  zusätzlich den letzten — vor „Jun 26" fehlten so „Apr 26" und „Mai 26"
+  (Lücke von drei Monaten). Die Daten selbst waren vollständig. Die Achse
+  braucht jetzt weniger Abstand (12 Monate passen auf dem Desktop) und dünnt
+  bei Platzmangel gleichmäßig vom letzten Monat her aus.
+
 ## [1.16.2] - 2026-11-05
 
 ### Hinzugefügt
@@ -908,7 +918,8 @@ hochladen.
   - Dev-Setup-Scripts für Windows (`dev-setup.ps1`, `dev-start.ps1`) und macOS/Linux.
   - Docker Compose für vollständige Integrationstests inkl. PDF-Export.
 
-[Unreleased]: https://github.com/muelley86/eierverkauf/compare/v1.16.2...HEAD
+[Unreleased]: https://github.com/muelley86/eierverkauf/compare/v1.16.3...HEAD
+[1.16.3]: https://github.com/muelley86/eierverkauf/compare/v1.16.2...v1.16.3
 [1.16.2]: https://github.com/muelley86/eierverkauf/compare/v1.16.1...v1.16.2
 [1.16.1]: https://github.com/muelley86/eierverkauf/compare/v1.16.0...v1.16.1
 [1.16.0]: https://github.com/muelley86/eierverkauf/compare/v1.15.0...v1.16.0

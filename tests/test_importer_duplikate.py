@@ -12,7 +12,7 @@ Regression März 2026 (zwei Bugs im UNIQUE-Schlüssel):
    NIE als Duplikat erkannt und still verdoppelt. Die Duplikat-Erkennung
    läuft jetzt über einen UNIQUE-Index mit COALESCE.
 
-Alle Daten synthetisch.
+Alle Daten synthetisch (Platzhalter: Testkunde Markt, Muster, Max, Kd.-Nr. 99999001).
 """
 import sqlite3
 
@@ -33,16 +33,16 @@ BESCHREIBUNG_KVP10 = "110 Bio-Eier 10er Kvp Größe L MHD: ab 17.04.2026"
 BESCHREIBUNG_LOSE = "Bio-Eier 90 lose Größe M MHD: 10.04.2026"
 
 ZEILE_KVP10 = (
-    '23.03.26;2026-165;15100080;"REWE Markt";"Baasch, Johannes";72,000;PACK;110;'
+    '23.03.26;2026-999;99999001;"Testkunde Markt";"Muster, Max";72,000;PACK;110;'
     f'"{BESCHREIBUNG_KVP10}";3,550;7%;0,000;0%;0%;255,600\n'
 )
 ZEILE_KVP6 = (
-    '23.03.26;2026-165;15100080;"REWE Markt";"Baasch, Johannes";60,000;PACK;111;'
+    '23.03.26;2026-999;99999001;"Testkunde Markt";"Muster, Max";60,000;PACK;111;'
     '"111 Bio-Eier 6er Kvp Größe M MHD: ab 17.04.2026";2,172;7%;0,000;0%;0%;130,320\n'
 )
 # Lose Ware ohne Pack-Code — pack_code wird NULL (Regressionsfall 2).
 ZEILE_LOSE = (
-    '23.03.26;2026-165;15100080;"REWE Markt";"Baasch, Johannes";90,000;stk;;'
+    '23.03.26;2026-999;99999001;"Testkunde Markt";"Muster, Max";90,000;stk;;'
     f'"{BESCHREIBUNG_LOSE}";0,300;7%;0,000;0%;0%;27,000\n'
 )
 
@@ -87,7 +87,7 @@ _ALT_INSERT_KVP10 = (
          (rechnungsdatum, rechnungsnummer, kundennummer, kundenname,
           menge, einheit, pack_code, eier_stueck, artikel_code,
           beschreibung, preis_einheit, gesamt)
-       VALUES ('2026-03-23', '2026-165', '15100080', 'REWE Markt',
+       VALUES ('2026-03-23', '2026-999', '99999001', 'Testkunde Markt',
                72.0, 'PACK', 110, 720, '10er Kvp', ?, 3.55, 255.6)"""
 )
 _ALT_INSERT_LOSE = (
@@ -95,7 +95,7 @@ _ALT_INSERT_LOSE = (
          (rechnungsdatum, rechnungsnummer, kundennummer, kundenname,
           menge, einheit, pack_code, eier_stueck, artikel_code,
           beschreibung, preis_einheit, gesamt)
-       VALUES ('2026-03-23', '2026-165', '15100080', 'REWE Markt',
+       VALUES ('2026-03-23', '2026-999', '99999001', 'Testkunde Markt',
                90.0, 'stk', NULL, 90, 'Sonstige', ?, 0.3, 27.0)"""
 )
 

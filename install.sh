@@ -189,37 +189,28 @@ install_steps() {
         echo 85; echo "# Frontend bauen…"
         (cd "$APP_DIR/frontend" && npm run build --silent >>"$progress_log" 2>&1)
 
-        echo 90; echo "# Systemd-Unit installieren…"
-        cat > /etc/systemd/system/${SERVICE}.service <<UNIT
-[Unit]
-Description=Eierverkauf Auswertungs-App
-After=network.target
+        # Unit, Rechte und Verwaltungsbefehl kommen aus dem Helper-Skript,
+        # damit Installer und `eierverkauf update` identisch vorgehen.
+        # Subshell: das Sourcen überschreibt sonst log()/LOG_FILE des Installers.
+        (
+            # shellcheck source=eierverkauf-helper.sh
+            source "$APP_DIR/eierverkauf-helper.sh"
 
-[Service]
-Type=simple
-User=$SERVICE_USER
-WorkingDirectory=$APP_DIR
-ExecStart=$APP_DIR/venv/bin/uvicorn main:app --host 0.0.0.0 --port $PORT
-Restart=always
-RestartSec=5
-StandardOutput=journal
-StandardError=journal
+            echo 90; echo "# Berechtigungen setzen…"
+            # Code-Baum root-eigen; das Dienstkonto schreibt nur in
+            # data/, uploads/, logs/ (Schutz vor Rechteausweitung zu root).
+            rechte_setzen
 
-[Install]
-WantedBy=multi-user.target
-UNIT
+            echo 93; echo "# Verwaltungsbefehl und Konfiguration…"
+            helper_installieren
+            umgebung_vorlage_anlegen
 
-        echo 93; echo "# Helper-Symlink anlegen…"
-        chmod +x "$APP_DIR/eierverkauf-helper.sh"
-        ln -sf "$APP_DIR/eierverkauf-helper.sh" /usr/local/bin/eierverkauf
-
-        echo 96; echo "# Berechtigungen setzen…"
-        chown -R "$SERVICE_USER:$SERVICE_USER" "$APP_DIR"
-
-        echo 98; echo "# Dienst aktivieren…"
-        systemctl daemon-reload
-        systemctl enable "$SERVICE" >>"$progress_log" 2>&1
-        systemctl restart "$SERVICE"
+            echo 96; echo "# Systemd-Unit installieren und Dienst starten…"
+            unit_schreiben gehaertet
+            systemctl daemon-reload
+            systemctl enable "$SERVICE" >>"$progress_log" 2>&1
+            dienst_neu_starten >>"$progress_log" 2>&1
+        )
 
         echo 100; echo "# Installation abgeschlossen"
         sleep 1

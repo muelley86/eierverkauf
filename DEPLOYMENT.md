@@ -47,7 +47,6 @@ git init -q
 git remote add origin https://github.com/muelley86/eierverkauf.git
 git fetch origin
 git reset --hard v1.1.0
-chown -R eierverkauf:eierverkauf .git
 
 # Aufräumen + Smoke-Test
 rm -rf /tmp/eierverkauf-source
@@ -225,10 +224,9 @@ Danach läuft eine Fortschritts-Anzeige (Gauge 0 → 100 %) durch diese Phasen �
 | 55 | Python-virtualenv + `requirements.txt` |
 | 70 | `npm install` im Frontend (lädt ~400 MB Node-Module — **dauert am längsten**) |
 | 85 | `npm run build` → erzeugt `frontend/dist/` |
-| 90 | systemd-Unit `eierverkauf.service` |
-| 93 | Symlink `/usr/local/bin/eierverkauf` |
-| 96 | Berechtigungen auf `eierverkauf:eierverkauf` |
-| 98 | Dienst aktivieren (`systemctl enable` + `restart`) |
+| 90 | Berechtigungen: Code-Baum `root:root`, nur `data/`, `uploads/`, `logs/` gehören `eierverkauf`; `backups/` nur root |
+| 93 | Verwaltungsbefehl `/usr/local/bin/eierverkauf` (root-eigene Kopie) + Konfigurationsvorlage `/etc/default/eierverkauf` |
+| 96 | systemd-Unit `eierverkauf.service` schreiben, Dienst aktivieren und starten |
 | 100 | Erfolgs-Meldung mit URL |
 
 Am Ende erscheint:
@@ -261,7 +259,6 @@ git init -q
 git remote add origin https://github.com/muelley86/eierverkauf.git
 git fetch origin
 git reset --hard v1.1.0
-chown -R eierverkauf:eierverkauf .git
 ```
 
 Erwartete Ausgaben:
@@ -270,7 +267,6 @@ git init -q                  → keine Ausgabe (still)
 git remote add …             → keine Ausgabe
 git fetch origin             → "remote: Enumerating objects…" + Downloadzahlen
 git reset --hard v1.1.0      → "HEAD is now at 30655c2 feat: UI-Redesign …"
-chown -R …                   → keine Ausgabe
 ```
 
 > **Was passiert hier?** `install.sh` hat den `.git`-Ordner bewusst nicht mitkopiert. Wir
@@ -641,6 +637,14 @@ apt-get install -y nginx
 
 `/etc/nginx/sites-available/eierverkauf.conf`:
 ```nginx
+# Fremde Hostnamen abweisen (Schutz vor DNS-Rebinding): Ohne diesen Block
+# beantwortet Nginx Anfragen für JEDEN Host-Header mit dem ersten server-Block.
+server {
+    listen 80 default_server;
+    server_name _;
+    return 444;
+}
+
 server {
     listen 80;
     server_name eier.example.com;
@@ -667,11 +671,53 @@ apt-get install -y certbot python3-certbot-nginx
 certbot --nginx -d eier.example.com
 ```
 
+### Sicherheit im LAN-Betrieb (ab v1.15.0)
+
+Die App hat bewusst **keinen Login** — jeder Rechner, der sie erreicht, darf alles. Damit
+fremde Webseiten den Browser eines Mitarbeiters nicht als Brücke ins LAN missbrauchen
+können, gibt es drei Schutzschichten:
+
+**1. Host-Schutz (DNS-Rebinding).** Die App beantwortet nur Anfragen an IP-Adressen,
+`localhost` und die in `/etc/default/eierverkauf` eingetragenen Hostnamen. Ohne Eintrag läuft
+die Prüfung im Übergangsmodus (keine Sperre, nur eine Warnung im Log; `eierverkauf status`
+zeigt „Host-Schutz: NICHT gesetzt"). Einrichten:
+
+```bash
+nano /etc/default/eierverkauf
+# EIERVERKAUF_ALLOWED_HOSTS=eier.example.com     (Kommentarzeichen entfernen, eigenen Namen)
+# EIERVERKAUF_BIND=127.0.0.1                     (nur mit Reverse-Proxy auf demselben Server)
+systemctl restart eierverkauf
+eierverkauf status                               # → Host-Schutz: gesetzt
+```
+
+Mit `EIERVERKAUF_BIND=127.0.0.1` ist Port 8050 nur noch über den Proxy erreichbar —
+direkte Aufrufe `http://<ip>:8050` funktionieren dann nicht mehr. Bei Nginx zusätzlich den
+`default_server`-Block aus Option B verwenden.
+
+**2. Herkunftsprüfung (CSRF).** Hochladen, Löschen und Konfiguration ändern sind nur aus der
+App selbst heraus möglich; der Browser kennzeichnet seitenfremde Anfragen, die App lehnt sie
+mit `403` ab. Keine Konfiguration nötig. Skripte (`curl`) sind nicht betroffen.
+
+**3. Dateirechte.** `root` führt `eierverkauf` (Backup/Update), `pip` und `npm` aus — diese
+Dateien dürfen deshalb **nicht** dem Dienstkonto `eierverkauf` gehören. Der Code-Baum
+`/opt/eierverkauf` gehört `root:root`; nur `data/`, `uploads/` und `logs/` gehören
+`eierverkauf`, `backups/` ist nur für root lesbar. Bestehende Installationen werden beim
+ersten `eierverkauf`-Aufruf nach dem Update auf v1.15.0 automatisch umgestellt. Kontrolle:
+
+```bash
+find /opt/eierverkauf -maxdepth 1 -user eierverkauf   # → nur data, uploads, logs
+ls -l /usr/local/bin/eierverkauf                      # → reguläre Datei root:root, kein Symlink
+```
+
+Die systemd-Unit läuft zusätzlich gehärtet (`ProtectSystem=strict`, Schreibrecht nur auf die
+Laufzeit-Ordner). Unterstützt der LXC keine Mount-Namespaces, fällt `eierverkauf update`
+automatisch auf eine Unit ohne Dateisystem-Sandbox zurück (Eintrag im Helper-Log).
+
 ---
 
 ## 10. Wartungs-Befehle (`eierverkauf …`)
 
-Der Symlink `/usr/local/bin/eierverkauf` ruft `eierverkauf-helper.sh` auf. Alle Befehle:
+`/usr/local/bin/eierverkauf` ist eine root-eigene Kopie von `eierverkauf-helper.sh` (seit v1.15.0; vorher ein Symlink). Alle Befehle:
 
 | Befehl | Wirkung |
 |---|---|
@@ -764,7 +810,7 @@ Häufige Ursachen:
 | Symptom im Log | Lösung |
 |---|---|
 | `Address already in use` | Port 8050 belegt. `ss -tlnp \| grep 8050` zeigt blockierenden Prozess. |
-| `Permission denied … data/eierverkauf.db` | `chown -R eierverkauf:eierverkauf /opt/eierverkauf` |
+| `Permission denied … data/eierverkauf.db` | `chown -R eierverkauf:eierverkauf /opt/eierverkauf/data` — **nie** den ganzen Baum dem Dienstkonto geben (siehe §9, „Sicherheit im LAN-Betrieb“) |
 | `database disk image is malformed` | DB korrupt → Restore aus letztem Backup (§7.5) |
 | `ModuleNotFoundError: No module named '…'` | venv defekt → siehe 11.4 |
 | `OSError: cannot load library 'libpango…'` | WeasyPrint-Libs fehlen → `apt-get install -y libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz0b libfontconfig1 libcairo2 libgdk-pixbuf-2.0-0` |
@@ -779,8 +825,7 @@ rm -rf /opt/eierverkauf/venv
 python3 -m venv /opt/eierverkauf/venv
 /opt/eierverkauf/venv/bin/pip install --upgrade pip
 /opt/eierverkauf/venv/bin/pip install -r /opt/eierverkauf/requirements.txt
-chown -R eierverkauf:eierverkauf /opt/eierverkauf/venv
-systemctl start eierverkauf
+systemctl start eierverkauf      # venv bleibt root-eigen (siehe §9, „Sicherheit im LAN-Betrieb“)
 ```
 
 ### 11.5 — Frontend zeigt veraltete Version
@@ -793,8 +838,8 @@ systemctl start eierverkauf
    Zeitstempel muss nach dem letzten Update aktuell sein. Wenn alt → Build ist gescheitert:
    ```bash
    cd /opt/eierverkauf/frontend
-   sudo -u eierverkauf npm ci
-   sudo -u eierverkauf npm run build
+   npm ci            # als root — der Code-Baum gehört seit v1.15.0 root
+   npm run build
    systemctl restart eierverkauf
    ```
 
@@ -1020,7 +1065,7 @@ eierverkauf uninstall
 
 Fragt nach, ob die Daten (`data/`, `uploads/`, `backups/`) erhalten bleiben sollen. Bei „nein"
 wird `/opt/eierverkauf` komplett entfernt, der systemd-Service und der
-`/usr/local/bin/eierverkauf`-Symlink ebenfalls.
+`/usr/local/bin/eierverkauf`-Befehl ebenfalls.
 
 Bei „ja" bleibt `/opt/eierverkauf/data/` und `/opt/eierverkauf/backups/` für einen späteren
 Restore liegen.
@@ -1064,7 +1109,7 @@ Bei jedem Release sind diese drei Stellen synchron zu halten: `VERSION`, `CHANGE
 ├── DEPLOYMENT.md               # diese Anleitung
 ├── README.md
 ├── requirements.txt
-├── eierverkauf-helper.sh       # Symlink-Ziel /usr/local/bin/eierverkauf
+├── eierverkauf-helper.sh       # Quelle für /usr/local/bin/eierverkauf (Kopie)
 ├── install.sh                  # Erstinstallation
 ├── api/                        # FastAPI-Router (Auswertung, Import, Export)
 ├── data/
@@ -1088,7 +1133,8 @@ Bei jedem Release sind diese drei Stellen synchron zu halten: `VERSION`, `CHANGE
 
 | Pfad | Inhalt |
 |---|---|
-| `/usr/local/bin/eierverkauf` | Symlink zum Helper-Skript |
+| `/usr/local/bin/eierverkauf` | Verwaltungsbefehl (root-eigene Kopie von `eierverkauf-helper.sh`, wird bei jedem Update erneuert) |
+| `/etc/default/eierverkauf` | Konfiguration: `EIERVERKAUF_ALLOWED_HOSTS`, `EIERVERKAUF_BIND` |
 | `/etc/systemd/system/eierverkauf.service` | systemd-Unit |
 | `/var/log/eierverkauf-install.log` | Installer-Log |
 | `/tmp/eierverkauf-update.log` | Letztes Update-Log |

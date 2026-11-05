@@ -54,7 +54,7 @@ docker compose up --build           # http://localhost:8050
 
 ### Request-Pfad
 
-`main.py` mountet Router unter `/api/*` **vor** dem StaticFiles-Mount auf `/`. Im Produktiv-Build liefert FastAPI `frontend/dist/` aus; im Dev läuft Vite separat und proxy-t `/api/*` zu uvicorn (siehe `frontend/vite.config.ts`). CORS ist nur für `localhost:5173` offen — in Produktion irrelevant.
+`main.py` mountet Router unter `/api/*` **vor** dem StaticFiles-Mount auf `/`. Äußerste Schicht ist `api/sicherheit.py` (`SicherheitsMiddleware`, seit v1.15.0): Host-Erlaubt-Liste gegen DNS-Rebinding (`EIERVERKAUF_ALLOWED_HOSTS`; leer = nur Warnung) und Origin-/`Sec-Fetch-Site`-Prüfung für POST/PUT/PATCH/DELETE (CSRF). Die App hat bewusst **keinen Login** (LAN-Betrieb) — neue schreibende Endpunkte sind über die Middleware automatisch geschützt, nicht daran vorbei bauen. Im Produktiv-Build liefert FastAPI `frontend/dist/` aus; im Dev läuft Vite separat und proxy-t `/api/*` zu uvicorn (siehe `frontend/vite.config.ts`). CORS ist nur für `localhost:5173` offen — in Produktion irrelevant.
 
 ### Datenschicht (`data/`)
 
@@ -123,6 +123,7 @@ In `ColumnDef<…>[]` jeder TanStack-Table v8 muss für **Zahlen-Spalten** expli
 ### Export (`export/`)
 
 - `excel_export.py`: openpyxl. Titelzeile „Kerba Bio-Ei GbR" + Zeitraum, **dunkelblauer Header (`#1E3A8A`)** aus der Pre-v1.1.0-Palette. **Stilistisch inkonsistent** mit dem neuen Warm-Editorial-Frontend (Yolk/Sage/Brick) — bei Gelegenheit auf `#D69826` (Yolk) für den Kopf + `#5A7F4F` (Sage) für Akzente migrieren. Niedrige Priorität, weil Excel-Exporte selten geöffnet werden und der dunkelblaue Kopf gut lesbar ist.
+- **Beide Exporte behandeln CSV-Text als feindlich:** `pdf_export.py` maskiert jeden Wert mit `html.escape` und rendert mit `pdf_url_fetcher()` (nur `data:`-URLs — sonst bettet WeasyPrint `file://`-Ziele aus `<a rel="attachment">` ein); `excel_export.py` setzt Text-Zellen auf `data_type="s"` (keine Formeln). Neue Template-Felder/Spalten nur über diese Pfade.
 - `pdf_export.py`: WeasyPrint. **Auf Windows lokal oft kaputt** (GTK fehlt) → der Endpoint fängt `OSError` und liefert 500 mit klarem Hinweis. PDF-Tests am besten in Docker. PDF-Styling sollte bei Gelegenheit ebenfalls auf die Warm-Editorial-Palette angeglichen werden.
 
 ## Versions- und Release-Hygiene
@@ -140,5 +141,7 @@ Release-Commit-Konvention: Tag `v<MAJOR>.<MINOR>.<PATCH>` setzen, dann `git push
 ## Deployment
 
 Produktivumgebung wird durch `install.sh` aufgesetzt und durch `eierverkauf-helper.sh` (Symlink `/usr/local/bin/eierverkauf`) gepflegt. **Vollständige Server-Admin-Anleitung in `DEPLOYMENT.md`** — inkl. LXC-Setup, Update-Pipeline, Backup/Restore, Reverse-Proxy, Daten-Migration vom alten Server, Troubleshooting. Update-Pipeline macht automatisches Pre-Update-Backup mit Rollback bei Fehler — die Backup-Logik liegt im Helper-Script, nicht in der App.
+
+**Rechtetrennung (seit v1.15.0, kritisch):** root führt `/usr/local/bin/eierverkauf` (root-eigene *Kopie* von `eierverkauf-helper.sh`, kein Symlink), `venv/bin/pip` und `npm` aus. Der Code-Baum gehört deshalb `root:root`; das Dienstkonto `eierverkauf` besitzt nur `data/`, `uploads/`, `logs/` (`rechte_setzen` im Helper, von `install.sh` und `do_update` genutzt). Niemals `chown -R eierverkauf` auf `/opt/eierverkauf`, `venv` oder `.git` — sonst Rechteausweitung Dienstkonto → root. Unit wird von `unit_schreiben` erzeugt (liest `/etc/default/eierverkauf`). Das Helper-Skript ist sourcebar (Source-Guard am Ende); Tests in `tests/test_helper_rechte.py`.
 
 **Wichtige Diskrepanz zwischen `install.sh` und `eierverkauf-helper.sh update`:** Der Installer rsync't den Code von einem temporären Quellverzeichnis nach `/opt/eierverkauf` **ohne `.git`**. Der Update-Helper erwartet aber ein Git-Working-Copy mit Remote `origin/main`. Nach jeder Erstinstallation muss daher manuell `git init` + `git remote add origin …` + `git fetch` + `git reset --hard <tag>` in `/opt/eierverkauf` ausgeführt werden — siehe `DEPLOYMENT.md` §4.5. Dieses Manuell-Setup ist die einzige nicht-automatisierte Stelle in der Deploy-Pipeline.

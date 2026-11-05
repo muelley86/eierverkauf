@@ -7,6 +7,78 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.15.0] - 2026-11-05
+
+Sicherheits-Release nach einem Audit. Die App bleibt ohne Login (reiner
+LAN-Betrieb); geschlossen werden die Wege, über die man trotzdem von außen
+bzw. aus dem Dienstkonto heraus Schaden anrichten konnte.
+
+### Behoben
+- **Dienstkonto konnte root-Rechte erlangen.** Der Installer gab den gesamten
+  Code-Baum `/opt/eierverkauf` dem Dienstkonto `eierverkauf`, und
+  `/usr/local/bin/eierverkauf` war ein Symlink auf das Helper-Skript darin.
+  root führt dieses Skript (Backup-/Update-Cron), `venv/bin/pip` und `npm`
+  aus — ein kompromittierter App-Prozess hätte so Code als root ausführen
+  können. Jetzt gehört der Code-Baum `root:root`; das Dienstkonto schreibt
+  nur noch in `data/`, `uploads/` und `logs/`, `backups/` ist root-only, und
+  `/usr/local/bin/eierverkauf` ist eine root-eigene Kopie.
+- **PDF-Export bettete auf Wunsch Server-Dateien ein.** Kundennamen aus der
+  CSV wurden ungefiltert als HTML an WeasyPrint übergeben; ein Kundenname wie
+  `<a rel="attachment" href="file:///…">` fügte die Datei als PDF-Anhang ein
+  (mit WeasyPrint 70 nachgewiesen). Alle Werte werden jetzt HTML-maskiert,
+  und WeasyPrint lädt nur noch `data:`-Ressourcen (keine Dateien, keine
+  Netzwerkzugriffe).
+- **PDF-Export brach bei `$` in Kundennamen ab** (matplotlib-Mathtext in den
+  Diagrammbeschriftungen).
+- **Excel-Export schrieb Text mit führendem `=` als Formel.** Textzellen
+  werden jetzt immer als Text gespeichert; der Inhalt bleibt unverändert.
+- **Fremde Webseiten konnten über den Browser eines Mitarbeiters CSVs
+  importieren (CSRF).** Hochladen, Löschen und Konfiguration ändern werden
+  abgelehnt (`403`), wenn der Browser die Anfrage als seitenfremd kennzeichnet
+  oder `Origin` nicht zum Host passt. Skripte ohne Browser-Header sind nicht
+  betroffen.
+- **DNS-Rebinding.** Neue Host-Prüfung: Die App beantwortet nur Anfragen an
+  IP-Adressen, `localhost` und die in `EIERVERKAUF_ALLOWED_HOSTS`
+  eingetragenen Hostnamen.
+
+### Geändert
+- `eierverkauf update` setzt nach dem `git pull` die Dateirechte, erneuert
+  den Verwaltungsbefehl und schreibt die systemd-Unit neu.
+- Die systemd-Unit liest `/etc/default/eierverkauf` (`EIERVERKAUF_BIND`,
+  `EIERVERKAUF_ALLOWED_HOSTS`), nutzt einen eigenen Cache-Ordner
+  (`/var/cache/eierverkauf`) und ist gehärtet (`ProtectSystem=strict`,
+  `NoNewPrivileges`). Startet die gehärtete Unit im LXC nicht (fehlende
+  Mount-Namespaces), fällt der Helper automatisch auf eine Unit ohne
+  Dateisystem-Sandbox zurück.
+- `eierverkauf status` zeigt, ob der Host-Schutz konfiguriert ist.
+- Die App legt `backups/` beim Start nicht mehr an (verwaltet allein der
+  Helper).
+- Testdaten in `tests/test_importer_duplikate.py` durch Platzhalter ersetzt.
+- DEPLOYMENT.md: keine `chown`-Anweisungen mehr, die root-ausgeführte Dateien
+  dem Dienstkonto geben; Nginx-Vorlage mit `default_server`, der fremde
+  Hostnamen abweist; neuer Abschnitt „Sicherheit im LAN-Betrieb" (§9).
+
+### Hinweise
+- **Rechte-Umstellung bestehender Server:** Beim Update auf 1.15.0 läuft
+  noch der alte Helper; die Umstellung erfolgt automatisch beim **nächsten**
+  `eierverkauf`-Aufruf als root (z. B. nächtlicher Backup-Cron oder direkt
+  `eierverkauf status`). Dabei wird der Dienst einmal neu gestartet.
+  Kontrolle: `find /opt/eierverkauf -maxdepth 1 -user eierverkauf` zeigt nur
+  noch `data`, `uploads`, `logs`.
+- **Host-Schutz aktivieren** (sonst nur Warnung im Log):
+  ```bash
+  nano /etc/default/eierverkauf
+  # EIERVERKAUF_ALLOWED_HOSTS=eier.example
+  # EIERVERKAUF_BIND=127.0.0.1      # Nginx auf demselben Server
+  systemctl restart eierverkauf
+  eierverkauf status              # → Host-Schutz: gesetzt
+  ```
+  Mit `EIERVERKAUF_BIND=127.0.0.1` ist `http://<ip>:8050` nicht mehr direkt
+  erreichbar, nur noch über Nginx. Zusätzlich in Nginx den
+  `default_server`-Block aus DEPLOYMENT.md §9 ergänzen.
+- Ein eventuell gesetztes `git config --global safe.directory` für
+  `/opt/eierverkauf` wird nicht mehr benötigt (`.git` gehört jetzt root).
+
 ## [1.14.0] - 2026-07-13
 
 ### Hinzugefügt

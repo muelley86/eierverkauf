@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import base64
+import html as html_lib
 from io import BytesIO
 from typing import Optional, Sequence
 
@@ -76,6 +77,15 @@ def _fmt(wert: object, kind: str) -> str:
     return str(wert)
 
 
+def _label(wert: object) -> str:
+    """Achsenbeschriftung: '$' maskieren, sonst parst matplotlib Mathtext.
+
+    Kundennamen stammen aus der CSV; ungültiger Mathtext ("$\\frac{$") ließ
+    den PDF-Export mit einer Exception abbrechen.
+    """
+    return str(wert).replace("$", r"\$")
+
+
 def _chart_png_base64(typ: str, daten: Sequence[dict]) -> Optional[str]:
     """Erzeugt einen Übersichts-Chart und kodiert ihn als base64-PNG."""
     if not daten:
@@ -93,14 +103,14 @@ def _chart_png_base64(typ: str, daten: Sequence[dict]) -> Optional[str]:
         ax.legend()
         ax.set_ylabel("Eier (Stück)")
     elif typ in ("kunde_monate", "artikel_monate"):
-        monate = [str(d.get("monat", "")) for d in daten]
+        monate = [_label(d.get("monat", "")) for d in daten]
         eier = [d.get("eier", 0) for d in daten]
         ax.bar(monate, eier, color="#2563eb")
         ax.set_ylabel("Eier (Stück)")
         plt.xticks(rotation=45, ha="right")
     elif typ == "ranking":
         top = list(daten)[:10]
-        namen = [d.get("kundenname", "") for d in top][::-1]
+        namen = [_label(d.get("kundenname", "")) for d in top][::-1]
         eier = [d.get("eier", 0) for d in top][::-1]
         ax.barh(namen, eier, color="#16a34a")
         ax.set_xlabel("Eier (Stück)")
@@ -111,7 +121,7 @@ def _chart_png_base64(typ: str, daten: Sequence[dict]) -> Optional[str]:
             plt.close(fig)
             return None
         key = keys[0]
-        labels = [str(d.get("kundenname") or d.get("artikel_code") or "") for d in daten[:10]]
+        labels = [_label(d.get("kundenname") or d.get("artikel_code") or "") for d in daten[:10]]
         werte = [d.get(key, 0) for d in daten[:10]]
         ax.bar(labels, werte, color="#2563eb")
         plt.xticks(rotation=45, ha="right")
@@ -154,12 +164,37 @@ _HTML_TEMPLATE = """<!DOCTYPE html>
 """
 
 
-def build_pdf(typ: str, von: Optional[str], bis: Optional[str], daten: Sequence[dict],
-              titel: Optional[str] = None) -> bytes:
-    """Erzeugt ein PDF-Dokument aus den Daten."""
-    from datetime import datetime
-    from weasyprint import HTML  # lokaler Import → Fehler nur bei tatsächlicher Nutzung
+def pdf_url_fetcher():
+    """URL-Fetcher für WeasyPrint, der nur ``data:``-URLs auflöst.
 
+    Der Standard-Fetcher liest ``file://``- und ``http(s)://``-Ressourcen —
+    über eingeschleustes Markup ließen sich sonst lokale Server-Dateien als
+    PDF-Anhang einbetten oder Requests ins LAN auslösen. Das einzige externe
+    Element des Templates ist das Diagramm als ``data:``-PNG.
+
+    WeasyPrint ≥ 67 erwartet eine ``URLFetcher``-Instanz, ältere Versionen
+    eine Funktion; beide Varianten werden unterstützt.
+    """
+    try:
+        from weasyprint.urls import URLFetcher
+    except ImportError:  # WeasyPrint < 67
+        from weasyprint import default_url_fetcher
+
+        def fetcher(url: str, *args, **kwargs):
+            if not url.startswith("data:"):
+                raise ValueError(f"PDF-Export: Ressource nicht erlaubt: {url}")
+            return default_url_fetcher(url, *args, **kwargs)
+
+        return fetcher
+    return URLFetcher(allowed_protocols={"data"})
+
+
+def baue_pdf_html(typ: str, von: Optional[str], bis: Optional[str], daten: Sequence[dict],
+                  titel: Optional[str] = None) -> str:
+    """Baut das HTML-Dokument für den PDF-Export; alle Textwerte maskiert."""
+    from datetime import datetime
+
+    esc = html_lib.escape
     spalten = SPALTEN_PDF.get(typ)
     if spalten is None:
         # Fallback: alle keys aus erstem Eintrag, als Text.
@@ -168,9 +203,9 @@ def build_pdf(typ: str, von: Optional[str], bis: Optional[str], daten: Sequence[
 
     zeitraum = f"{von or '–'} bis {bis or '–'}" if (von or bis) else "Gesamtzeitraum"
     titel_text = titel or f"Auswertung: {typ.capitalize()}"
-    kopfzeile = "".join(f"<th>{name}</th>" for name, _, _ in spalten)
+    kopfzeile = "".join(f"<th>{esc(name)}</th>" for name, _, _ in spalten)
     zeilen_html = "".join(
-        "<tr>" + "".join(f"<td>{_fmt(eintrag.get(key), kind)}</td>" for _, key, kind in spalten) + "</tr>"
+        "<tr>" + "".join(f"<td>{esc(_fmt(eintrag.get(key), kind))}</td>" for _, key, kind in spalten) + "</tr>"
         for eintrag in daten
     )
     chart_b64 = _chart_png_base64(typ, daten)
@@ -178,15 +213,23 @@ def build_pdf(typ: str, von: Optional[str], bis: Optional[str], daten: Sequence[
         f'<div class="chart"><img src="data:image/png;base64,{chart_b64}" alt="Diagramm"/></div>'
         if chart_b64 else ""
     )
-    html = _HTML_TEMPLATE.format(
-        titel=titel_text,
-        zeitraum=zeitraum,
+    return _HTML_TEMPLATE.format(
+        titel=esc(titel_text),
+        zeitraum=esc(zeitraum),
         erstellt=datetime.now().strftime("%d.%m.%Y %H:%M"),
         chart_html=chart_html,
         kopfzeile=kopfzeile,
         zeilen=zeilen_html or "<tr><td colspan='99'>Keine Daten</td></tr>",
     )
-    return HTML(string=html).write_pdf()
 
 
-__all__ = ["build_pdf", "SPALTEN_PDF"]
+def build_pdf(typ: str, von: Optional[str], bis: Optional[str], daten: Sequence[dict],
+              titel: Optional[str] = None) -> bytes:
+    """Erzeugt ein PDF-Dokument aus den Daten."""
+    from weasyprint import HTML  # lokaler Import → Fehler nur bei tatsächlicher Nutzung
+
+    html = baue_pdf_html(typ, von, bis, daten, titel)
+    return HTML(string=html, url_fetcher=pdf_url_fetcher()).write_pdf()
+
+
+__all__ = ["build_pdf", "baue_pdf_html", "pdf_url_fetcher", "SPALTEN_PDF"]

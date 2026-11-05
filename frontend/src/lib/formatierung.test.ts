@@ -3,6 +3,7 @@ import {
   formatBruttoRetouren,
   formatCentJeEi,
   formatEuro,
+  formatVerlaufLabel,
   formatZahl,
 } from "./formatierung";
 
@@ -61,5 +62,19 @@ describe("formatBruttoRetouren", () => {
     expect(formatBruttoRetouren(74.8, -15, formatEuro)).toBe(
       `Verkauft ${formatEuro(74.8)} · Retouren ${formatEuro(-15)}`,
     );
+  });
+});
+
+describe("formatVerlaufLabel", () => {
+  test("formatiert Tages-Buckets als 'TT.MM.'", () => {
+    expect(formatVerlaufLabel("2026-11-03", "tag")).toBe("03.11.");
+  });
+
+  test("formatiert Wochen-Buckets mit Startdatum", () => {
+    expect(formatVerlaufLabel("2026-11-02", "woche")).toBe("ab 02.11.");
+  });
+
+  test("formatiert Monats-Buckets als 'Mon JJ'", () => {
+    expect(formatVerlaufLabel("2025-11-15", "monat")).toBe("Nov 25");
   });
 });

@@ -2,6 +2,7 @@
  * Axios-Client für alle Backend-Endpunkte. Strikt typisiert, keine `any`.
  */
 import axios, { AxiosInstance } from "axios";
+import type { VerlaufGranularitaet } from "@/lib/formatierung";
 
 export const api: AxiosInstance = axios.create({
   baseURL: "/api",
@@ -87,6 +88,21 @@ export interface JahresvergleichZeile {
   /** Umsatz nur aus Positionen mit Eier-Stückzahl (Basis für Umsatz/Ei). */
   jahr_eier_umsatz: number;
   vorjahr_eier_umsatz: number;
+}
+
+export interface VerlaufPunkt {
+  /** Bucket-Start (ISO-Datum). */
+  start: string;
+  eier: number;
+  umsatz: number;
+  /** Positionsgleicher Vorjahres-Bucket; null ohne Zeitraum-Filter. */
+  vorjahr_eier: number | null;
+  vorjahr_umsatz: number | null;
+}
+
+export interface DashboardVerlauf {
+  granularitaet: VerlaufGranularitaet;
+  punkte: VerlaufPunkt[];
 }
 
 export interface ArtikelZeile {
@@ -255,6 +271,11 @@ export async function getBelegPositionen(
   const { data } = await api.get<BelegPosition[]>(
     `/belege/${encodeURIComponent(rechnungsnummer)}/positionen?datum=${encodeURIComponent(datum)}`,
   );
+  return data;
+}
+
+export async function getDashboardVerlauf(z: Zeitraum): Promise<DashboardVerlauf> {
+  const { data } = await api.get<DashboardVerlauf>(`/dashboard/verlauf?${params(z)}`);
   return data;
 }
 

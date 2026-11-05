@@ -94,3 +94,17 @@ export function monatsname(nr: number): string {
 export function monatsKurz(nr: number): string {
   return MONATSNAMEN[nr - 1]?.slice(0, 3) ?? String(nr);
 }
+
+export type VerlaufGranularitaet = "tag" | "woche" | "monat";
+
+/**
+ * Achsen-Label für einen Verlaufs-Bucket ('03.11.', 'ab 02.11.', 'Nov 25').
+ * Wochen-Buckets beginnen am Zeitraum-Start (nicht montags), daher kein 'KW'.
+ */
+export function formatVerlaufLabel(startIso: string, granularitaet: VerlaufGranularitaet): string {
+  const [jahr, monat, tag] = startIso.split("-");
+  if (!jahr || !monat || !tag) return startIso;
+  if (granularitaet === "monat") return `${monatsKurz(Number(monat))} ${jahr.slice(2)}`;
+  const tagMonat = `${tag}.${monat}.`;
+  return granularitaet === "woche" ? `ab ${tagMonat}` : tagMonat;
+}

@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from "react";
+import { isoDatumLokal } from "@/lib/datum";
 
 /**
  * Globaler Zeitraumfilter (Von/Bis). Default: laufendes Jahr.
@@ -20,11 +21,10 @@ export interface ZeitraumState {
 
 const ZeitraumContext = createContext<ZeitraumState | null>(null);
 
-const STORAGE_KEY = "eierverkauf.zeitraum";
+// v2: ältere Einträge waren durch toISOString() um einen Tag verschoben (MEZ).
+const STORAGE_KEY = "eierverkauf.zeitraum.v2";
 
-function iso(d: Date): string {
-  return d.toISOString().slice(0, 10);
-}
+const iso = isoDatumLokal;
 
 function defaultRange(): { von: string; bis: string } {
   const heute = new Date();

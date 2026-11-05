@@ -6,7 +6,7 @@ from typing import Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Query
 
-from data import queries
+from data import queries, verlauf
 
 router = APIRouter(tags=["auswertung"])
 
@@ -50,6 +50,72 @@ def dashboard(
         "vorjahres_kpis": vorjahres_kpis,
         "top5_kunden": queries.top5_kunden(_iso(von), _iso(bis)),
         "top5_artikel": queries.top5_artikel(_iso(von), _iso(bis)),
+    }
+
+
+def _effektiver_zeitraum(
+    von: Optional[date], bis: Optional[date]
+) -> Optional[tuple[date, date]]:
+    """Füllt fehlende Grenzen mit dem Datenbereich auf; ``None`` ohne Daten."""
+    if von and bis:
+        return von, bis
+    min_datum, max_datum = queries.datenbereich()
+    if min_datum is None or max_datum is None:
+        return None
+    return (
+        von or date.fromisoformat(min_datum),
+        bis or date.fromisoformat(max_datum),
+    )
+
+
+@router.get("/dashboard/verlauf")
+def dashboard_verlauf(
+    von: Optional[date] = Query(None),
+    bis: Optional[date] = Query(None),
+) -> dict:
+    """Verlauf für die Dashboard-Grafik im gewählten Zeitraum.
+
+    Auflösung automatisch (Tag/Woche/Monat, siehe ``data.verlauf``). Der
+    Vorjahreszeitraum liegt positionsgleich in ``vorjahr_*``; ohne
+    Zeitraum-Filter sind diese Felder ``None`` (analog ``vorjahres_kpis``).
+    """
+    if von and bis and von > bis:
+        raise HTTPException(status_code=422, detail="„von“ liegt nach „bis“.")
+    zeitraum = _effektiver_zeitraum(von, bis)
+    if zeitraum is None:
+        return {"granularitaet": "monat", "punkte": []}
+    start, ende = zeitraum
+    if start > ende:
+        raise HTTPException(status_code=422, detail="Zeitraum enthält keine Daten.")
+
+    granularitaet = verlauf.waehle_granularitaet(start, ende)
+    aktuell = verlauf.bucket_verlauf(
+        queries.tageswerte(_iso(start), _iso(ende)), start, ende, granularitaet
+    )
+    mit_vorjahr = bool(von or bis)
+    vorjahr: list[dict] = []
+    if mit_vorjahr:
+        vj_start, vj_ende = _ein_jahr_zurueck(start), _ein_jahr_zurueck(ende)
+        vorjahr = verlauf.bucket_verlauf(
+            queries.tageswerte(_iso(vj_start), _iso(vj_ende)),
+            vj_start, vj_ende, granularitaet,
+        )
+
+    def _vj(i: int, feld: str) -> Optional[float]:
+        if not mit_vorjahr:
+            return None
+        return vorjahr[i][feld] if i < len(vorjahr) else 0.0
+
+    return {
+        "granularitaet": granularitaet,
+        "punkte": [
+            {
+                **punkt,
+                "vorjahr_eier": _vj(i, "eier"),
+                "vorjahr_umsatz": _vj(i, "umsatz"),
+            }
+            for i, punkt in enumerate(aktuell)
+        ],
     }
 
 

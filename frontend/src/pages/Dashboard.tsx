@@ -20,19 +20,19 @@ import { Hen } from "@/components/illustrations/Hen";
 import { useZeitraum } from "@/context/ZeitraumContext";
 import {
   DashboardResponse,
+  DashboardVerlauf,
   ImportProtokollEintrag,
-  JahresvergleichZeile,
   getDashboard,
+  getDashboardVerlauf,
   getImportHistorie,
-  getJahresvergleich,
 } from "@/api/client";
 import { artikelLabel } from "@/lib/artikel";
 import {
   formatBruttoRetouren,
   formatDatum,
   formatEuro,
+  formatVerlaufLabel,
   formatZahl,
-  monatsKurz,
 } from "@/lib/formatierung";
 import { AXIS_TICK, CHART_FARBEN, CHART_GRID, TOOLTIP_STYLE } from "@/lib/chart-farben";
 
@@ -52,12 +52,6 @@ function delta(aktuell: number, vorjahr: number | undefined | null) {
   };
 }
 
-/** Extrahiert das Jahr aus einem ISO-Datum „YYYY-MM-DD". Fallback: aktuelles Jahr. */
-function jahrAusIso(iso: string): number {
-  const m = /^(\d{4})/.exec(iso);
-  return m ? Number(m[1]) : new Date().getFullYear();
-}
-
 // ---------------------------------------------------------------------------
 // Komponente
 // ---------------------------------------------------------------------------
@@ -66,18 +60,16 @@ export default function Dashboard() {
   const { von, bis } = useZeitraum();
   const navigate = useNavigate();
   const [daten, setDaten] = useState<DashboardResponse | null>(null);
-  const [verlauf, setVerlauf] = useState<JahresvergleichZeile[] | null>(null);
+  const [verlauf, setVerlauf] = useState<DashboardVerlauf | null>(null);
   const [imports, setImports] = useState<ImportProtokollEintrag[] | null>(null);
   const [loading, setLoading] = useState(true);
-
-  const jahr = jahrAusIso(bis);
 
   useEffect(() => {
     let abgebrochen = false;
     setLoading(true);
     Promise.all([
       getDashboard({ von, bis }),
-      getJahresvergleich(jahr),
+      getDashboardVerlauf({ von, bis }),
       getImportHistorie(),
     ])
       .then(([d, v, i]) => {
@@ -95,17 +87,11 @@ export default function Dashboard() {
     return () => {
       abgebrochen = true;
     };
-  }, [von, bis, jahr]);
+  }, [von, bis]);
 
-  // Sparkline-Daten aus dem Monatsverlauf des aktuellen Jahres.
-  const sparkEier = useMemo(
-    () => verlauf?.map((m) => m.jahr) ?? [],
-    [verlauf],
-  );
-  const sparkUmsatz = useMemo(
-    () => verlauf?.map((m) => m.jahr_umsatz) ?? [],
-    [verlauf],
-  );
+  // Sparkline-Daten aus dem Verlauf des gewählten Zeitraums.
+  const sparkEier = useMemo(() => verlauf?.punkte.map((p) => p.eier) ?? [], [verlauf]);
+  const sparkUmsatz = useMemo(() => verlauf?.punkte.map((p) => p.umsatz) ?? [], [verlauf]);
 
   // Delta-Pills aus Vorjahresvergleich (Backend liefert).
   const vj = daten?.vorjahres_kpis;
@@ -114,16 +100,17 @@ export default function Dashboard() {
   const deltaKunden = daten ? delta(daten.kpis.anzahl_kunden, vj?.anzahl_kunden) : null;
   const deltaPositionen = daten ? delta(daten.kpis.anzahl_positionen, vj?.anzahl_positionen) : null;
 
-  // Daten für Hauptchart: Monatszeile mit zwei Linien.
+  // Hauptchart: ein Punkt je Bucket (Tag/Woche/Monat) im gewählten Zeitraum.
   const chartDaten = useMemo(
     () =>
-      (verlauf ?? []).map((m) => ({
-        monat: monatsKurz(m.monat),
-        aktuell: m.jahr || null,
-        vorjahr: m.vorjahr || null,
+      (verlauf?.punkte ?? []).map((p) => ({
+        label: formatVerlaufLabel(p.start, verlauf?.granularitaet ?? "monat"),
+        aktuell: p.eier,
+        vorjahr: p.vorjahr_eier,
       })),
     [verlauf],
   );
+  const hatVorjahr = chartDaten.some((d) => d.vorjahr !== null);
 
   // Top-5-Werte mit Maximum für Balkenbreite.
   const top5Kunden = daten?.top5_kunden ?? [];
@@ -211,18 +198,20 @@ export default function Dashboard() {
           eyebrow="Verlauf"
           title={
             <>
-              Eierverkauf <span className="italic">im Jahresverlauf</span>
+              Eierverkauf <span className="italic">im gewählten Zeitraum</span>
             </>
           }
           actions={
             <div className="flex items-center gap-4 text-xs font-mono text-muted-foreground">
               <span className="inline-flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-yolk" /> {jahr}
+                <span className="h-2 w-2 rounded-full bg-yolk" /> Zeitraum
               </span>
-              <span className="inline-flex items-center gap-1.5">
-                <span className="inline-block w-4 border-t border-dashed border-muted-foreground" />
-                {jahr - 1}
-              </span>
+              {hatVorjahr && (
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="inline-block w-4 border-t border-dashed border-muted-foreground" />
+                  Vorjahreszeitraum
+                </span>
+              )}
             </div>
           }
         >
@@ -242,7 +231,7 @@ export default function Dashboard() {
                 </defs>
                 <CartesianGrid {...CHART_GRID} vertical={false} />
                 <XAxis
-                  dataKey="monat"
+                  dataKey="label"
                   stroke={CHART_FARBEN.inkMuted}
                   tick={AXIS_TICK}
                   axisLine={false}
@@ -257,7 +246,7 @@ export default function Dashboard() {
                 />
                 <Tooltip
                   formatter={(v: number) => formatZahl(v)}
-                  labelFormatter={(l) => `Monat: ${l}`}
+                  labelFormatter={(l) => String(l)}
                   contentStyle={TOOLTIP_STYLE}
                   labelStyle={{ color: CHART_FARBEN.ink }}
                 />
@@ -276,7 +265,7 @@ export default function Dashboard() {
                   strokeDasharray="4 4"
                   dot={false}
                   isAnimationActive={false}
-                  name="Vorjahr"
+                  name="Vorjahreszeitraum"
                 />
                 <Line
                   type="monotone"
@@ -285,7 +274,7 @@ export default function Dashboard() {
                   strokeWidth={2.5}
                   dot={{ r: 3, fill: CHART_FARBEN.yolk, stroke: CHART_FARBEN.surface, strokeWidth: 1.5 }}
                   isAnimationActive={false}
-                  name={String(jahr)}
+                  name="Zeitraum"
                 />
               </ComposedChart>
             </ResponsiveContainer>

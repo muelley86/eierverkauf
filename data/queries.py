@@ -339,6 +339,38 @@ def jahresvergleich(jahr: int) -> list[dict]:
     return list(daten.values())
 
 
+def tageswerte(von: Optional[str], bis: Optional[str]) -> list[dict]:
+    """Netto-Eier und -Umsatz je Rechnungsdatum (Basis für den Dashboard-Verlauf)."""
+    wh, params = _zeitraum_filter(von, bis)
+    sql = f"""
+        SELECT rechnungsdatum AS datum,
+               COALESCE(SUM(eier_stueck), 0) AS eier,
+               COALESCE(SUM(gesamt), 0)      AS umsatz
+        FROM verkaufspositionen
+        {wh}
+        GROUP BY rechnungsdatum
+        ORDER BY rechnungsdatum
+    """
+    conn = get_conn()
+    try:
+        return [_row_to_dict(r) for r in conn.execute(sql, params).fetchall()]
+    finally:
+        conn.close()
+
+
+def datenbereich() -> tuple[Optional[str], Optional[str]]:
+    """Frühestes und spätestes Rechnungsdatum im Bestand (``(None, None)`` ohne Daten)."""
+    conn = get_conn()
+    try:
+        row = conn.execute(
+            "SELECT MIN(rechnungsdatum) AS von, MAX(rechnungsdatum) AS bis "
+            "FROM verkaufspositionen"
+        ).fetchone()
+    finally:
+        conn.close()
+    return row["von"], row["bis"]
+
+
 # ---------------------------------------------------------------------------
 # Import-Verwaltung
 # ---------------------------------------------------------------------------

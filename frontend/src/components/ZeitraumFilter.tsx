@@ -5,12 +5,13 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatDatum } from "@/lib/formatierung";
+import { isoDatumLokal } from "@/lib/datum";
 import { cn } from "@/lib/utils";
 
 /** Liefert das aktuelle ISO-Datum (Tag-genau, lokale Zeitzone). */
 function isoHeute(): string {
   const h = new Date();
-  return new Date(h.getFullYear(), h.getMonth(), h.getDate()).toISOString().slice(0, 10);
+  return isoDatumLokal(h);
 }
 
 /** Heuristik: erkennt eine der Quick-Ranges am aktuellen (von,bis)-Paar. */
@@ -18,13 +19,11 @@ function aktuelleRange(von: string, bis: string): string {
   const heute = isoHeute();
   const h = new Date();
   const jahr = h.getFullYear();
-  const monatStart = new Date(jahr, h.getMonth(), 1).toISOString().slice(0, 10);
-  const qStart = new Date(jahr, Math.floor(h.getMonth() / 3) * 3, 1)
-    .toISOString()
-    .slice(0, 10);
-  const jahrStart = new Date(jahr, 0, 1).toISOString().slice(0, 10);
-  const letztesJahrStart = new Date(jahr - 1, 0, 1).toISOString().slice(0, 10);
-  const letztesJahrEnde = new Date(jahr - 1, 11, 31).toISOString().slice(0, 10);
+  const monatStart = isoDatumLokal(new Date(jahr, h.getMonth(), 1));
+  const qStart = isoDatumLokal(new Date(jahr, Math.floor(h.getMonth() / 3) * 3, 1));
+  const jahrStart = isoDatumLokal(new Date(jahr, 0, 1));
+  const letztesJahrStart = isoDatumLokal(new Date(jahr - 1, 0, 1));
+  const letztesJahrEnde = isoDatumLokal(new Date(jahr - 1, 11, 31));
 
   if (von === monatStart && bis === heute) return "Dieser Monat";
   if (von === qStart && bis === heute) return "Dieses Quartal";

@@ -62,6 +62,13 @@ SPALTEN_PDF: dict[str, list[tuple[str, str, str]]] = {
         ("Diff.", "differenz", "int"),
         ("Umsatz", "jahr_umsatz", "euro"),
     ],
+    "zeitraumvergleich": [
+        ("Zeitraum", "zeitraum", "text"),
+        ("Eier (Vorjahr)", "vorjahr", "int"),
+        ("Eier (Zeitraum)", "jahr", "int"),
+        ("Diff.", "differenz", "int"),
+        ("Umsatz (Zeitraum)", "jahr_umsatz", "euro"),
+    ],
 }
 
 
@@ -125,6 +132,17 @@ def _chart_png_base64(typ: str, daten: Sequence[dict]) -> Optional[str]:
         ax.plot(x, vorjahr, marker="o", color=FARBE_VORJAHR, label="Vorjahr")
         ax.set_xticks(list(x))
         ax.set_xticklabels(monate)
+        ax.legend()
+        ax.set_ylabel("Eier (Stück)")
+    elif typ == "zeitraumvergleich":
+        labels = [_label(d.get("zeitraum", "")) for d in daten]
+        x = range(len(labels))
+        ax.bar(x, [d.get("jahr", 0) for d in daten], width=0.6, label="Zeitraum",
+               color=FARBE_GRUEN, edgecolor=FARBE_GRUEN_KRAEFTIG)
+        ax.plot(x, [d.get("vorjahr", 0) for d in daten], marker="o", color=FARBE_VORJAHR,
+                label="Vorjahr")
+        ax.set_xticks(list(x))
+        ax.set_xticklabels(labels, rotation=45, ha="right")
         ax.legend()
         ax.set_ylabel("Eier (Stück)")
     elif typ in ("kunde_monate", "artikel_monate"):

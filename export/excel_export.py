@@ -78,6 +78,15 @@ SPALTEN_DEFINITIONEN: dict[str, list[tuple[str, str, Optional[str]]]] = {
         ("Umsatz (Vorjahr)", "vorjahr_umsatz", ZAHLENFORMAT_EURO),
         ("Differenz €", "differenz_umsatz", ZAHLENFORMAT_EURO),
     ],
+    "zeitraumvergleich": [
+        ("Zeitraum", "zeitraum", None),
+        ("Eier (Vorjahr)", "vorjahr", ZAHLENFORMAT_INT),
+        ("Eier (Zeitraum)", "jahr", ZAHLENFORMAT_INT),
+        ("Differenz", "differenz", ZAHLENFORMAT_INT),
+        ("Umsatz (Vorjahr)", "vorjahr_umsatz", ZAHLENFORMAT_EURO),
+        ("Umsatz (Zeitraum)", "jahr_umsatz", ZAHLENFORMAT_EURO),
+        ("Differenz €", "differenz_umsatz", ZAHLENFORMAT_EURO),
+    ],
 }
 
 

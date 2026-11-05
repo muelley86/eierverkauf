@@ -340,12 +340,13 @@ def jahresvergleich(jahr: int) -> list[dict]:
 
 
 def tageswerte(von: Optional[str], bis: Optional[str]) -> list[dict]:
-    """Netto-Eier und -Umsatz je Rechnungsdatum (Basis für den Dashboard-Verlauf)."""
+    """Netto-Eier, -Umsatz und Eier-Umsatz je Rechnungsdatum (Basis für ``data.verlauf``)."""
     wh, params = _zeitraum_filter(von, bis)
     sql = f"""
         SELECT rechnungsdatum AS datum,
                COALESCE(SUM(eier_stueck), 0) AS eier,
-               COALESCE(SUM(gesamt), 0)      AS umsatz
+               COALESCE(SUM(gesamt), 0)      AS umsatz,
+               COALESCE(SUM(CASE WHEN eier_stueck IS NOT NULL THEN gesamt END), 0) AS eier_umsatz
         FROM verkaufspositionen
         {wh}
         GROUP BY rechnungsdatum

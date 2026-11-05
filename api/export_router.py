@@ -8,7 +8,7 @@ from typing import Literal, Optional
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse
 
-from data import queries
+from data import queries, verlauf
 from export.excel_export import build_excel
 from export.pdf_export import build_pdf
 
@@ -16,7 +16,7 @@ router = APIRouter(tags=["export"])
 
 ExportTyp = Literal[
     "kunden", "artikel", "ranking", "belege",
-    "kunde_monate", "artikel_monate", "jahresvergleich",
+    "kunde_monate", "artikel_monate", "jahresvergleich", "zeitraumvergleich",
 ]
 
 
@@ -47,7 +47,19 @@ def _daten_laden(typ: str, von: Optional[str], bis: Optional[str],
         if not jahr:
             raise HTTPException(status_code=400, detail="Parameter 'jahr' erforderlich.")
         return queries.jahresvergleich(jahr)
+    if typ == "zeitraumvergleich":
+        return _zeitraumvergleich(von, bis)
     raise HTTPException(status_code=400, detail=f"Unbekannter Export-Typ: {typ}")
+
+
+def _zeitraumvergleich(von: Optional[str], bis: Optional[str]) -> list[dict]:
+    if not (von and bis):
+        raise HTTPException(status_code=400, detail="Parameter 'von' und 'bis' erforderlich.")
+    try:
+        daten = verlauf.zeitraum_verlauf(date.fromisoformat(von), date.fromisoformat(bis))
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return verlauf.zeitraumvergleich_zeilen(daten)
 
 
 def _dateiname(typ: str, ext: str, von: Optional[str], bis: Optional[str]) -> str:

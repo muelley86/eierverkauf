@@ -12,6 +12,7 @@ import ArtikelDetail from "@/pages/ArtikelDetail";
 import Ranking from "@/pages/Ranking";
 import Belege from "@/pages/Belege";
 import Jahresvergleich from "@/pages/Jahresvergleich";
+import Zeitraumvergleich from "@/pages/Zeitraumvergleich";
 import Konfiguration from "@/pages/Konfiguration";
 
 export default function App() {
@@ -29,6 +30,7 @@ export default function App() {
             <Route path="artikel/:code" element={<ArtikelDetail />} />
             <Route path="ranking" element={<Ranking />} />
             <Route path="belege" element={<Belege />} />
+            <Route path="zeitraumvergleich" element={<Zeitraumvergleich />} />
             <Route path="jahresvergleich" element={<Jahresvergleich />} />
             <Route path="konfiguration" element={<Konfiguration />} />
           </Route>

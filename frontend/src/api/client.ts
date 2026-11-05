@@ -95,14 +95,27 @@ export interface VerlaufPunkt {
   start: string;
   eier: number;
   umsatz: number;
+  /** Umsatz nur aus Positionen mit Eier-Stückzahl (Basis für Umsatz/Ei). */
+  eier_umsatz: number;
   /** Positionsgleicher Vorjahres-Bucket; null ohne Zeitraum-Filter. */
   vorjahr_eier: number | null;
   vorjahr_umsatz: number | null;
+  vorjahr_eier_umsatz: number | null;
 }
 
-export interface DashboardVerlauf {
+export interface ZeitraumGrenzen {
+  von: string;
+  bis: string;
+}
+
+/** Antwort von `/api/verlauf` — Übersichts-Grafik und Zeitraumvergleich. */
+export interface ZeitraumVerlauf {
   granularitaet: VerlaufGranularitaet;
   punkte: VerlaufPunkt[];
+  /** Tatsächlich ausgewerteter Zeitraum; null ohne Daten. */
+  zeitraum: ZeitraumGrenzen | null;
+  /** Um ein Jahr verschobener Zeitraum; null ohne Zeitraum-Filter. */
+  vorjahreszeitraum: ZeitraumGrenzen | null;
 }
 
 export interface ArtikelZeile {
@@ -274,8 +287,8 @@ export async function getBelegPositionen(
   return data;
 }
 
-export async function getDashboardVerlauf(z: Zeitraum): Promise<DashboardVerlauf> {
-  const { data } = await api.get<DashboardVerlauf>(`/dashboard/verlauf?${params(z)}`);
+export async function getVerlauf(z: Zeitraum): Promise<ZeitraumVerlauf> {
+  const { data } = await api.get<ZeitraumVerlauf>(`/verlauf?${params(z)}`);
   return data;
 }
 
@@ -353,7 +366,8 @@ export interface ExportOptionen extends Zeitraum {
     | "belege"
     | "kunde_monate"
     | "artikel_monate"
-    | "jahresvergleich";
+    | "jahresvergleich"
+    | "zeitraumvergleich";
   kunde_nr?: string;
   code?: string;
   jahr?: number;

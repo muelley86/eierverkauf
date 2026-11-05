@@ -1,6 +1,7 @@
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import {
   BarChart3,
+  CalendarRange,
   LayoutDashboard,
   ListOrdered,
   Menu,
@@ -30,6 +31,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/artikel", label: "Artikel", icon: <Package className={ICON} /> },
   { to: "/ranking", label: "Ranking", icon: <ListOrdered className={ICON} /> },
   { to: "/belege", label: "Belege", icon: <Receipt className={ICON} /> },
+  { to: "/zeitraumvergleich", label: "Zeitraumvergleich", icon: <CalendarRange className={ICON} /> },
   { to: "/jahresvergleich", label: "Jahresvergleich", icon: <BarChart3 className={ICON} /> },
   { to: "/import", label: "Import", icon: <Upload className={ICON} /> },
   { to: "/konfiguration", label: "Konfiguration", icon: <Settings className={ICON} /> },

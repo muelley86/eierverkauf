@@ -10,8 +10,9 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 ## [1.16.0] - 2026-11-05
 
 Neues Erscheinungsbild im Corporate Design von [buchenhof.de](https://www.buchenhof.de),
-durchgehend responsiv (Handy, Tablet, Desktop) und mit Dunkelmodus. Dazu ein
-Fix: Die Grafik auf der Übersicht folgt jetzt dem gewählten Zeitraum.
+durchgehend responsiv (Handy, Tablet, Desktop) und mit Dunkelmodus, neue Seite
+„Zeitraumvergleich". Dazu ein Fix: Die Grafik auf der Übersicht folgt jetzt
+dem gewählten Zeitraum.
 
 ### Behoben
 - **Übersichts-Grafik ignorierte den Zeitraum.** Sie zeigte immer Januar bis
@@ -26,8 +27,13 @@ Fix: Die Grafik auf der Übersicht folgt jetzt dem gewählten Zeitraum.
   zurückgesetzt.
 
 ### Hinzugefügt
-- Endpoint `GET /api/dashboard/verlauf?von&bis` (Auflösung Tag/Woche/Monat,
+- **Seite „Zeitraumvergleich"** (über dem Jahresvergleich): vergleicht den oben
+  rechts gewählten Zeitraum mit demselben Zeitraum ein Jahr früher — Diagramm
+  und Tabelle wie beim Jahresvergleich (Δ Stück, Δ %, Umsatz je Ei,
+  Summenzeile), nach Tagen, Wochen oder Monaten. Excel- und PDF-Export.
+- Endpoint `GET /api/verlauf?von&bis` (Auflösung Tag/Woche/Monat,
   positionsgleicher Vorjahreszeitraum; ohne Filter über den gesamten Bestand).
+- Jahresvergleich: Summenzeile zeigt jetzt auch Δ %.
 - Dunkelmodus nach Systemeinstellung, inklusive Diagrammfarben.
 - Buchenhof-Logo in der Navigation, Baum-Icon als Favicon und im PDF-Export.
 

@@ -19,10 +19,10 @@ import { Hen } from "@/components/illustrations/Hen";
 import { useZeitraum } from "@/context/ZeitraumContext";
 import {
   DashboardResponse,
-  DashboardVerlauf,
+  ZeitraumVerlauf,
   ImportProtokollEintrag,
   getDashboard,
-  getDashboardVerlauf,
+  getVerlauf,
   getImportHistorie,
 } from "@/api/client";
 import { artikelLabel } from "@/lib/artikel";
@@ -58,7 +58,7 @@ const LINK_KLASSEN = "text-sm text-muted-foreground underline-offset-4 transitio
 // Teilkomponenten
 // ---------------------------------------------------------------------------
 
-function KpiBand({ daten, verlauf }: { daten: DashboardResponse; verlauf: DashboardVerlauf | null }) {
+function KpiBand({ daten, verlauf }: { daten: DashboardResponse; verlauf: ZeitraumVerlauf | null }) {
   const vj = daten.vorjahres_kpis;
   const sparkEier = verlauf?.punkte.map((p) => p.eier) ?? [];
   const sparkUmsatz = verlauf?.punkte.map((p) => p.umsatz) ?? [];
@@ -119,7 +119,7 @@ function Legende({ hatVorjahr }: { hatVorjahr: boolean }) {
   );
 }
 
-function VerlaufChart({ verlauf }: { verlauf: DashboardVerlauf }) {
+function VerlaufChart({ verlauf }: { verlauf: ZeitraumVerlauf }) {
   const { farben, tooltip, achse, raster } = useChartFarben();
   const daten = verlauf.punkte.map((p) => ({
     label: formatVerlaufLabel(p.start, verlauf.granularitaet),
@@ -266,14 +266,14 @@ function LetzteImports({ imports }: { imports: ImportProtokollEintrag[] }) {
 export default function Dashboard() {
   const { von, bis } = useZeitraum();
   const [daten, setDaten] = useState<DashboardResponse | null>(null);
-  const [verlauf, setVerlauf] = useState<DashboardVerlauf | null>(null);
+  const [verlauf, setVerlauf] = useState<ZeitraumVerlauf | null>(null);
   const [imports, setImports] = useState<ImportProtokollEintrag[] | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let abgebrochen = false;
     setLoading(true);
-    Promise.all([getDashboard({ von, bis }), getDashboardVerlauf({ von, bis }), getImportHistorie()])
+    Promise.all([getDashboard({ von, bis }), getVerlauf({ von, bis }), getImportHistorie()])
       .then(([d, v, i]) => {
         if (abgebrochen) return;
         setDaten(d);

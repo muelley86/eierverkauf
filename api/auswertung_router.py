@@ -1,4 +1,4 @@
-"""API-Endpunkte für Auswertungen: Dashboard, Kunden, Artikel, Ranking, Jahresvergleich."""
+"""API-Endpunkte für Auswertungen: Dashboard, Verlauf, Kunden, Artikel, Ranking, Jahresvergleich."""
 from __future__ import annotations
 
 from datetime import date
@@ -15,17 +15,6 @@ def _iso(d: Optional[date]) -> Optional[str]:
     return d.isoformat() if d else None
 
 
-def _ein_jahr_zurueck(d: Optional[date]) -> Optional[date]:
-    """Schiebt ein Datum um genau ein Jahr zurück. 29.02. → 28.02."""
-    if d is None:
-        return None
-    try:
-        return d.replace(year=d.year - 1)
-    except ValueError:
-        # Schaltjahr-29.02. — auf 28.02. im Vorjahr zurückfallen.
-        return d.replace(year=d.year - 1, day=28)
-
-
 @router.get("/dashboard")
 def dashboard(
     von: Optional[date] = Query(None),
@@ -40,7 +29,7 @@ def dashboard(
     ist dort nicht möglich.
     """
     aktuell = queries.dashboard_kpis(_iso(von), _iso(bis))
-    vj_von, vj_bis = _ein_jahr_zurueck(von), _ein_jahr_zurueck(bis)
+    vj_von, vj_bis = verlauf.ein_jahr_zurueck(von), verlauf.ein_jahr_zurueck(bis)
     vorjahres_kpis = (
         queries.dashboard_kpis(_iso(vj_von), _iso(vj_bis))
         if (vj_von or vj_bis) else None
@@ -53,70 +42,20 @@ def dashboard(
     }
 
 
-def _effektiver_zeitraum(
-    von: Optional[date], bis: Optional[date]
-) -> Optional[tuple[date, date]]:
-    """Füllt fehlende Grenzen mit dem Datenbereich auf; ``None`` ohne Daten."""
-    if von and bis:
-        return von, bis
-    min_datum, max_datum = queries.datenbereich()
-    if min_datum is None or max_datum is None:
-        return None
-    return (
-        von or date.fromisoformat(min_datum),
-        bis or date.fromisoformat(max_datum),
-    )
-
-
-@router.get("/dashboard/verlauf")
-def dashboard_verlauf(
+@router.get("/verlauf")
+def zeitraum_verlauf(
     von: Optional[date] = Query(None),
     bis: Optional[date] = Query(None),
 ) -> dict:
-    """Verlauf für die Dashboard-Grafik im gewählten Zeitraum.
+    """Verlauf im Zeitraum + positionsgleicher Vorjahreszeitraum.
 
-    Auflösung automatisch (Tag/Woche/Monat, siehe ``data.verlauf``). Der
-    Vorjahreszeitraum liegt positionsgleich in ``vorjahr_*``; ohne
-    Zeitraum-Filter sind diese Felder ``None`` (analog ``vorjahres_kpis``).
+    Speist die Übersichts-Grafik und die Seite „Zeitraumvergleich".
+    Auflösung automatisch (Tag/Woche/Monat), siehe ``data.verlauf``.
     """
-    if von and bis and von > bis:
-        raise HTTPException(status_code=422, detail="„von“ liegt nach „bis“.")
-    zeitraum = _effektiver_zeitraum(von, bis)
-    if zeitraum is None:
-        return {"granularitaet": "monat", "punkte": []}
-    start, ende = zeitraum
-    if start > ende:
-        raise HTTPException(status_code=422, detail="Zeitraum enthält keine Daten.")
-
-    granularitaet = verlauf.waehle_granularitaet(start, ende)
-    aktuell = verlauf.bucket_verlauf(
-        queries.tageswerte(_iso(start), _iso(ende)), start, ende, granularitaet
-    )
-    mit_vorjahr = bool(von or bis)
-    vorjahr: list[dict] = []
-    if mit_vorjahr:
-        vj_start, vj_ende = _ein_jahr_zurueck(start), _ein_jahr_zurueck(ende)
-        vorjahr = verlauf.bucket_verlauf(
-            queries.tageswerte(_iso(vj_start), _iso(vj_ende)),
-            vj_start, vj_ende, granularitaet,
-        )
-
-    def _vj(i: int, feld: str) -> Optional[float]:
-        if not mit_vorjahr:
-            return None
-        return vorjahr[i][feld] if i < len(vorjahr) else 0.0
-
-    return {
-        "granularitaet": granularitaet,
-        "punkte": [
-            {
-                **punkt,
-                "vorjahr_eier": _vj(i, "eier"),
-                "vorjahr_umsatz": _vj(i, "umsatz"),
-            }
-            for i, punkt in enumerate(aktuell)
-        ],
-    }
+    try:
+        return verlauf.zeitraum_verlauf(von, bis)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.get("/kunden")

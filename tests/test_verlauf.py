@@ -1,7 +1,7 @@
 """Tests für den zeitraumabhängigen Dashboard-Verlauf (v1.16.0).
 
 Reine Bucket-Logik (``data.verlauf``) plus Integration über
-``GET /api/dashboard/verlauf``. Alle Daten synthetisch.
+``GET /api/verlauf``. Alle Daten synthetisch.
 """
 from datetime import date
 
@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 
 import data.db as db
 import main
-from data.verlauf import bucket_verlauf, waehle_granularitaet
+from data.verlauf import bucket_verlauf, verlauf_label, waehle_granularitaet
 
 
 # ---------------------------------------------------------------------------
@@ -36,8 +36,9 @@ def test_waehle_granularitaet_schwellen(von, bis, erwartet):
 # bucket_verlauf
 # ---------------------------------------------------------------------------
 
-def _tag(datum: str, eier: float, umsatz: float) -> dict:
-    return {"datum": datum, "eier": eier, "umsatz": umsatz}
+def _tag(datum: str, eier: float, umsatz: float, eier_umsatz: float | None = None) -> dict:
+    return {"datum": datum, "eier": eier, "umsatz": umsatz,
+            "eier_umsatz": umsatz if eier_umsatz is None else eier_umsatz}
 
 
 def test_bucket_tag_fuellt_leere_tage_mit_null():
@@ -99,8 +100,30 @@ def test_bucket_leere_eingabe_liefert_nullreihe():
     assert all(p["eier"] == 0 and p["umsatz"] == 0 for p in punkte)
 
 
+def test_bucket_summiert_eier_umsatz_getrennt():
+    # Arrange: kg-Umsatz (ohne Eier) zählt nicht in eier_umsatz
+    werte = [_tag("2026-11-01", 100, 74.8, eier_umsatz=24.8)]
+
+    # Act
+    punkte = bucket_verlauf(werte, date(2026, 11, 1), date(2026, 11, 1), "tag")
+
+    # Assert
+    assert punkte[0]["umsatz"] == pytest.approx(74.8)
+    assert punkte[0]["eier_umsatz"] == pytest.approx(24.8)
+
+
+@pytest.mark.parametrize(
+    ("start", "granularitaet", "erwartet"),
+    [("2026-11-03", "tag", "03.11.2026"),
+     ("2026-11-03", "woche", "ab 03.11.2026"),
+     ("2025-11-15", "monat", "Nov 2025")],
+)
+def test_verlauf_label(start, granularitaet, erwartet):
+    assert verlauf_label(start, granularitaet) == erwartet
+
+
 # ---------------------------------------------------------------------------
-# GET /api/dashboard/verlauf
+# GET /api/verlauf
 # ---------------------------------------------------------------------------
 
 @pytest.fixture()
@@ -133,7 +156,7 @@ def test_verlauf_folgt_zeitraum_mit_vorjahr(client):
     _position("2026-10-15", 999, 999.0, "R-X")  # außerhalb
 
     # Act
-    antwort = client.get("/api/dashboard/verlauf?von=2026-11-01&bis=2026-11-30")
+    antwort = client.get("/api/verlauf?von=2026-11-01&bis=2026-11-30")
 
     # Assert
     assert antwort.status_code == 200
@@ -145,6 +168,10 @@ def test_verlauf_folgt_zeitraum_mit_vorjahr(client):
     assert zweiter["eier"] == 100
     assert zweiter["vorjahr_eier"] == 80
     assert sum(p["eier"] for p in body["punkte"]) == 100
+    assert zweiter["eier_umsatz"] == pytest.approx(30.0)
+    assert zweiter["vorjahr_eier_umsatz"] == pytest.approx(20.0)
+    assert body["zeitraum"] == {"von": "2026-11-01", "bis": "2026-11-30"}
+    assert body["vorjahreszeitraum"] == {"von": "2025-11-01", "bis": "2025-11-30"}
 
 
 def test_verlauf_schaltjahr_vorjahr_shift(client):
@@ -152,7 +179,7 @@ def test_verlauf_schaltjahr_vorjahr_shift(client):
     _position("2027-02-28", 5, 1.0, "R-1")
 
     # Act
-    antwort = client.get("/api/dashboard/verlauf?von=2028-02-29&bis=2028-03-02")
+    antwort = client.get("/api/verlauf?von=2028-02-29&bis=2028-03-02")
 
     # Assert
     punkte = antwort.json()["punkte"]
@@ -166,19 +193,44 @@ def test_verlauf_ohne_zeitraum_nutzt_datenbereich_ohne_vorjahr(client):
     _position("2026-12-10", 2, 2.0, "R-2")
 
     # Act
-    body = client.get("/api/dashboard/verlauf").json()
+    body = client.get("/api/verlauf").json()
 
     # Assert
     assert body["granularitaet"] == "monat"
     assert len(body["punkte"]) == 12
     assert body["punkte"][0]["vorjahr_eier"] is None
+    assert body["zeitraum"] == {"von": "2026-01-10", "bis": "2026-12-10"}
+    assert body["vorjahreszeitraum"] is None
 
 
 def test_verlauf_ohne_daten_liefert_leere_reihe(client):
-    body = client.get("/api/dashboard/verlauf").json()
-    assert body == {"granularitaet": "monat", "punkte": []}
+    body = client.get("/api/verlauf").json()
+    assert body == {"granularitaet": "monat", "punkte": [],
+                    "zeitraum": None, "vorjahreszeitraum": None}
 
 
 def test_verlauf_von_nach_bis_ist_422(client):
-    antwort = client.get("/api/dashboard/verlauf?von=2026-12-01&bis=2026-11-01")
+    antwort = client.get("/api/verlauf?von=2026-12-01&bis=2026-11-01")
     assert antwort.status_code == 422
+
+
+def test_export_zeitraumvergleich_excel_enthaelt_buckets(client):
+    # Arrange
+    from io import BytesIO
+    from openpyxl import load_workbook
+    _position("2026-11-02", 100, 30.0, "R-1")
+    _position("2025-11-02", 80, 20.0, "R-0")
+
+    # Act
+    antwort = client.get("/api/export/excel?typ=zeitraumvergleich&von=2026-11-01&bis=2026-11-03")
+
+    # Assert
+    assert antwort.status_code == 200
+    ws = load_workbook(BytesIO(antwort.content)).active
+    zeilen = list(ws.iter_rows(min_row=4, values_only=True))
+    assert zeilen[1][:4] == ("02.11.2026", 80, 100, 20)
+
+
+def test_export_zeitraumvergleich_ohne_zeitraum_ist_400(client):
+    antwort = client.get("/api/export/excel?typ=zeitraumvergleich")
+    assert antwort.status_code == 400

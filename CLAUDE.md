@@ -40,7 +40,15 @@ npm run dev            # Dev-Server auf 5173
 npm run build          # tsc -b && vite build → frontend/dist/ (wird von FastAPI gemountet)
 ```
 
-**Tests:** Keine vorhanden. Falls welche hinzukommen, im Setup `pytest` zu requirements.txt ergänzen.
+**Tests** (vor jedem Commit beide laufen lassen):
+
+```bash
+.venv/bin/python -m pytest          # Backend: tests/, tmp-SQLite je Test, keine echten Daten
+cd frontend && npm run test         # Frontend: Vitest, src/**/*.test.ts (pure Helper)
+cd frontend && npm run build        # tsc -b + Vite — fängt Typfehler, die Vitest nicht sieht
+```
+
+Neue Endpoints/Filter mit Integrationstest über `TestClient(main.app)` absichern (Muster: `tests/test_kundenfilter.py`, `tests/test_verlauf.py`).
 
 **Docker** (spiegelt Debian-Produktion, inkl. WeasyPrint-GTK):
 
@@ -140,7 +148,9 @@ Die aktuelle Versionsnummer steht in der Datei `VERSION` (hier nicht duplizieren
 
 Bei Bugfixes mit Schema-Auswirkung zusätzlich **Migration in `data/db.py` ergänzen** und im CHANGELOG-Eintrag „Datenmigration"-Sektion dokumentieren (Beispiel: v1.0.4-Migration des UNIQUE-Constraints).
 
-Release-Commit-Konvention: Tag `v<MAJOR>.<MINOR>.<PATCH>` setzen, dann `git push origin main && git push origin v<X.Y.Z>`. Server zieht via `eierverkauf update` automatisch nach.
+Release-Commit-Konvention: Tag `v<MAJOR>.<MINOR>.<PATCH>` (annotiert) setzen, dann `git push origin main && git push origin v<X.Y.Z>`. Server zieht via `eierverkauf update` automatisch nach. Zusätzlich am Ende von `CHANGELOG.md` die Link-Referenzen pflegen: neue Zeile `[X.Y.Z]: …/compare/v<vorher>...vX.Y.Z` und `[Unreleased]` auf `compare/vX.Y.Z...HEAD` umstellen.
+
+Jede Version ab v1.0.0 hat einen Tag (v1.0.x und v1.15.0 am 2026-11-05 nachträglich gesetzt) — **außer v1.10.0**: Sie hat keinen eigenen Commit, ihre Änderungen stecken im v1.11.0-Commit `9168c23`. Keinen Tag dafür nachziehen (wäre identisch mit v1.11.0).
 
 ## Deployment
 

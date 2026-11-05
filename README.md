@@ -7,6 +7,19 @@ Backend: FastAPI + SQLite. Frontend: React 18 + TypeScript + Vite + Recharts + s
 - Persistente Datenbank für Auswertungen über beliebige Zeiträume.
 - Browser-basierte CSV-Imports, Excel- und PDF-Exporte.
 
+**Bereiche:** Übersicht (Kennzahlen mit Vorjahresvergleich, Verlauf in Tag/Woche/Monat
+je nach Zeitraum), Kunden, Artikel, Ranking, Belege, Zeitraumvergleich (Zeitraum vs.
+derselbe Zeitraum im Vorjahr, Monat für Monat), Jahresvergleich, Import, Konfiguration.
+
+**Filter oben rechts:** Zeitraum (Schnellwahl oder eigene Daten) und — auf Übersicht,
+Kunden, Artikel, Belege, Zeitraum- und Jahresvergleich — ein Kundenfilter mit
+Mehrfachauswahl und Suche. Beide gelten seitenübergreifend, werden pro Browser gespeichert
+und wirken auch auf die Exporte.
+
+**Darstellung:** Buchenhof-Design, responsiv für Handy, Tablet und Desktop (auf dem Handy
+mit Tab-Leiste unten), hell oder dunkel — standardmäßig nach Systemeinstellung,
+umschaltbar unten in der Seitenleiste bzw. auf dem Handy oben rechts.
+
 > **Vollständige Deployment-Anleitung:** Erstinstallation, Updates, Migration, Reverse-Proxy
 > und Troubleshooting findest du in [DEPLOYMENT.md](DEPLOYMENT.md). Diese README ist die
 > Kurz-Referenz; DEPLOYMENT.md ist das ausführliche Handbuch für Server-Admins.
@@ -206,6 +219,16 @@ bash dev-start.sh
 - Vite Dev-Server lauscht auf `localhost:5173`, leitet `/api/*` via Proxy an Backend.
 - SQLite-DB wird unter `./data/eierverkauf.db` angelegt (lokal, nicht in `/opt/eierverkauf/`).
 
+### Tests
+
+```bash
+.venv/bin/python -m pytest      # Backend (Windows: .\.venv\Scripts\python.exe -m pytest)
+cd frontend && npm run test     # Frontend (Vitest)
+```
+
+Alle Testdaten sind synthetisch; die Backend-Tests legen je Test eine eigene temporäre
+Datenbank an und berühren `data/eierverkauf.db` nicht.
+
 ---
 
 ## Mit Docker Compose
@@ -230,15 +253,20 @@ Spiegelt die Debian-Produktivumgebung. Volumes für `data/`, `uploads/`, `backup
 ├── api/                                FastAPI-Router
 │   ├── import_router.py
 │   ├── auswertung_router.py
-│   └── export_router.py
+│   ├── export_router.py
+│   ├── konfiguration_router.py
+│   ├── kundenfilter.py                  (Query-Parameter `kunden`, Mehrfachauswahl)
+│   └── sicherheit.py                    (Host-/Origin-Prüfung, CSRF-Schutz)
 ├── data/                                Datenschicht
 │   ├── db.py                            (SQLite-Connection, Schema-Init)
 │   ├── importer.py                      (CSV-Parser + Eier-Berechnung)
 │   ├── queries.py                       (alle SQL-Abfragen)
+│   ├── verlauf.py                       (Zeitraum-Verlauf Tag/Woche/Monat + Vorjahr)
 │   └── eierverkauf.db                   (Produktiv-DB, gitignoriert)
 ├── export/                              Excel- und PDF-Erzeugung
 │   ├── excel_export.py
-│   └── pdf_export.py
+│   ├── pdf_export.py
+│   └── assets/buchenhof-baum.png        (Logo für den PDF-Kopf)
 ├── utils/                               Server-Helfer
 │   └── formatierung.py
 ├── frontend/                            React + Vite
@@ -248,20 +276,29 @@ Spiegelt die Debian-Produktivumgebung. Volumes für `data/`, `uploads/`, `backup
 │   ├── tailwind.config.ts
 │   ├── components.json                  (shadcn/ui-Konfiguration)
 │   ├── index.html
+│   ├── public/                          (favicon.png, farbschema.js)
 │   └── src/
 │       ├── main.tsx, App.tsx, index.css
 │       ├── api/client.ts                (typisierter Axios-Client)
-│       ├── lib/utils.ts, formatierung.ts
+│       ├── assets/                      (Buchenhof-Wortmarke)
+│       ├── lib/                         (Formatierung, Datum, Vergleich, Kundenfilter,
+│       │                                 Farbschema, Diagrammfarben; *.test.ts = Vitest)
+│       ├── hooks/useIstMobil.ts
 │       ├── context/ZeitraumContext.tsx  (globaler Zeitraumfilter)
+│       ├── context/KundenFilterContext.tsx (globaler Kundenfilter)
 │       ├── components/
-│       │   ├── Layout.tsx, KPICard.tsx
-│       │   ├── ChartToggle.tsx, DataTable.tsx
+│       │   ├── Layout.tsx, KPICard.tsx, PageHeader.tsx
+│       │   ├── ZeitraumFilter.tsx, KundenFilter.tsx, FarbschemaUmschalter.tsx
+│       │   ├── VergleichsAnsicht.tsx    (Diagramm + Tabelle der Vergleichsseiten)
+│       │   ├── DataTable.tsx, ChartToggle.tsx
 │       │   └── ui/                      (shadcn-Komponenten)
 │       └── pages/
 │           ├── Dashboard.tsx, Import.tsx
 │           ├── Kunden.tsx, KundenDetail.tsx
 │           ├── Artikel.tsx, ArtikelDetail.tsx
-│           ├── Ranking.tsx, Jahresvergleich.tsx
+│           ├── Ranking.tsx, Belege.tsx
+│           ├── Zeitraumvergleich.tsx, Jahresvergleich.tsx
+│           ├── ImportDetail.tsx, Konfiguration.tsx
 ├── uploads/                             Temporäre CSVs (laufzeitbedingt)
 ├── backups/                             Datenbank-Backups (max. 10 behalten)
 ├── logs/                                App-Logs
@@ -270,6 +307,7 @@ Spiegelt die Debian-Produktivumgebung. Volumes für `data/`, `uploads/`, `backup
 ├── dev-setup.ps1, dev-setup.sh           Lokales Setup
 ├── dev-start.ps1, dev-start.sh           Lokaler Dev-Start
 ├── Dockerfile, docker-compose.yml        Container-Tests
+├── tests/                               Backend-Tests (pytest)
 ├── VERSION, CHANGELOG.md, README.md
 └── requirements.txt
 ```

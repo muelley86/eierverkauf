@@ -85,6 +85,9 @@ filtern.
 ### Hinweise
 - Keine Datenmigration. `eierverkauf update` installiert die neue
   Schrift-Abhängigkeit (`@fontsource-variable/inter`) per `npm` mit.
+- Zeitraum, Kundenfilter und Hell/Dunkel werden **pro Browser** gespeichert.
+  Nach dem Update steht jedes Gerät einmalig auf „Dieses Jahr", „Alle Kunden"
+  und der Systemeinstellung für Hell/Dunkel.
 
 ## [1.15.0] - 2026-11-05
 

@@ -1090,6 +1090,8 @@ rm -rf /opt/eierverkauf       # Achtung: enthält Daten + Backups!
 
 - **Tags** auf GitHub: `v<MAJOR>.<MINOR>.<PATCH>` (z. B. `v1.1.0`) — **empfohlene Update-Referenz**
   für Produktivserver. Liste unter <https://github.com/muelley86/eierverkauf/tags>.
+  Jede Version ab `v1.0.0` ist getaggt — einzige Ausnahme `v1.10.0`: Sie wurde zusammen
+  mit `v1.11.0` in einem Commit ausgeliefert; wer „1.10.0" braucht, nimmt `v1.11.0`.
 - **`VERSION`-Datei** im Repo: enthält die Versionsnummer in Klartext, wird vom Helper gelesen
   und in `eierverkauf status` angezeigt.
 - **`CHANGELOG.md`**: Keep-a-Changelog-Format. Jeder Release-Tag hat einen Abschnitt mit

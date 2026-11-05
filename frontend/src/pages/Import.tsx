@@ -163,6 +163,15 @@ export default function Import() {
             {isDragActive ? "Loslassen zum Hochladen…" : "Datei hierher ziehen"}
           </p>
           <p className="mt-1 text-sm text-muted-foreground text-center">oder tippen zum Auswählen</p>
+          <div className="mt-5 max-w-2xl space-y-1 border-t border-rule pt-4 text-xs sm:text-sm text-muted-foreground text-center">
+            <p>
+              Auswertung aus Agrarmonitor: Eierverkäufe nach Rechnungsposition (gespeicherte Auswertung).
+            </p>
+            <p>
+              Filter: <strong className="font-semibold text-ink">Datumsbereich</strong>; Firma: Kerba Bio-Ei GbR;
+              Artikel Eier mit Unterwarengruppen; nach Leistungsdatum; alle Ein- und Verkäufe
+            </p>
+          </div>
         </div>
         {datei && (
           <div className="mt-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-lg border border-rule bg-background/40 px-4 py-3">

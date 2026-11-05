@@ -7,6 +7,14 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.16.4] - 2026-11-05
+
+### Geändert
+- **Import-Seite: Hinweis zur passenden Auswertung.** Im Feld zum
+  Hineinziehen der Datei steht jetzt, welche Agrarmonitor-Auswertung
+  exportiert werden muss (Eierverkäufe nach Rechnungsposition, gespeicherte
+  Auswertung) und mit welchen Filtern — der Datumsbereich ist hervorgehoben.
+
 ## [1.16.3] - 2026-11-05
 
 ### Behoben
@@ -918,7 +926,8 @@ hochladen.
   - Dev-Setup-Scripts für Windows (`dev-setup.ps1`, `dev-start.ps1`) und macOS/Linux.
   - Docker Compose für vollständige Integrationstests inkl. PDF-Export.
 
-[Unreleased]: https://github.com/muelley86/eierverkauf/compare/v1.16.3...HEAD
+[Unreleased]: https://github.com/muelley86/eierverkauf/compare/v1.16.4...HEAD
+[1.16.4]: https://github.com/muelley86/eierverkauf/compare/v1.16.3...v1.16.4
 [1.16.3]: https://github.com/muelley86/eierverkauf/compare/v1.16.2...v1.16.3
 [1.16.2]: https://github.com/muelley86/eierverkauf/compare/v1.16.1...v1.16.2
 [1.16.1]: https://github.com/muelley86/eierverkauf/compare/v1.16.0...v1.16.1

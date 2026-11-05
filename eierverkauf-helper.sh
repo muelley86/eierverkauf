@@ -7,6 +7,7 @@
 #   eierverkauf status     # Direkter Status
 #   eierverkauf update     # Direktes Update (für Cron geeignet)
 #   eierverkauf logs       # Live-Logs
+#   eierverkauf diagnose   # Befund bei hängender App (vor Neustart!)
 #   eierverkauf backup     # Direktes Backup
 # ----------------------------------------------------------------------------
 set -euo pipefail
@@ -273,6 +274,52 @@ do_logs() {
     journalctl -u "$SERVICE" -f --no-pager
 }
 
+# Diagnose bei App-Hänger (seit v1.16.2) --------------------------------------
+# VOR einem Neustart ausführen: trennt "Server hängt" (lokale Anfrage hängt,
+# Thread-Stacks zeigen die Stelle) von "Browser/Netz hängt" (lokal OK).
+# Jeder Schritt mit `|| true`: ein hängender Dienst darf den Bericht nicht
+# abbrechen.
+DIAGNOSE_TIMEOUT_S=5
+
+diagnose_anfrage() {  # $1 = Pfad, z. B. /api/health
+    local start ende
+    start=$(date +%s)
+    if curl -sS -m "$DIAGNOSE_TIMEOUT_S" -o /dev/null -w '%{http_code}' \
+            "http://127.0.0.1:8050$1" 2>&1; then
+        ende=$(date +%s)
+        echo "  (in $((ende - start)) s)"
+    else
+        echo "  KEINE ANTWORT innerhalb ${DIAGNOSE_TIMEOUT_S} s"
+    fi
+}
+
+do_diagnose() {
+    local bericht pid wal
+    bericht="$APP_DIR/logs/diagnose-$(date +%Y-%m-%d_%H-%M-%S).txt"
+    pid=$(systemctl show -p MainPID --value "$SERVICE" 2>/dev/null || echo "?")
+    wal=$(du -h "$DB_FILE-wal" 2>/dev/null | cut -f1 || true)
+    {
+        echo "=== Eierverkauf-Diagnose $(date '+%Y-%m-%d %H:%M:%S') ==="
+        echo "Dienst: $(systemctl is-active "$SERVICE" 2>/dev/null || true), PID $pid"
+        echo
+        echo "--- Lokale Anfrage GET /api/health ---"
+        diagnose_anfrage /api/health || true
+        echo "--- Lokale Anfrage GET /api/imports (mit DB) ---"
+        diagnose_anfrage /api/imports || true
+        echo
+        echo "WAL-Datei: ${wal:-nicht vorhanden}"
+        echo "Offene Verbindungen auf :8050: $(ss -tn 2>/dev/null | grep -c ':8050 ' || true)"
+        echo "Threads im App-Prozess: $(($(ps -L -p "$pid" 2>/dev/null | wc -l) - 1))"
+        echo
+        echo "--- Thread-Stacks (SIGUSR1) und letzte Journal-Zeilen ---"
+        systemctl kill -s USR1 "$SERVICE" 2>/dev/null || true
+        sleep 1
+        journalctl -u "$SERVICE" -n 300 --no-pager 2>/dev/null || true
+    } > "$bericht" 2>&1
+    echo "Diagnose gespeichert: $bericht"
+    echo "Bitte VOR dem Neustart zusätzlich prüfen: Lädt die App auf einem anderen Gerät?"
+}
+
 # Update-Prozedur ------------------------------------------------------------
 do_update() {
     log "Update gestartet"
@@ -486,6 +533,7 @@ main() {
         stop)     do_stop ;;
         start)    do_start ;;
         logs)     do_logs ;;
+        diagnose) do_diagnose ;;
         backup)   do_backup ;;
         restore)  do_restore ;;
         uninstall) do_uninstall ;;
@@ -494,12 +542,12 @@ main() {
                 show_menu
             else
                 echo "Whiptail nicht verfügbar. Direkte Aufrufe:"
-                echo "  eierverkauf status | update | logs | backup | restore | uninstall"
+                echo "  eierverkauf status | update | logs | diagnose | backup | restore | uninstall"
             fi
             ;;
         *)
             echo "Unbekannter Befehl: $1"
-            echo "Aufrufe: status | update | restart | stop | start | logs | backup | restore | uninstall"
+            echo "Aufrufe: status | update | restart | stop | start | logs | diagnose | backup | restore | uninstall"
             exit 1
             ;;
     esac

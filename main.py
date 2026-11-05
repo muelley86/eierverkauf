@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from api.auswertung_router import router as auswertung_router
+from api.diagnose import LangsameAnfragenMiddleware, thread_dump_aktivieren
 from api.export_router import router as export_router
 from api.import_router import router as import_router
 from api.konfiguration_router import router as konfiguration_router
@@ -19,6 +20,8 @@ from data.db import init_db
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    # `systemctl kill -s USR1 eierverkauf` → Thread-Stacks ins Journal.
+    thread_dump_aktivieren()
     init_db()
     Path("uploads").mkdir(parents=True, exist_ok=True)
     # backups/ verwaltet allein das root-Skript eierverkauf-helper.sh.
@@ -28,7 +31,7 @@ async def lifespan(_app: FastAPI):
 app = FastAPI(
     title="Eierverkauf-Auswertung",
     description="Auswertung von Eierverkäufen (Kerba Bio-Ei GbR).",
-    version="1.16.1",
+    version="1.16.2",
     lifespan=lifespan,
 )
 
@@ -43,6 +46,9 @@ app.add_middleware(
 # Zuletzt registriert = äußerste Schicht: Host-/Herkunftsprüfung greift vor
 # allem anderen (siehe api/sicherheit.py).
 app.add_middleware(SicherheitsMiddleware)
+# Ganz außen: misst auch Zeit in der Sicherheitsschicht und meldet hängende
+# Anfragen, die uvicorns Zugriffslog nie zeigt (siehe api/diagnose.py).
+app.add_middleware(LangsameAnfragenMiddleware)
 
 # API-Router VOR StaticFiles mounten.
 app.include_router(import_router, prefix="/api")

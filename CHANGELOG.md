@@ -7,6 +7,25 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.16.2] - 2026-11-05
+
+### Hinzugefügt
+- **Diagnose für „Seiten laden endlos".** Nach Import oder Löschen hing die
+  App im Betrieb, bis der Container neu gestartet wurde — das Journal zeigte
+  dabei nichts, weil uvicorn Anfragen erst bei Antwort loggt. Die Löschung
+  selbst war nachweislich in 0,1 s fertig. Damit die Ursache beim nächsten
+  Mal belegbar ist:
+  - Anfragen, die länger als 5 s laufen, erscheinen sofort im Journal
+    (`[anfrage] LÄUFT NOCH …`) und bei Abschluss mit Dauer (`[anfrage] ENDE …`).
+  - `SIGUSR1` schreibt die Stacks aller Threads ins Journal, ohne Neustart.
+  - Neuer Befehl `eierverkauf diagnose` sammelt beides plus lokale
+    Test-Anfragen, WAL-Größe, Verbindungen und Threads in
+    `logs/diagnose-<zeit>.txt`.
+
+### Hinweise
+- Hängt die App, **vor** dem Neustart `eierverkauf diagnose` ausführen und
+  prüfen, ob sie auf einem anderen Gerät lädt (DEPLOYMENT.md §11.15).
+
 ## [1.16.1] - 2026-11-05
 
 ### Geändert
@@ -889,7 +908,8 @@ hochladen.
   - Dev-Setup-Scripts für Windows (`dev-setup.ps1`, `dev-start.ps1`) und macOS/Linux.
   - Docker Compose für vollständige Integrationstests inkl. PDF-Export.
 
-[Unreleased]: https://github.com/muelley86/eierverkauf/compare/v1.16.1...HEAD
+[Unreleased]: https://github.com/muelley86/eierverkauf/compare/v1.16.2...HEAD
+[1.16.2]: https://github.com/muelley86/eierverkauf/compare/v1.16.1...v1.16.2
 [1.16.1]: https://github.com/muelley86/eierverkauf/compare/v1.16.0...v1.16.1
 [1.16.0]: https://github.com/muelley86/eierverkauf/compare/v1.15.0...v1.16.0
 [1.15.0]: https://github.com/muelley86/eierverkauf/compare/v1.14.0...v1.15.0

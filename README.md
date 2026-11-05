@@ -111,6 +111,7 @@ eierverkauf restart     # Dienst neu starten
 eierverkauf stop        # Dienst stoppen
 eierverkauf start       # Dienst starten
 eierverkauf logs        # Live-Logs (Strg+C zum Beenden)
+eierverkauf diagnose    # App hängt? Befund sichern, VOR dem Neustart
 eierverkauf backup      # Datenbank-Backup erstellen
 eierverkauf restore     # Aus Backup wiederherstellen
 eierverkauf uninstall   # Vollständige Deinstallation

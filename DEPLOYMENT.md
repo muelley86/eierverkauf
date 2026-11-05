@@ -728,6 +728,7 @@ automatisch auf eine Unit ohne Dateisystem-Sandbox zurück (Eintrag im Helper-Lo
 | `eierverkauf stop` | Service stoppen |
 | `eierverkauf start` | Service starten |
 | `eierverkauf logs` | Live-Logs (Strg+C zum Beenden) |
+| `eierverkauf diagnose` | Befund bei hängender App sichern — **vor** dem Neustart (§11.15) |
 | `eierverkauf backup` | DB-Backup erzeugen (siehe §7) |
 | `eierverkauf restore` | Backup zurückspielen — Liste der vorhandenen Backups erscheint (siehe §7) |
 | `eierverkauf uninstall` | Komplette Deinstallation (siehe §12) |
@@ -1052,6 +1053,43 @@ entsprechend darüber. Seit v1.14.0 zeigt das Dashboard in solchen Monaten unter
 der Eier- und der Umsatz-Kennzahl die Unterzeile „Verkauft … · Retouren …" —
 damit lässt sich der Beleg-Abgleich direkt in der App machen:
 Netto (große Zahl) = Verkauft (brutto) + Retouren (negativ).
+
+### 11.15 — Alle Seiten laden endlos, erst ein Neustart hilft
+
+Symptom: Nach einem Import oder einer Import-Löschung drehen alle Seiten nur
+noch, im Journal erscheint ab diesem Zeitpunkt **keine einzige Zugriffszeile**
+mehr. Das täuscht: uvicorn loggt eine Anfrage erst, wenn sie beantwortet ist —
+hängende Anfragen sind dort unsichtbar.
+
+**Vor dem Neustart** (sonst sind die Beweise weg):
+
+```bash
+eierverkauf diagnose
+```
+
+Der Befehl schreibt einen Bericht nach `/opt/eierverkauf/logs/diagnose-<zeit>.txt`:
+lokale Test-Anfragen an `/api/health` und `/api/imports` (je max. 5 s), Größe
+der WAL-Datei, Zahl offener Verbindungen und Threads sowie die **Stacks aller
+Threads** des App-Prozesses (per `SIGUSR1`, ohne Neustart). Zusätzlich prüfen,
+ob die App auf einem **anderen Gerät** lädt.
+
+Auswertung:
+
+| Lokale Anfrage | Anderes Gerät | Bedeutung |
+|---|---|---|
+| hängt | hängt | Server blockiert — die Thread-Stacks zeigen die Stelle |
+| antwortet | lädt | nur dieser Browser hängt (Verbindungen/Proxy) |
+| antwortet | hängt auch | Netz/Container (LXC-Netzwerk, Firewall) |
+
+Seit v1.16.2 meldet die App außerdem jede Anfrage, die länger als 5 s läuft,
+sofort im Journal (`[anfrage] LÄUFT NOCH …`) und bei Abschluss mit Dauer
+(`[anfrage] ENDE … nach X s`):
+
+```bash
+journalctl -u eierverkauf --since "-1h" | grep '\[anfrage\]'
+```
+
+Den Bericht und diese Zeilen für die Fehleranalyse weitergeben.
 
 ---
 

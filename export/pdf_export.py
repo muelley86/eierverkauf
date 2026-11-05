@@ -3,7 +3,9 @@ from __future__ import annotations
 
 import base64
 import html as html_lib
+from functools import lru_cache
 from io import BytesIO
+from pathlib import Path
 from typing import Optional, Sequence
 
 import matplotlib
@@ -86,6 +88,29 @@ def _label(wert: object) -> str:
     return str(wert).replace("$", r"\$")
 
 
+# Buchenhof-Palette (www.buchenhof.de), synchron zu frontend/src/index.css
+FARBE_ANTHRAZIT = "#353535"
+FARBE_TEXT = "#313131"
+FARBE_TEXT_LEISE = "#565B5B"
+FARBE_GRUEN = "#B5D556"
+FARBE_GRUEN_KRAEFTIG = "#76981C"
+FARBE_VORJAHR = "#A6A9A9"
+FARBE_LINIE = "#E6E7E4"
+FARBE_ZEILE = "#F7F7F7"
+
+LOGO_PFAD = Path(__file__).parent / "assets" / "buchenhof-baum.png"
+
+
+@lru_cache(maxsize=1)
+def _logo_data_url() -> str:
+    """Baum-Logo als ``data:``-URL (der URL-Fetcher lässt nur ``data:`` zu)."""
+    try:
+        roh = LOGO_PFAD.read_bytes()
+    except OSError:
+        return ""
+    return "data:image/png;base64," + base64.b64encode(roh).decode("ascii")
+
+
 def _chart_png_base64(typ: str, daten: Sequence[dict]) -> Optional[str]:
     """Erzeugt einen Übersichts-Chart und kodiert ihn als base64-PNG."""
     if not daten:
@@ -96,8 +121,8 @@ def _chart_png_base64(typ: str, daten: Sequence[dict]) -> Optional[str]:
         jahr = [d.get("jahr", 0) for d in daten]
         vorjahr = [d.get("vorjahr", 0) for d in daten]
         x = range(len(monate))
-        ax.bar(x, jahr, width=0.6, label="Jahr", color="#2563eb")
-        ax.plot(x, vorjahr, marker="o", color="#94a3b8", label="Vorjahr")
+        ax.bar(x, jahr, width=0.6, label="Jahr", color=FARBE_GRUEN, edgecolor=FARBE_GRUEN_KRAEFTIG)
+        ax.plot(x, vorjahr, marker="o", color=FARBE_VORJAHR, label="Vorjahr")
         ax.set_xticks(list(x))
         ax.set_xticklabels(monate)
         ax.legend()
@@ -105,14 +130,14 @@ def _chart_png_base64(typ: str, daten: Sequence[dict]) -> Optional[str]:
     elif typ in ("kunde_monate", "artikel_monate"):
         monate = [_label(d.get("monat", "")) for d in daten]
         eier = [d.get("eier", 0) for d in daten]
-        ax.bar(monate, eier, color="#2563eb")
+        ax.bar(monate, eier, color=FARBE_GRUEN, edgecolor=FARBE_GRUEN_KRAEFTIG)
         ax.set_ylabel("Eier (Stück)")
         plt.xticks(rotation=45, ha="right")
     elif typ == "ranking":
         top = list(daten)[:10]
         namen = [_label(d.get("kundenname", "")) for d in top][::-1]
         eier = [d.get("eier", 0) for d in top][::-1]
-        ax.barh(namen, eier, color="#16a34a")
+        ax.barh(namen, eier, color=FARBE_GRUEN, edgecolor=FARBE_GRUEN_KRAEFTIG)
         ax.set_xlabel("Eier (Stück)")
     else:
         # Generisch: erste numerische Spalte als Säulenchart.
@@ -123,7 +148,7 @@ def _chart_png_base64(typ: str, daten: Sequence[dict]) -> Optional[str]:
         key = keys[0]
         labels = [_label(d.get("kundenname") or d.get("artikel_code") or "") for d in daten[:10]]
         werte = [d.get(key, 0) for d in daten[:10]]
-        ax.bar(labels, werte, color="#2563eb")
+        ax.bar(labels, werte, color=FARBE_GRUEN, edgecolor=FARBE_GRUEN_KRAEFTIG)
         plt.xticks(rotation=45, ha="right")
         ax.set_ylabel(key)
 
@@ -140,19 +165,26 @@ _HTML_TEMPLATE = """<!DOCTYPE html>
 <title>{titel}</title>
 <style>
   @page {{ size: A4 landscape; margin: 1.5cm; }}
-  body {{ font-family: 'Helvetica', sans-serif; color: #1f2937; }}
-  h1 {{ color: #1e3a8a; font-size: 18pt; margin-bottom: 0.2em; }}
-  .meta {{ color: #475569; font-size: 10pt; margin-bottom: 1em; }}
+  body {{ font-family: 'Inter', 'DejaVu Sans', sans-serif; color: #313131; }}
+  .kopf {{ display: flex; align-items: center; gap: 0.6em;
+           border-bottom: 3px solid #B5D556; padding-bottom: 0.4em; margin-bottom: 0.6em; }}
+  .logo {{ height: 1.6cm; }}
+  .marke {{ color: #565B5B; font-size: 9pt; }}
+  h1 {{ color: #313131; font-size: 18pt; margin: 0; }}
+  .meta {{ color: #565B5B; font-size: 10pt; margin-bottom: 1em; }}
   table {{ width: 100%; border-collapse: collapse; font-size: 9pt; }}
-  th {{ background: #1e3a8a; color: white; padding: 0.4em; text-align: left; }}
-  td {{ border-bottom: 1px solid #e5e7eb; padding: 0.3em; }}
-  tr:nth-child(even) td {{ background: #f8fafc; }}
+  th {{ background: #353535; color: white; padding: 0.4em; text-align: left; }}
+  td {{ border-bottom: 1px solid #E6E7E4; padding: 0.3em; }}
+  tr:nth-child(even) td {{ background: #F7F7F7; }}
   .chart {{ margin: 1em 0; text-align: center; }}
   .chart img {{ max-width: 100%; }}
-  .footer {{ position: fixed; bottom: 0; right: 0; font-size: 8pt; color: #94a3b8; }}
+  .footer {{ position: fixed; bottom: 0; right: 0; font-size: 8pt; color: #A6A9A9; }}
 </style></head>
 <body>
-  <h1>{titel}</h1>
+  <div class="kopf">
+    {logo_html}
+    <div><div class="marke">Buchenhof · Kerba Bio-Ei GbR</div><h1>{titel}</h1></div>
+  </div>
   <div class="meta">Zeitraum: {zeitraum} &middot; Erstellt: {erstellt}</div>
   {chart_html}
   <table>
@@ -218,6 +250,8 @@ def baue_pdf_html(typ: str, von: Optional[str], bis: Optional[str], daten: Seque
         zeitraum=esc(zeitraum),
         erstellt=datetime.now().strftime("%d.%m.%Y %H:%M"),
         chart_html=chart_html,
+        logo_html=(f'<img class="logo" src="{_logo_data_url()}" alt="Buchenhof"/>'
+                   if _logo_data_url() else ""),
         kopfzeile=kopfzeile,
         zeilen=zeilen_html or "<tr><td colspan='99'>Keine Daten</td></tr>",
     )

@@ -9,9 +9,14 @@ from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 
 # Stilkonstanten
-FARBE_KOPF = "FF1E3A8A"  # dunkelblau
+# Buchenhof-Palette (www.buchenhof.de), synchron zu frontend/src/index.css
+FARBE_KOPF = "FF353535"      # Anthrazit
+FARBE_AKZENT = "FFB5D556"    # Buchenhof-Hellgrün
+FARBE_TEXT = "FF313131"
 SCHRIFT_WEISS_BOLD = Font(color="FFFFFFFF", bold=True, name="Calibri", size=11)
 FILL_KOPF = PatternFill(start_color=FARBE_KOPF, end_color=FARBE_KOPF, fill_type="solid")
+FILL_AKZENT = PatternFill(start_color=FARBE_AKZENT, end_color=FARBE_AKZENT, fill_type="solid")
+HOEHE_AKZENTZEILE = 4  # Punkt — dünner grüner Balken unter dem Titel
 ALIGN_CENTER = Alignment(horizontal="center", vertical="center")
 
 ZAHLENFORMAT_INT = "#,##0"
@@ -103,8 +108,13 @@ def build_excel(typ: str, von: Optional[str], bis: Optional[str], daten: Sequenc
     # Titelzeile -------------------------------------------------------------
     zeitraum = f"{von or '–'} bis {bis or '–'}" if (von or bis) else "Gesamtzeitraum"
     titel_text = titel or f"Kerba Bio-Ei GbR — {typ.capitalize()} — Zeitraum: {zeitraum}"
-    ws.cell(row=1, column=1, value=titel_text).font = Font(bold=True, size=14)
+    ws.cell(row=1, column=1, value=titel_text).font = Font(bold=True, size=14, color=FARBE_TEXT)
     ws.merge_cells(start_row=1, end_row=1, start_column=1, end_column=len(spalten))
+
+    # Grüner Akzentbalken ----------------------------------------------------
+    for idx in range(1, len(spalten) + 1):
+        ws.cell(row=2, column=idx).fill = FILL_AKZENT
+    ws.row_dimensions[2].height = HOEHE_AKZENTZEILE
 
     # Kopfzeile --------------------------------------------------------------
     for idx, (name, _, _) in enumerate(spalten, start=1):

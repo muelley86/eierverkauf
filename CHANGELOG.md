@@ -12,7 +12,8 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 Neues Erscheinungsbild im Corporate Design von [buchenhof.de](https://www.buchenhof.de),
 durchgehend responsiv (Handy, Tablet, Desktop) und mit Dunkelmodus, neue Seite
 „Zeitraumvergleich". Dazu ein Fix: Die Grafik auf der Übersicht folgt jetzt
-dem gewählten Zeitraum.
+dem gewählten Zeitraum. Außerdem lässt sich nach einem oder mehreren Kunden
+filtern.
 
 ### Behoben
 - **Übersichts-Grafik ignorierte den Zeitraum.** Sie zeigte immer Januar bis
@@ -35,6 +36,15 @@ dem gewählten Zeitraum.
   mehr aus.
 
 ### Hinzugefügt
+- **Kundenfilter mit Mehrfachauswahl** auf Belege, Kunden, Artikel,
+  Zeitraumvergleich und Jahresvergleich: Pille „Alle Kunden" oben rechts neben
+  dem Zeitraum, mit Suche nach Name oder Kundennummer. Die Auswahl gilt für
+  alle fünf Seiten gleichzeitig, bleibt nach dem Neuladen erhalten und wirkt
+  auch auf den Excel- und PDF-Export (gewählte Kunden stehen im Titel).
+  Ohne Auswahl werden wie bisher alle Kunden ausgewertet. Übersicht und Ranking
+  bleiben ungefiltert. API: wiederholbarer Parameter `kunden`
+  (`?kunden=10001&kunden=10002`, höchstens 500) und neuer Endpoint
+  `GET /api/kundenauswahl`.
 - **Seite „Zeitraumvergleich"** (über dem Jahresvergleich): vergleicht den oben
   rechts gewählten Zeitraum mit demselben Zeitraum ein Jahr früher — Diagramm
   und Tabelle wie beim Jahresvergleich (Δ Stück, Δ %, Umsatz je Ei,

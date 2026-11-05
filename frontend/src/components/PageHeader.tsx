@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { ArrowLeft, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ZeitraumFilter } from "@/components/ZeitraumFilter";
+import { KundenFilter } from "@/components/KundenFilter";
 
 interface PageHeaderProps {
   /** Bereichsname über dem Titel (z. B. „Kunden"). */
@@ -14,6 +15,8 @@ interface PageHeaderProps {
   actions?: ReactNode;
   /** Zeitraumfilter rechts ausblenden (z. B. auf Import-Seiten). Default: sichtbar. */
   withZeitraumFilter?: boolean;
+  /** Kundenfilter (Mehrfachauswahl) links neben dem Zeitraum einblenden. Default: aus. */
+  withKundenFilter?: boolean;
   /** Wenn gesetzt, erscheint rechts ein Download-Button für den Datenexport. */
   exportHref?: string;
   className?: string;
@@ -27,6 +30,7 @@ export function PageHeader({
   back,
   actions,
   withZeitraumFilter = true,
+  withKundenFilter = false,
   exportHref,
   className,
 }: PageHeaderProps) {
@@ -54,6 +58,7 @@ export function PageHeader({
       </div>
       <div className="flex flex-wrap items-center gap-2 md:shrink-0">
         {actions}
+        {withKundenFilter && <KundenFilter />}
         {withZeitraumFilter && <ZeitraumFilter />}
         {exportHref && (
           <a

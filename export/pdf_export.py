@@ -240,7 +240,7 @@ def pdf_url_fetcher():
 
 
 def baue_pdf_html(typ: str, von: Optional[str], bis: Optional[str], daten: Sequence[dict],
-                  titel: Optional[str] = None) -> str:
+                  titel: Optional[str] = None, filter_hinweis: Optional[str] = None) -> str:
     """Baut das HTML-Dokument für den PDF-Export; alle Textwerte maskiert."""
     from datetime import datetime
 
@@ -252,6 +252,8 @@ def baue_pdf_html(typ: str, von: Optional[str], bis: Optional[str], daten: Seque
         spalten = [(k.capitalize(), k, "text") for k in keys]
 
     zeitraum = f"{von or '–'} bis {bis or '–'}" if (von or bis) else "Gesamtzeitraum"
+    if filter_hinweis:
+        zeitraum = f"{zeitraum} · {filter_hinweis}"
     titel_text = titel or f"Auswertung: {typ.capitalize()}"
     kopfzeile = "".join(f"<th>{esc(name)}</th>" for name, _, _ in spalten)
     zeilen_html = "".join(
@@ -276,11 +278,11 @@ def baue_pdf_html(typ: str, von: Optional[str], bis: Optional[str], daten: Seque
 
 
 def build_pdf(typ: str, von: Optional[str], bis: Optional[str], daten: Sequence[dict],
-              titel: Optional[str] = None) -> bytes:
+              titel: Optional[str] = None, filter_hinweis: Optional[str] = None) -> bytes:
     """Erzeugt ein PDF-Dokument aus den Daten."""
     from weasyprint import HTML  # lokaler Import → Fehler nur bei tatsächlicher Nutzung
 
-    html = baue_pdf_html(typ, von, bis, daten, titel)
+    html = baue_pdf_html(typ, von, bis, daten, titel, filter_hinweis)
     return HTML(string=html, url_fetcher=pdf_url_fetcher()).write_pdf()
 
 

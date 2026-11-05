@@ -104,7 +104,7 @@ def _autosize(ws) -> None:
 
 
 def build_excel(typ: str, von: Optional[str], bis: Optional[str], daten: Sequence[dict],
-                titel: Optional[str] = None) -> bytes:
+                titel: Optional[str] = None, filter_hinweis: Optional[str] = None) -> bytes:
     """Erzeugt ein .xlsx mit Titelzeile und formatierter Tabelle."""
     spalten = SPALTEN_DEFINITIONEN.get(typ)
     if spalten is None:
@@ -117,6 +117,8 @@ def build_excel(typ: str, von: Optional[str], bis: Optional[str], daten: Sequenc
     # Titelzeile -------------------------------------------------------------
     zeitraum = f"{von or '–'} bis {bis or '–'}" if (von or bis) else "Gesamtzeitraum"
     titel_text = titel or f"Kerba Bio-Ei GbR — {typ.capitalize()} — Zeitraum: {zeitraum}"
+    if filter_hinweis:
+        titel_text = f"{titel_text} — {filter_hinweis}"
     ws.cell(row=1, column=1, value=titel_text).font = Font(bold=True, size=14, color=FARBE_TEXT)
     ws.merge_cells(start_row=1, end_row=1, start_column=1, end_column=len(spalten))
 

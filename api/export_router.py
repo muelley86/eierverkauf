@@ -5,9 +5,10 @@ from datetime import date
 from io import BytesIO
 from typing import Literal, Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 
+from api.kundenfilter import kunden_hinweis, kunden_param
 from data import queries, verlauf
 from export.excel_export import build_excel
 from export.pdf_export import build_pdf
@@ -19,6 +20,11 @@ ExportTyp = Literal[
     "kunde_monate", "artikel_monate", "jahresvergleich", "zeitraumvergleich",
 ]
 
+# Export-Typen, deren Seiten den Kundenfilter anbieten.
+TYPEN_MIT_KUNDENFILTER = frozenset(
+    {"kunden", "artikel", "belege", "jahresvergleich", "zeitraumvergleich"}
+)
+
 
 def _iso(d: Optional[date]) -> Optional[str]:
     return d.isoformat() if d else None
@@ -26,15 +32,15 @@ def _iso(d: Optional[date]) -> Optional[str]:
 
 def _daten_laden(typ: str, von: Optional[str], bis: Optional[str],
                  kunde_nr: Optional[str], code: Optional[str],
-                 jahr: Optional[int], sort: str) -> list[dict]:
+                 jahr: Optional[int], sort: str, kunden: list[str]) -> list[dict]:
     if typ == "kunden":
-        return queries.kunden_uebersicht(von, bis)
+        return queries.kunden_uebersicht(von, bis, kunden)
     if typ == "artikel":
-        return queries.artikel_uebersicht(von, bis)
+        return queries.artikel_uebersicht(von, bis, kunden)
     if typ == "ranking":
         return queries.ranking(von, bis, sort)
     if typ == "belege":
-        return queries.belege_uebersicht(von, bis)
+        return queries.belege_uebersicht(von, bis, kunden)
     if typ == "kunde_monate":
         if not kunde_nr:
             raise HTTPException(status_code=400, detail="Parameter 'kunde_nr' erforderlich.")
@@ -46,18 +52,20 @@ def _daten_laden(typ: str, von: Optional[str], bis: Optional[str],
     if typ == "jahresvergleich":
         if not jahr:
             raise HTTPException(status_code=400, detail="Parameter 'jahr' erforderlich.")
-        return queries.jahresvergleich(jahr)
+        return queries.jahresvergleich(jahr, kunden)
     if typ == "zeitraumvergleich":
-        return _zeitraumvergleich(von, bis)
+        return _zeitraumvergleich(von, bis, kunden)
     raise HTTPException(status_code=400, detail=f"Unbekannter Export-Typ: {typ}")
 
 
-def _zeitraumvergleich(von: Optional[str], bis: Optional[str]) -> list[dict]:
+def _zeitraumvergleich(von: Optional[str], bis: Optional[str],
+                       kunden: list[str]) -> list[dict]:
     if not (von and bis):
         raise HTTPException(status_code=400, detail="Parameter 'von' und 'bis' erforderlich.")
     try:
         daten = verlauf.zeitraum_verlauf(
-            date.fromisoformat(von), date.fromisoformat(bis), granularitaet="monat"
+            date.fromisoformat(von), date.fromisoformat(bis), granularitaet="monat",
+            kunden=kunden,
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -82,10 +90,12 @@ def export_excel(
     code: Optional[str] = Query(None),
     jahr: Optional[int] = Query(None),
     sort: Literal["menge", "umsatz"] = "menge",
+    kunden: list[str] = Depends(kunden_param),
 ):
     v, b = _iso(von), _iso(bis)
-    daten = _daten_laden(typ, v, b, kunde_nr, code, jahr, sort)
-    bytes_ = build_excel(typ, v, b, daten)
+    daten = _daten_laden(typ, v, b, kunde_nr, code, jahr, sort, kunden)
+    hinweis = kunden_hinweis(kunden) if typ in TYPEN_MIT_KUNDENFILTER else None
+    bytes_ = build_excel(typ, v, b, daten, filter_hinweis=hinweis)
     headers = {"Content-Disposition": f'attachment; filename="{_dateiname(typ, "xlsx", v, b)}"'}
     return StreamingResponse(
         BytesIO(bytes_),
@@ -103,11 +113,13 @@ def export_pdf(
     code: Optional[str] = Query(None),
     jahr: Optional[int] = Query(None),
     sort: Literal["menge", "umsatz"] = "menge",
+    kunden: list[str] = Depends(kunden_param),
 ):
     v, b = _iso(von), _iso(bis)
-    daten = _daten_laden(typ, v, b, kunde_nr, code, jahr, sort)
+    daten = _daten_laden(typ, v, b, kunde_nr, code, jahr, sort, kunden)
+    hinweis = kunden_hinweis(kunden) if typ in TYPEN_MIT_KUNDENFILTER else None
     try:
-        bytes_ = build_pdf(typ, v, b, daten)
+        bytes_ = build_pdf(typ, v, b, daten, filter_hinweis=hinweis)
     except OSError as exc:
         # WeasyPrint kann auf Systemen ohne GTK-Runtime mit OSError fehlschlagen.
         raise HTTPException(

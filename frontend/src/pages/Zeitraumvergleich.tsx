@@ -9,6 +9,7 @@ import {
   VergleichsTabelle,
 } from "@/components/VergleichsAnsicht";
 import { useZeitraum } from "@/context/ZeitraumContext";
+import { useKundenFilter } from "@/context/KundenFilterContext";
 import { exportExcelUrl, exportPdfUrl, getVerlauf, ZeitraumVerlauf } from "@/api/client";
 import { formatDatum } from "@/lib/formatierung";
 import { zeilenAusVerlauf } from "@/lib/vergleich";
@@ -27,24 +28,26 @@ function panelTitel(verlauf: ZeitraumVerlauf | null): string {
 
 export default function Zeitraumvergleich() {
   const { von, bis } = useZeitraum();
+  const { kunden } = useKundenFilter();
   const [verlauf, setVerlauf] = useState<ZeitraumVerlauf | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let ab = false;
     setLoading(true);
-    getVerlauf({ von, bis }, VERGLEICHSEBENE)
+    getVerlauf({ von, bis, kunden }, VERGLEICHSEBENE)
       .then((v) => { if (!ab) setVerlauf(v); })
       .catch((e) => toast.error("Zeitraumvergleich konnte nicht geladen werden", { description: String(e) }))
       .finally(() => { if (!ab) setLoading(false); });
     return () => { ab = true; };
-  }, [von, bis]);
+  }, [von, bis, kunden]);
 
   const zeilen = useMemo(() => (verlauf ? zeilenAusVerlauf(verlauf) : []), [verlauf]);
 
   return (
     <div className="max-w-[1400px] space-y-4 md:space-y-6">
       <PageHeader
+        withKundenFilter
         title="Zeitraumvergleich"
         subtitle="Gewählter Zeitraum im Vergleich zum selben Zeitraum ein Jahr früher, Monat für Monat."
       />
@@ -55,8 +58,8 @@ export default function Zeitraumvergleich() {
           <div className="flex items-center gap-3">
             <VergleichsLegende {...BESCHRIFTUNG} />
             <ExportKnoepfe
-              excelHref={exportExcelUrl({ typ: "zeitraumvergleich", von, bis })}
-              pdfHref={exportPdfUrl({ typ: "zeitraumvergleich", von, bis })}
+              excelHref={exportExcelUrl({ typ: "zeitraumvergleich", von, bis, kunden })}
+              pdfHref={exportPdfUrl({ typ: "zeitraumvergleich", von, bis, kunden })}
             />
           </div>
         }

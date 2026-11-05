@@ -2,21 +2,38 @@
 from __future__ import annotations
 
 import time
-from typing import Optional
+from typing import Optional, Sequence
 
 from .db import get_conn
 
 # Filter-Helper -------------------------------------------------------------
 
-def _zeitraum_filter(von: Optional[str], bis: Optional[str], prefix: str = "WHERE") -> tuple[str, list]:
-    """Liefert SQL-Snippet '<prefix> rechnungsdatum BETWEEN ? AND ?' + Parameter."""
-    if von and bis:
-        return f" {prefix} rechnungsdatum BETWEEN ? AND ? ", [von, bis]
+def _zeitraum_filter(
+    von: Optional[str],
+    bis: Optional[str],
+    prefix: str = "WHERE",
+    kunden: Optional[Sequence[str]] = None,
+) -> tuple[str, list]:
+    """Liefert SQL-Snippet '<prefix> <bedingungen>' + Parameter.
+
+    Bedingungen: Rechnungsdatum im Zeitraum und — falls ``kunden`` nicht
+    leer — ``kundennummer IN (…)`` (Kundenfilter, seit v1.16.0).
+    """
+    bedingungen: list[str] = []
+    params: list = []
     if von:
-        return f" {prefix} rechnungsdatum >= ? ", [von]
+        bedingungen.append("rechnungsdatum >= ?")
+        params.append(von)
     if bis:
-        return f" {prefix} rechnungsdatum <= ? ", [bis]
-    return "", []
+        bedingungen.append("rechnungsdatum <= ?")
+        params.append(bis)
+    if kunden:
+        platzhalter = ", ".join("?" for _ in kunden)
+        bedingungen.append(f"kundennummer IN ({platzhalter})")
+        params.extend(kunden)
+    if not bedingungen:
+        return "", []
+    return f" {prefix} " + " AND ".join(bedingungen) + " ", params
 
 
 def _row_to_dict(row) -> dict:
@@ -100,8 +117,10 @@ def top5_artikel(von: Optional[str], bis: Optional[str]) -> list[dict]:
 # Kunden
 # ---------------------------------------------------------------------------
 
-def kunden_uebersicht(von: Optional[str], bis: Optional[str]) -> list[dict]:
-    wh, params = _zeitraum_filter(von, bis)
+def kunden_uebersicht(
+    von: Optional[str], bis: Optional[str], kunden: Optional[Sequence[str]] = None
+) -> list[dict]:
+    wh, params = _zeitraum_filter(von, bis, kunden=kunden)
     sql = f"""
         SELECT kundennummer, kundenname,
                COALESCE(SUM(eier_stueck), 0) AS eier,
@@ -186,8 +205,10 @@ def kunde_jahresvergleich(kundennummer: str, jahr: int) -> list[dict]:
 # Artikel
 # ---------------------------------------------------------------------------
 
-def artikel_uebersicht(von: Optional[str], bis: Optional[str]) -> list[dict]:
-    wh, params = _zeitraum_filter(von, bis)
+def artikel_uebersicht(
+    von: Optional[str], bis: Optional[str], kunden: Optional[Sequence[str]] = None
+) -> list[dict]:
+    wh, params = _zeitraum_filter(von, bis, kunden=kunden)
     sql = f"""
         SELECT artikel_code,
                COALESCE(SUM(menge), 0)       AS menge,
@@ -232,14 +253,16 @@ def artikel_monate(code: str, von: Optional[str], bis: Optional[str]) -> list[di
 # Belege
 # ---------------------------------------------------------------------------
 
-def belege_uebersicht(von: Optional[str], bis: Optional[str]) -> list[dict]:
+def belege_uebersicht(
+    von: Optional[str], bis: Optional[str], kunden: Optional[Sequence[str]] = None
+) -> list[dict]:
     """Aggregat pro Rechnung: Eier, Umsatz, Positionen. Sortiert nach Eier DESC.
 
     Gruppierung schließt ``rechnungsdatum`` ein, weil der UNIQUE-Constraint ab
     v1.0.4 das Datum mit umfasst — derselbe Rechnungsnummer-String an einem
     anderen Tag wird bewusst als separater Beleg geführt.
     """
-    wh, params = _zeitraum_filter(von, bis)
+    wh, params = _zeitraum_filter(von, bis, kunden=kunden)
     sql = f"""
         SELECT rechnungsnummer,
                rechnungsdatum,
@@ -301,9 +324,10 @@ def ranking(von: Optional[str], bis: Optional[str], sort: str = "menge") -> list
         conn.close()
 
 
-def jahresvergleich(jahr: int) -> list[dict]:
-    """Gesamt-Jahresvergleich Monat 1..12, Jahr vs. Vorjahr."""
-    sql = """
+def jahresvergleich(jahr: int, kunden: Optional[Sequence[str]] = None) -> list[dict]:
+    """Gesamt-Jahresvergleich Monat 1..12, Jahr vs. Vorjahr (optional nur ``kunden``)."""
+    kunden_wh, kunden_params = _zeitraum_filter(None, None, prefix="AND", kunden=kunden)
+    sql = f"""
         SELECT CAST(substr(rechnungsdatum, 6, 2) AS INTEGER) AS monat,
                CAST(substr(rechnungsdatum, 1, 4) AS INTEGER) AS jahr,
                COALESCE(SUM(eier_stueck), 0) AS eier,
@@ -311,12 +335,13 @@ def jahresvergleich(jahr: int) -> list[dict]:
                COALESCE(SUM(CASE WHEN eier_stueck IS NOT NULL THEN gesamt END), 0) AS eier_umsatz
         FROM verkaufspositionen
         WHERE substr(rechnungsdatum, 1, 4) IN (?, ?)
+        {kunden_wh}
         GROUP BY monat, jahr
         ORDER BY monat, jahr
     """
     conn = get_conn()
     try:
-        rows = conn.execute(sql, [str(jahr), str(jahr - 1)]).fetchall()
+        rows = conn.execute(sql, [str(jahr), str(jahr - 1), *kunden_params]).fetchall()
     finally:
         conn.close()
     daten: dict[int, dict] = {m: {"monat": m, "jahr": 0.0, "vorjahr": 0.0,
@@ -339,9 +364,11 @@ def jahresvergleich(jahr: int) -> list[dict]:
     return list(daten.values())
 
 
-def tageswerte(von: Optional[str], bis: Optional[str]) -> list[dict]:
+def tageswerte(
+    von: Optional[str], bis: Optional[str], kunden: Optional[Sequence[str]] = None
+) -> list[dict]:
     """Netto-Eier, -Umsatz und Eier-Umsatz je Rechnungsdatum (Basis für ``data.verlauf``)."""
-    wh, params = _zeitraum_filter(von, bis)
+    wh, params = _zeitraum_filter(von, bis, kunden=kunden)
     sql = f"""
         SELECT rechnungsdatum AS datum,
                COALESCE(SUM(eier_stueck), 0) AS eier,
@@ -355,6 +382,27 @@ def tageswerte(von: Optional[str], bis: Optional[str]) -> list[dict]:
     conn = get_conn()
     try:
         return [_row_to_dict(r) for r in conn.execute(sql, params).fetchall()]
+    finally:
+        conn.close()
+
+
+def kundenauswahl() -> list[dict]:
+    """Alle Kunden des Bestands für den Kundenfilter, nach Name sortiert.
+
+    Ein Kunde kann unter mehreren Namensschreibweisen vorkommen — angezeigt
+    wird die jüngste.
+    """
+    sql = """
+        -- SQLite-Garantie: bei MAX() stammen die übrigen Spalten aus der Max-Zeile.
+        SELECT kundennummer, kundenname, MAX(rechnungsdatum) AS letzter_kauf
+        FROM verkaufspositionen
+        GROUP BY kundennummer
+        ORDER BY kundenname COLLATE NOCASE, kundennummer
+    """
+    conn = get_conn()
+    try:
+        return [{"kundennummer": r["kundennummer"], "kundenname": r["kundenname"]}
+                for r in conn.execute(sql).fetchall()]
     finally:
         conn.close()
 

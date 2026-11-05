@@ -11,11 +11,13 @@ import {
 } from "@/components/VergleichsAnsicht";
 import { exportExcelUrl, exportPdfUrl, getJahresvergleich, JahresvergleichZeile } from "@/api/client";
 import { zeilenAusJahresvergleich } from "@/lib/vergleich";
+import { useKundenFilter } from "@/context/KundenFilterContext";
 
 const ANZAHL_JAHRE_AUSWAHL = 6;
 
 export default function Jahresvergleich() {
   const aktuellesJahr = new Date().getFullYear();
+  const { kunden } = useKundenFilter();
   const [jahr, setJahr] = useState<number>(aktuellesJahr);
   const [daten, setDaten] = useState<JahresvergleichZeile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -23,12 +25,12 @@ export default function Jahresvergleich() {
   useEffect(() => {
     let ab = false;
     setLoading(true);
-    getJahresvergleich(jahr)
+    getJahresvergleich(jahr, kunden)
       .then((d) => { if (!ab) setDaten(d); })
       .catch((e) => toast.error("Jahresvergleich konnte nicht geladen werden", { description: String(e) }))
       .finally(() => { if (!ab) setLoading(false); });
     return () => { ab = true; };
-  }, [jahr]);
+  }, [jahr, kunden]);
 
   const zeilen = useMemo(() => zeilenAusJahresvergleich(daten), [daten]);
   const jahrOptionen = Array.from({ length: ANZAHL_JAHRE_AUSWAHL }, (_, i) => aktuellesJahr - i);
@@ -40,6 +42,7 @@ export default function Jahresvergleich() {
         title="Jahresvergleich"
         subtitle="Ganzes Kalenderjahr im Vergleich zum Vorjahr, Monat für Monat."
         withZeitraumFilter={false}
+        withKundenFilter
       />
 
       <Panel
@@ -56,8 +59,8 @@ export default function Jahresvergleich() {
               {jahrOptionen.map((j) => <option key={j} value={j}>{j}</option>)}
             </Select>
             <ExportKnoepfe
-              excelHref={exportExcelUrl({ typ: "jahresvergleich", jahr })}
-              pdfHref={exportPdfUrl({ typ: "jahresvergleich", jahr })}
+              excelHref={exportExcelUrl({ typ: "jahresvergleich", jahr, kunden })}
+              pdfHref={exportPdfUrl({ typ: "jahresvergleich", jahr, kunden })}
             />
           </div>
         }

@@ -6,12 +6,14 @@ import { DataTable } from "@/components/DataTable";
 import { PageHeader, Panel } from "@/components/PageHeader";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useZeitraum } from "@/context/ZeitraumContext";
+import { useKundenFilter } from "@/context/KundenFilterContext";
 import { ArtikelZeile, getArtikel } from "@/api/client";
 import { artikelLabel } from "@/lib/artikel";
 import { formatCentJeEi, formatEuro, formatZahl } from "@/lib/formatierung";
 
 export default function Artikel() {
   const { von, bis } = useZeitraum();
+  const { kunden } = useKundenFilter();
   const navigate = useNavigate();
   const [daten, setDaten] = useState<ArtikelZeile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -19,7 +21,7 @@ export default function Artikel() {
   useEffect(() => {
     let abgebrochen = false;
     setLoading(true);
-    getArtikel({ von, bis })
+    getArtikel({ von, bis, kunden })
       .then((d) => {
         if (!abgebrochen) setDaten(d);
       })
@@ -30,7 +32,7 @@ export default function Artikel() {
     return () => {
       abgebrochen = true;
     };
-  }, [von, bis]);
+  }, [von, bis, kunden]);
 
   const columns = useMemo<ColumnDef<ArtikelZeile>[]>(
     () => [
@@ -97,6 +99,7 @@ export default function Artikel() {
   return (
     <div className="space-y-8 max-w-[1400px]">
       <PageHeader
+        withKundenFilter
         eyebrow="Artikel"
         title="Was verkauft wurde"
         subtitle={`${daten.length} Artikel im gewählten Zeitraum.`}

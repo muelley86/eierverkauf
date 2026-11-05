@@ -4,8 +4,9 @@ from __future__ import annotations
 from datetime import date
 from typing import Literal, Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
+from api.kundenfilter import kunden_param
 from data import queries, verlauf
 
 router = APIRouter(tags=["auswertung"])
@@ -49,6 +50,7 @@ def zeitraum_verlauf(
     von: Optional[date] = Query(None),
     bis: Optional[date] = Query(None),
     granularitaet: Optional[Literal["tag", "woche", "monat"]] = Query(None),
+    kunden: list[str] = Depends(kunden_param),
 ) -> dict:
     """Verlauf im Zeitraum + positionsgleicher Vorjahreszeitraum.
 
@@ -56,7 +58,7 @@ def zeitraum_verlauf(
     „Zeitraumvergleich" (``granularitaet=monat``), siehe ``data.verlauf``.
     """
     try:
-        return verlauf.zeitraum_verlauf(von, bis, granularitaet)
+        return verlauf.zeitraum_verlauf(von, bis, granularitaet, kunden)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
@@ -65,8 +67,9 @@ def zeitraum_verlauf(
 def kunden(
     von: Optional[date] = Query(None),
     bis: Optional[date] = Query(None),
+    kunden: list[str] = Depends(kunden_param),
 ) -> list[dict]:
-    return queries.kunden_uebersicht(_iso(von), _iso(bis))
+    return queries.kunden_uebersicht(_iso(von), _iso(bis), kunden)
 
 
 @router.get("/kunden/{nr}")
@@ -95,8 +98,9 @@ def kunde_jahresvergleich(nr: str, jahr: int = Query(...)) -> list[dict]:
 def artikel(
     von: Optional[date] = Query(None),
     bis: Optional[date] = Query(None),
+    kunden: list[str] = Depends(kunden_param),
 ) -> list[dict]:
-    return queries.artikel_uebersicht(_iso(von), _iso(bis))
+    return queries.artikel_uebersicht(_iso(von), _iso(bis), kunden)
 
 
 @router.get("/artikel/{code}/monate")
@@ -112,8 +116,9 @@ def artikel_monate(
 def belege(
     von: Optional[date] = Query(None),
     bis: Optional[date] = Query(None),
+    kunden: list[str] = Depends(kunden_param),
 ) -> list[dict]:
-    return queries.belege_uebersicht(_iso(von), _iso(bis))
+    return queries.belege_uebersicht(_iso(von), _iso(bis), kunden)
 
 
 @router.get("/belege/{rechnungsnummer}/positionen")
@@ -134,5 +139,14 @@ def ranking(
 
 
 @router.get("/jahresvergleich")
-def jahresvergleich(jahr: int = Query(...)) -> list[dict]:
-    return queries.jahresvergleich(jahr)
+def jahresvergleich(
+    jahr: int = Query(...),
+    kunden: list[str] = Depends(kunden_param),
+) -> list[dict]:
+    return queries.jahresvergleich(jahr, kunden)
+
+
+@router.get("/kundenauswahl")
+def kundenauswahl() -> list[dict]:
+    """Alle Kunden (Nummer + Name) für die Auswahlliste des Kundenfilters."""
+    return queries.kundenauswahl()

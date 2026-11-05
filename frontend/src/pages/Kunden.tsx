@@ -6,11 +6,13 @@ import { DataTable } from "@/components/DataTable";
 import { PageHeader, Panel } from "@/components/PageHeader";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useZeitraum } from "@/context/ZeitraumContext";
+import { useKundenFilter } from "@/context/KundenFilterContext";
 import { getKunden, KundenZeile } from "@/api/client";
 import { formatCentJeEi, formatDatum, formatEuro, formatZahl } from "@/lib/formatierung";
 
 export default function Kunden() {
   const { von, bis } = useZeitraum();
+  const { kunden } = useKundenFilter();
   const navigate = useNavigate();
   const [daten, setDaten] = useState<KundenZeile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -18,7 +20,7 @@ export default function Kunden() {
   useEffect(() => {
     let abgebrochen = false;
     setLoading(true);
-    getKunden({ von, bis })
+    getKunden({ von, bis, kunden })
       .then((d) => {
         if (!abgebrochen) setDaten(d);
       })
@@ -29,7 +31,7 @@ export default function Kunden() {
     return () => {
       abgebrochen = true;
     };
-  }, [von, bis]);
+  }, [von, bis, kunden]);
 
   const columns = useMemo<ColumnDef<KundenZeile>[]>(
     () => [
@@ -107,6 +109,7 @@ export default function Kunden() {
   return (
     <div className="space-y-8 max-w-[1400px]">
       <PageHeader
+        withKundenFilter
         eyebrow="Kunden"
         title="Wer hat bestellt"
         subtitle={`${daten.length} Kunden im gewählten Zeitraum.`}

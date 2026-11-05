@@ -11,7 +11,7 @@ Export.
 from __future__ import annotations
 
 from datetime import MINYEAR, date, timedelta
-from typing import Literal, Optional
+from typing import Literal, Optional, Sequence
 
 from utils.formatierung import monatsname
 
@@ -124,9 +124,12 @@ def _effektiver_zeitraum(von: Optional[date], bis: Optional[date]) -> Optional[t
     return von or date.fromisoformat(min_datum), bis or date.fromisoformat(max_datum)
 
 
-def _buckets(von: date, bis: date, granularitaet: Granularitaet) -> list[dict]:
+def _buckets(
+    von: date, bis: date, granularitaet: Granularitaet, kunden: Optional[Sequence[str]]
+) -> list[dict]:
     return bucket_verlauf(
-        queries.tageswerte(von.isoformat(), bis.isoformat()), von, bis, granularitaet
+        queries.tageswerte(von.isoformat(), bis.isoformat(), kunden=kunden),
+        von, bis, granularitaet,
     )
 
 
@@ -138,13 +141,15 @@ def zeitraum_verlauf(
     von: Optional[date],
     bis: Optional[date],
     granularitaet: Optional[Granularitaet] = None,
+    kunden: Optional[Sequence[str]] = None,
 ) -> dict:
     """Verlauf im Zeitraum plus positionsgleicher Vorjahreszeitraum.
 
     Basis für Dashboard-Grafik (Auflösung automatisch) und Seite
     „Zeitraumvergleich" (fest ``"monat"``). Ohne Zeitraum-Filter läuft der
     Verlauf über den gesamten Bestand und ``vorjahr_*`` /
-    ``vorjahreszeitraum`` sind ``None``.
+    ``vorjahreszeitraum`` sind ``None``. ``kunden`` beschränkt Zeitraum und
+    Vorjahr auf diese Kundennummern (leer = alle).
 
     Raises:
         ValueError: wenn ``von`` nach ``bis`` liegt.
@@ -160,10 +165,10 @@ def zeitraum_verlauf(
         raise ValueError("Zeitraum enthält keine Daten.")
 
     granularitaet = granularitaet or waehle_granularitaet(start, ende)
-    aktuell = _buckets(start, ende, granularitaet)
+    aktuell = _buckets(start, ende, granularitaet, kunden)
     vj_start, vj_ende = ein_jahr_zurueck(start), ein_jahr_zurueck(ende)
     mit_vorjahr = bool(von or bis) and vj_start is not None and vj_ende is not None
-    vorjahr = _buckets(vj_start, vj_ende, granularitaet) if mit_vorjahr else []
+    vorjahr = _buckets(vj_start, vj_ende, granularitaet, kunden) if mit_vorjahr else []
 
     def _vj(i: int, feld: str) -> Optional[float]:
         if not mit_vorjahr:

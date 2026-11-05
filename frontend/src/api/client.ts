@@ -59,6 +59,11 @@ export interface KundenZeile {
   letzter_kauf: string | null;
 }
 
+export interface KundeOption {
+  kundennummer: string;
+  kundenname: string;
+}
+
 export interface KundeStamm {
   kundennummer: string;
   kundenname: string;
@@ -210,6 +215,8 @@ export interface VorschauResponse {
 export interface Zeitraum {
   von?: string; // ISO YYYY-MM-DD
   bis?: string;
+  /** Kundenfilter: Kundennummern (leer/undefined = alle Kunden). */
+  kunden?: string[];
 }
 
 function params(z: Zeitraum, extra: Record<string, string | number | undefined> = {}): URLSearchParams {
@@ -219,6 +226,8 @@ function params(z: Zeitraum, extra: Record<string, string | number | undefined> 
   for (const [k, v] of Object.entries(extra)) {
     if (v !== undefined && v !== null && v !== "") sp.set(k, String(v));
   }
+  // Mehrfachauswahl als wiederholter Parameter: ?kunden=a&kunden=b
+  for (const nr of z.kunden ?? []) sp.append("kunden", nr);
   return sp;
 }
 
@@ -296,8 +305,19 @@ export async function getVerlauf(
   return data;
 }
 
-export async function getJahresvergleich(jahr: number): Promise<JahresvergleichZeile[]> {
-  const { data } = await api.get<JahresvergleichZeile[]>(`/jahresvergleich?jahr=${jahr}`);
+export async function getJahresvergleich(
+  jahr: number,
+  kunden: string[] = [],
+): Promise<JahresvergleichZeile[]> {
+  const { data } = await api.get<JahresvergleichZeile[]>(
+    `/jahresvergleich?${params({ kunden }, { jahr })}`,
+  );
+  return data;
+}
+
+/** Alle Kunden des Bestands für die Auswahlliste des Kundenfilters. */
+export async function getKundenAuswahl(): Promise<KundeOption[]> {
+  const { data } = await api.get<KundeOption[]>("/kundenauswahl");
   return data;
 }
 

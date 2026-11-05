@@ -2,6 +2,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster } from "sonner";
 import { Layout } from "@/components/Layout";
 import { ZeitraumProvider } from "@/context/ZeitraumContext";
+import { KundenFilterProvider } from "@/context/KundenFilterContext";
 import Dashboard from "@/pages/Dashboard";
 import Import from "@/pages/Import";
 import ImportDetail from "@/pages/ImportDetail";
@@ -18,6 +19,7 @@ import Konfiguration from "@/pages/Konfiguration";
 export default function App() {
   return (
     <ZeitraumProvider>
+      <KundenFilterProvider>
       <BrowserRouter>
         <Routes>
           <Route element={<Layout />}>
@@ -36,6 +38,7 @@ export default function App() {
           </Route>
         </Routes>
       </BrowserRouter>
+      </KundenFilterProvider>
       <Toaster richColors position="top-right" />
     </ZeitraumProvider>
   );

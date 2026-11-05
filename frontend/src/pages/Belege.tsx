@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/table";
 import { TABELLE_STICKY_ERSTE_SPALTE } from "@/lib/tabelle";
 import { useZeitraum } from "@/context/ZeitraumContext";
+import { useKundenFilter } from "@/context/KundenFilterContext";
 import {
   BelegeZeile,
   BelegPosition,
@@ -40,6 +41,7 @@ function einheitLabel(einheit: string | null, packCode: number | null): string {
 
 export default function Belege() {
   const { von, bis } = useZeitraum();
+  const { kunden } = useKundenFilter();
   const [daten, setDaten] = useState<BelegeZeile[]>([]);
   const [loading, setLoading] = useState(true);
   const [ausgewaehlt, setAusgewaehlt] = useState<BelegeZeile | null>(null);
@@ -49,7 +51,7 @@ export default function Belege() {
   useEffect(() => {
     let abgebrochen = false;
     setLoading(true);
-    getBelege({ von, bis })
+    getBelege({ von, bis, kunden })
       .then((d) => {
         if (!abgebrochen) setDaten(d);
       })
@@ -62,7 +64,7 @@ export default function Belege() {
     return () => {
       abgebrochen = true;
     };
-  }, [von, bis]);
+  }, [von, bis, kunden]);
 
   useEffect(() => {
     if (!ausgewaehlt) {
@@ -169,11 +171,12 @@ export default function Belege() {
     [],
   );
 
-  const exportUrl = exportExcelUrl({ typ: "belege", von, bis });
+  const exportUrl = exportExcelUrl({ typ: "belege", von, bis, kunden });
 
   return (
     <div className="space-y-8 max-w-[1400px]">
       <PageHeader
+        withKundenFilter
         eyebrow="Belege"
         title="Eiermengen je Beleg"
         subtitle={`${daten.length} Belege im gewählten Zeitraum. Klick auf eine Zeile zeigt die Einzelpositionen.`}

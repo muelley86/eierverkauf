@@ -64,6 +64,7 @@ docker compose up --build           # http://localhost:8050
 - `importer.py` ist die einzige Komplexitäts-Konzentration im Backend — siehe nächster Abschnitt.
 - `queries.py` ist reine SQL-Schicht ohne ORM. Zeitraumfilter via `_zeitraum_filter(von, bis, prefix=…)` — `prefix` muss `WHERE` oder `AND` sein je nachdem, ob schon eine WHERE-Klausel existiert.
 - **Vorjahres-Vergleichsmuster** (seit v1.1.0): `/api/dashboard` liefert zusätzlich `vorjahres_kpis: DashboardKPIs | null` für denselben Zeitraum exakt 12 Monate zurückversetzt (`_ein_jahr_zurueck`-Helper in `api/auswertung_router.py`). Frontend nutzt das für Delta-Pillen. Das Feld ist **nullable und additiv** — ältere Frontend-Builds brechen nicht, weil sie es einfach ignorieren. Pattern für künftige Vergleichs-Endpoints: nullable Vorjahres-Sektion in die Response, nicht neue Endpoints.
+- **Dashboard-Verlauf** (seit v1.16.0): `GET /api/dashboard/verlauf?von&bis` speist Hauptgrafik und Sparklines der Übersicht. Bucket-Logik rein in `data/verlauf.py`: Auflösung automatisch (`tag` bis 62 Tage, `woche` bis 183, sonst `monat`), Buckets **relativ zu `von`** (Wochen beginnen am Zeitraumstart, nicht montags), damit der Vorjahreszeitraum positionsgleich in `vorjahr_*` liegt (ohne Filter `null`). `/jahresvergleich` bleibt für die Seite Jahresvergleich (fix Jan–Dez).
 - **Netto-Semantik** (wichtig für Beleg-Abgleiche): Retouren/Gutschriften stehen als **negative Positionen** (`menge`/`eier_stueck`/`gesamt` < 0) in `verkaufspositionen` — alle `SUM`-Aggregate sind daher Netto. Brutto-Reports der Warenwirtschaft liegen in Retouren-Monaten darüber; das ist kein Fehler (DEPLOYMENT.md §11.14). `dashboard_kpis()` weist seit v1.14.0 zusätzlich `brutto_eier`/`retouren_eier`/`brutto_umsatz`/`retouren_umsatz` aus (Invariante: `brutto + retouren = netto`); das Dashboard zeigt daraus eine Unterzeile, nur wenn Retouren ≠ 0.
 
 ### CSV-Importer (`data/importer.py`) — kritische Invarianten
@@ -97,24 +98,24 @@ Weitere Eigenheiten:
 - Frontend-Unit-Tests laufen mit **Vitest** (`npm run test`, Dateien `src/**/*.test.ts`) — pure Helper testen, kein jsdom-Setup vorhanden.
 - `components/ui/` enthält shadcn/ui-generierte Komponenten — bei Updates über die shadcn-CLI regenerieren, nicht von Hand patchen.
 
-**Design-System „Warm Editorial" (seit v1.1.0):**
+**Design-System „Buchenhof" (seit v1.16.0, ersetzt „Warm Editorial"):**
 
-- **Schriften**: `Manrope` (Display + Body) und `JetBrains Mono` (tabular nums, Monospace). Beides offline via `@fontsource` in `main.tsx` geladen — kein CDN-Roundtrip im Browser. Bei Schrift-Änderungen `main.tsx` + `index.css` (`--font-display`, `--font-body`, `--font-mono`) + `tailwind.config.ts` (`fontFamily.display/body/mono`) **synchron** halten.
-- **Farbpalette** (Tokens in `tailwind.config.ts` + HSL-Varianten in `index.css`):
-  - `yolk #D69826` — Primärakzent, Eier-Diagramme, aktive Pillen
-  - `sage #5A7F4F` — Umsatz, positive Deltas
-  - `brick #B5532C` — negative Deltas, Fehler
-  - `surface #FAF5E6` — Card-Hintergrund
-  - `ink #1A1610` — primärer Text
-  - `rule #E4D9BB` — Trennlinien
-  - Vorjahres-Werte in Charts: `#B5A98C` (warmes Grau)
-  Direkte Hex-Werte in Recharts (Bar/Line `fill`/`stroke`) sind OK — Tailwind kann an Recharts-Props nicht durchgereicht werden. Für UI-Elemente: Tailwind-Tokens (`bg-yolk`, `text-sage`) nutzen.
+- **Herkunft**: Farben von www.buchenhof.de — Hellgrün `#B5D556` (Baum im Logo), Anthrazit `#353535` (Website-Kopf). Logo-Dateien liegen lokal (offline): Wortmarke `src/assets/buchenhof-wortmarke.png` (weiße Schrift → nur auf Anthrazit verwenden), Baum-Icon `public/favicon.png` und `export/assets/buchenhof-baum.png` (PDF).
+- **Schrift**: nur `Inter Variable`, offline via `@fontsource-variable/inter` in `main.tsx`. Zahlen über `tabular-nums`, keine Monospace-Schrift. Bei Schrift-Änderungen `main.tsx` + `index.css` (`--font-sans`) + `tailwind.config.ts` (`fontFamily`) **synchron** halten.
+- **Farben** stehen **nur** in `src/index.css` als RGB-Kanal-Variablen (für Tailwind-Alpha wie `bg-brand/20`), je einmal hell unter `:root` und dunkel unter `@media (prefers-color-scheme: dark)`. `tailwind.config.ts` mappt sie (`darkMode: "media"`). Tokens:
+  - `brand` (#B5D556) — Flächen, Balken, aktive Pillen; Text darauf `text-brand-foreground`
+  - `brand-strong` (#5E7A12) — **grüner Text/Icons**; `#B5D556` ist als Textfarbe auf Weiß nicht AA-tauglich
+  - `chrome` — Sidebar, Kopfzeile, Hero-Karte; `ink`, `muted-foreground`, `canvas`, `surface`, `rule`
+  - `positive` / `negative` — Deltas, Fehler (`negative` aus Website-Signalfarbe #F66035 abgedunkelt)
+  - `.flaeche-dunkel` setzt die Tokens lokal auf Dunkel-Werte (Hero-KPI) — Inhalte darin nutzen normal `text-ink`, `delta-up` usw.
+- **Diagrammfarben**: Recharts braucht Farben als Props → `useChartFarben()` aus `lib/chart-farben.ts` liest die `--chart-*`-Variablen zur Laufzeit und rendert bei Hell/Dunkel-Wechsel neu. Liefert `farben` (`eier`, `eierFlaeche`, `umsatz`, `vorjahr`, `raster`, `text`, `flaeche`), `tooltip`, `achse`, `raster`. Keine Hex-Werte in Komponenten. Balken: `eierFlaeche`, Linien: `eier`. Animationen aus (`isAnimationActive={false}`).
+- **Responsiv**: Layout = Anthrazit-Sidebar ab `lg`, Drawer `md`–`lg`, untere Tab-Leiste unter `md` (`components/Layout.tsx`). Diagramm-Props, die Tailwind nicht erreicht (Achsenbreiten, Balkenabstände), über `useIstMobil()` (`hooks/useIstMobil.ts`, Grenze = `sm`). Rohe shadcn-`<Table>`s bekommen `className={TABELLE_STICKY_ERSTE_SPALTE}` (`lib/tabelle.ts`); `DataTable` zeigt unter `md` Karten.
 - **Pflicht-Wrapper für neue Seiten** (nicht jedes Mal eigene Header/Cards basteln):
-  - `components/PageHeader.tsx` → `<PageHeader eyebrow="…" title="…" subtitle="…" />`. Rendert standardmäßig die `ZeitraumFilter`-Pille rechts; mit `withZeitraumFilter={false}` ausschaltbar (z. B. auf Jahresvergleich/Import-Seiten). Optional `exportHref` für dezenten Download-Icon-Button.
-  - `components/PageHeader.tsx`'s `<Panel>` ist der **einzige Card-Wrapper** — `eyebrow`, `title`, `actions`, Children im `<div className="p-6">`. Eigene Cards (`rounded-xl border …`) bedeuten Drift zur einheitlichen Optik.
-  - `components/ZeitraumFilter.tsx` → Pill mit Quick-Range-Erkennung (Dieser Monat / Letztes Jahr / Eigener Zeitraum). Wird vom `PageHeader` automatisch eingebunden, nur in Ausnahmefällen einzeln rendern.
-  - `components/KPICard.tsx` → Hero-Variante (8/12-Spalten, 88–112 px Wertgröße) + Default-Variante. `wertFarbe="ink|yolk|sage"`, `sparkline: number[]` (optional, sitzt absolute in der rechten unteren Ecke), `delta: { wert, richtung }`, `hinweis?: string` (Unterzeile unter dem Wert; reserviert bei aktiver Sparkline automatisch deren Ecke per Padding — nicht entfernen, sonst überlappt der Text).
-- **Charts**: Recharts mit `ResponsiveContainer`. Achsenlinien/Tick-Striche entfernt für ruhigeres Bild (`axisLine={false} tickLine={false}`). Grid via `<CartesianGrid stroke="#E4D9BB" strokeDasharray="3 3" />`. Tooltip-Style einheitlich `background: "#FAF5E6", border: "1px solid #E4D9BB", borderRadius: 8, fontFamily: "JetBrains Mono"`.
+  - `components/PageHeader.tsx` → `<PageHeader eyebrow="…" title="…" subtitle="…" />`. `eyebrow` = Bereichsname (grün, Satzschreibung). Rendert standardmäßig die `ZeitraumFilter`-Pille rechts; mit `withZeitraumFilter={false}` ausschaltbar. Optional `exportHref` für den Excel-Download-Button.
+  - `<Panel title actions>` (gleiche Datei) ist der **einzige Card-Wrapper**, Padding `p-4 sm:p-6`. Kein Eyebrow über Panel-Titeln. Eigene Cards bedeuten Drift zur einheitlichen Optik.
+  - `components/ZeitraumFilter.tsx` → Pill mit Quick-Range-Erkennung. Datumswerte immer über `isoDatumLokal()` (`lib/datum.ts`) bilden, **nie** `toISOString()` (UTC-Versatz → Vortag in MEZ).
+  - `components/KPICard.tsx` → `variant="hero"` (dunkle Anthrazit-Karte, grüner Wert, eine pro Seite) oder Default. `sparkline: number[]` läuft als Fläche über die volle Kartenbreite unten (`sparklineReihe="eier|umsatz"`), `delta: { wert: "+4,2 %", richtung }` — „zum Vorjahr" ergänzt die Karte selbst (auf dem Handy bei kleinen Karten ausgeblendet), `hinweis?: string` als Unterzeile.
+- **Charts**: Recharts mit `ResponsiveContainer`, Höhe responsiv (z. B. Wrapper `h-[240px] sm:h-[320px]`). `axisLine={false} tickLine={false}`, Grid `<CartesianGrid {...raster} />`, Tooltip `contentStyle={tooltip}`.
 
 **Tabellen-Sortierung — kritische Invariante:**
 
@@ -122,9 +123,9 @@ In `ColumnDef<…>[]` jeder TanStack-Table v8 muss für **Zahlen-Spalten** expli
 
 ### Export (`export/`)
 
-- `excel_export.py`: openpyxl. Titelzeile „Kerba Bio-Ei GbR" + Zeitraum, **dunkelblauer Header (`#1E3A8A`)** aus der Pre-v1.1.0-Palette. **Stilistisch inkonsistent** mit dem neuen Warm-Editorial-Frontend (Yolk/Sage/Brick) — bei Gelegenheit auf `#D69826` (Yolk) für den Kopf + `#5A7F4F` (Sage) für Akzente migrieren. Niedrige Priorität, weil Excel-Exporte selten geöffnet werden und der dunkelblaue Kopf gut lesbar ist.
+- `excel_export.py`: openpyxl. Titelzeile „Kerba Bio-Ei GbR" + Zeitraum, grüner Akzentbalken (Zeile 2, `#B5D556`), Anthrazit-Kopfzeile (`#353535`). Palette-Konstanten oben in der Datei — synchron zu `frontend/src/index.css`.
 - **Beide Exporte behandeln CSV-Text als feindlich:** `pdf_export.py` maskiert jeden Wert mit `html.escape` und rendert mit `pdf_url_fetcher()` (nur `data:`-URLs — sonst bettet WeasyPrint `file://`-Ziele aus `<a rel="attachment">` ein); `excel_export.py` setzt Text-Zellen auf `data_type="s"` (keine Formeln). Neue Template-Felder/Spalten nur über diese Pfade.
-- `pdf_export.py`: WeasyPrint. **Auf Windows lokal oft kaputt** (GTK fehlt) → der Endpoint fängt `OSError` und liefert 500 mit klarem Hinweis. PDF-Tests am besten in Docker. PDF-Styling sollte bei Gelegenheit ebenfalls auf die Warm-Editorial-Palette angeglichen werden.
+- `pdf_export.py`: WeasyPrint. **Auf Windows lokal oft kaputt** (GTK fehlt) → der Endpoint fängt `OSError` und liefert 500 mit klarem Hinweis. PDF-Tests am besten in Docker. Buchenhof-Palette als `FARBE_*`-Konstanten; das Baum-Logo wird als `data:`-URL eingebettet (`_logo_data_url()`), weil `pdf_url_fetcher()` nichts anderes lädt.
 
 ## Versions- und Release-Hygiene
 

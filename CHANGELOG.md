@@ -7,6 +7,44 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.16.0] - 2026-11-05
+
+Neues Erscheinungsbild im Corporate Design von [buchenhof.de](https://www.buchenhof.de),
+durchgehend responsiv (Handy, Tablet, Desktop) und mit Dunkelmodus. Dazu ein
+Fix: Die Grafik auf der Übersicht folgt jetzt dem gewählten Zeitraum.
+
+### Behoben
+- **Übersichts-Grafik ignorierte den Zeitraum.** Sie zeigte immer Januar bis
+  Dezember des Jahres von „bis" — „Dieser Monat" oder „Dieses Quartal" änderten
+  nur die Kennzahlen. Jetzt zeigt sie genau den gewählten Zeitraum,
+  automatisch in Tagen (bis ~2 Monate), Wochen (bis ~6 Monate) oder Monaten,
+  mit dem Vorjahreszeitraum als gestrichelter Linie. Die Sparklines der
+  Kennzahl-Karten folgen ebenfalls dem Zeitraum.
+- **Zeitraumgrenzen um einen Tag verschoben.** Die Schnellauswahl rechnete
+  lokale Mitternacht nach UTC um; in MEZ begann „Dieses Jahr" so am 31.12.
+  des Vorjahres. Gespeicherte Zeiträume werden einmalig auf „Dieses Jahr"
+  zurückgesetzt.
+
+### Hinzugefügt
+- Endpoint `GET /api/dashboard/verlauf?von&bis` (Auflösung Tag/Woche/Monat,
+  positionsgleicher Vorjahreszeitraum; ohne Filter über den gesamten Bestand).
+- Dunkelmodus nach Systemeinstellung, inklusive Diagrammfarben.
+- Buchenhof-Logo in der Navigation, Baum-Icon als Favicon und im PDF-Export.
+
+### Geändert
+- Design-System „Buchenhof" ersetzt „Warm Editorial": Hellgrün `#B5D556`,
+  Anthrazit `#353535`, Schrift Inter (offline gebündelt).
+- Navigation: Anthrazit-Seitenleiste auf dem Desktop, Menü-Schublade auf dem
+  Tablet, Tab-Leiste unten auf dem Handy.
+- Handy-Ansicht: Tabellenkarten mit Beschriftung über dem Wert, feststehende
+  erste Spalte in breiten Tabellen, an die Breite angepasste Diagramme.
+- Excel-Export mit Anthrazit-Kopf und grünem Akzent, PDF-Export in
+  Buchenhof-Farben mit Logo.
+
+### Hinweise
+- Keine Datenmigration. `eierverkauf update` installiert die neue
+  Schrift-Abhängigkeit (`@fontsource-variable/inter`) per `npm` mit.
+
 ## [1.15.0] - 2026-11-05
 
 Sicherheits-Release nach einem Audit. Die App bleibt ohne Login (reiner

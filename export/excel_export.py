@@ -118,6 +118,11 @@ def build_excel(typ: str, von: Optional[str], bis: Optional[str], daten: Sequenc
         for col_idx, (_, key, num_fmt) in enumerate(spalten, start=1):
             wert = eintrag.get(key)
             cell = ws.cell(row=row_idx, column=col_idx, value=wert)
+            if isinstance(wert, str):
+                # Text aus der CSV (Kundenname, Beleg-Nr.) nie als Formel
+                # speichern: openpyxl typisiert "=…" sonst als Formel, die
+                # Excel/LibreOffice beim Öffnen auswerten würden.
+                cell.data_type = "s"
             if num_fmt and isinstance(wert, (int, float)):
                 cell.number_format = num_fmt
 

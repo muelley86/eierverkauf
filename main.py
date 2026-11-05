@@ -13,6 +13,7 @@ from api.auswertung_router import router as auswertung_router
 from api.export_router import router as export_router
 from api.import_router import router as import_router
 from api.konfiguration_router import router as konfiguration_router
+from api.sicherheit import DEV_ORIGINS, SicherheitsMiddleware
 from data.db import init_db
 
 
@@ -20,25 +21,28 @@ from data.db import init_db
 async def lifespan(_app: FastAPI):
     init_db()
     Path("uploads").mkdir(parents=True, exist_ok=True)
-    Path("backups").mkdir(parents=True, exist_ok=True)
+    # backups/ verwaltet allein das root-Skript eierverkauf-helper.sh.
     yield
 
 
 app = FastAPI(
     title="Eierverkauf-Auswertung",
     description="Auswertung von Eierverkäufen (Kerba Bio-Ei GbR).",
-    version="1.14.0",
+    version="1.15.0",
     lifespan=lifespan,
 )
 
 # CORS für Vite-Dev-Server. In Produktion liefert FastAPI das Frontend selbst.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=list(DEV_ORIGINS),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# Zuletzt registriert = äußerste Schicht: Host-/Herkunftsprüfung greift vor
+# allem anderen (siehe api/sicherheit.py).
+app.add_middleware(SicherheitsMiddleware)
 
 # API-Router VOR StaticFiles mounten.
 app.include_router(import_router, prefix="/api")

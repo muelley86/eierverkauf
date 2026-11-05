@@ -16,10 +16,14 @@ DB_FILE="$APP_DIR/data/eierverkauf.db"
 BACKUP_DIR="$APP_DIR/backups"
 VERSION_FILE="$APP_DIR/VERSION"
 SERVICE="eierverkauf"
+SERVICE_USER="eierverkauf"
 LOG_FILE="/var/log/eierverkauf-helper.log"
-
-mkdir -p "$BACKUP_DIR"
-touch "$LOG_FILE" 2>/dev/null || LOG_FILE="/tmp/eierverkauf-helper.log"
+# root-eigene Kopie dieses Skripts (bis v1.14 ein Symlink in den App-Baum).
+HELPER_ZIEL="/usr/local/bin/eierverkauf"
+UNIT_DATEI="/etc/systemd/system/eierverkauf.service"
+UMGEBUNG_DATEI="/etc/default/eierverkauf"
+# Ordner, in die die laufende App schreibt — nur diese gehören dem Dienstkonto.
+LAUFZEIT_ORDNER=(data uploads logs)
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$LOG_FILE"; }
 
@@ -55,7 +59,148 @@ errortrap() {
     msg "Fehler" "Ein Fehler ist aufgetreten (Code $rc).\nSiehe Logdatei: $LOG_FILE"
     exit "$rc"
 }
-trap errortrap ERR
+
+# Nebenwirkungen erst beim Aufruf, nicht beim Sourcen (install.sh und Tests
+# laden dieses Skript als Funktionsbibliothek).
+helper_init() {
+    mkdir -p "$BACKUP_DIR"
+    touch "$LOG_FILE" 2>/dev/null || LOG_FILE="/tmp/eierverkauf-helper.log"
+    trap errortrap ERR
+}
+
+# ---------------------------------------------------------------------------
+# Rechtetrennung Dienstkonto / root (seit v1.15.0)
+#
+# root führt dieses Skript, venv/bin/pip und npm aus. Gehören diese Dateien
+# dem Dienstkonto der Web-App, kann ein kompromittierter App-Prozess Code als
+# root ausführen. Daher: Code-Baum root-eigen und nicht gruppen-/welt-
+# beschreibbar, Dienstkonto nur für die Laufzeit-Ordner.
+# ---------------------------------------------------------------------------
+
+rechte_setzen() {
+    local eintrag ordner
+    local pfade=()
+    chown root:root "$APP_DIR"
+    chmod go-w "$APP_DIR"
+    shopt -s dotglob nullglob
+    for eintrag in "$APP_DIR"/*; do
+        # Einzeln statt rekursiv über APP_DIR: data/ (die DB) darf während
+        # eines laufenden Dienstes nie kurzzeitig root gehören.
+        case " ${LAUFZEIT_ORDNER[*]} " in
+            *" $(basename "$eintrag") "*) continue ;;
+        esac
+        chown -R root:root "$eintrag"
+        chmod -R go-w "$eintrag"
+    done
+    shopt -u dotglob nullglob
+
+    for ordner in "${LAUFZEIT_ORDNER[@]}"; do
+        mkdir -p "$APP_DIR/$ordner"
+        pfade+=("$APP_DIR/$ordner")
+    done
+    chown -R "$SERVICE_USER:$SERVICE_USER" "${pfade[@]}"
+
+    mkdir -p "$BACKUP_DIR"
+    chmod 0700 "$BACKUP_DIR"
+}
+
+helper_installieren() {
+    # Atomar per rename ersetzen: ein laufendes bash liest sein Skript
+    # stückweise und darf keine halb überschriebene Datei sehen.
+    local tmp="${HELPER_ZIEL}.neu.$$"
+    cp "$APP_DIR/eierverkauf-helper.sh" "$tmp"
+    chown root:root "$tmp"
+    chmod 0755 "$tmp"
+    mv -f "$tmp" "$HELPER_ZIEL"
+    chown root:root "$HELPER_ZIEL"
+}
+
+migration_noetig() {
+    # Altinstallation (≤ v1.14): Helper-Befehl ist ein Symlink in den App-Baum.
+    [ -L "$HELPER_ZIEL" ] || [ ! -e "$HELPER_ZIEL" ]
+}
+
+umgebung_vorlage_anlegen() {
+    [ -e "$UMGEBUNG_DATEI" ] && return 0
+    cat > "$UMGEBUNG_DATEI" <<'UMGEBUNG'
+# Konfiguration der Eierverkauf-App (gelesen von der systemd-Unit).
+# Nach Änderungen: systemctl restart eierverkauf
+
+# Hostnamen, unter denen die App aufgerufen wird (kommagetrennt). Schützt
+# gegen DNS-Rebinding. Leer = Prüfung inaktiv (nur Warnung im Log).
+# IP-Adressen und localhost sind immer erlaubt.
+#EIERVERKAUF_ALLOWED_HOSTS=eier.example
+
+# Bind-Adresse von uvicorn. 127.0.0.1, wenn ein Reverse-Proxy (Nginx/Caddy)
+# auf demselben Server davor läuft; sonst 0.0.0.0 (Standard).
+#EIERVERKAUF_BIND=127.0.0.1
+UMGEBUNG
+    chmod 0644 "$UMGEBUNG_DATEI"
+}
+
+unit_schreiben() {  # $1 = gehaertet | einfach
+    local haertung=""
+    if [ "${1:-gehaertet}" = "gehaertet" ]; then
+        haertung="NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=$APP_DIR/data $APP_DIR/uploads $APP_DIR/logs"
+    else
+        haertung="NoNewPrivileges=yes"
+    fi
+    cat > "$UNIT_DATEI" <<UNIT
+[Unit]
+Description=Eierverkauf Auswertungs-App
+After=network.target
+
+[Service]
+Type=simple
+User=$SERVICE_USER
+WorkingDirectory=$APP_DIR
+Environment=EIERVERKAUF_BIND=0.0.0.0
+EnvironmentFile=-$UMGEBUNG_DATEI
+Environment=PYTHONDONTWRITEBYTECODE=1
+# matplotlib/fontconfig brauchen einen beschreibbaren Cache; der Code-Baum
+# (HOME des Dienstkontos) ist seit v1.15.0 schreibgeschützt.
+CacheDirectory=eierverkauf
+Environment=XDG_CACHE_HOME=/var/cache/eierverkauf
+Environment=MPLCONFIGDIR=/var/cache/eierverkauf/matplotlib
+ExecStart=$APP_DIR/venv/bin/uvicorn main:app --host \${EIERVERKAUF_BIND} --port 8050
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+$haertung
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+}
+
+dienst_neu_starten() {
+    # Gehärtete Unit zuerst; scheitert sie (z. B. unprivilegierter LXC ohne
+    # Mount-Namespaces → Exit 226/NAMESPACE), Fallback ohne Sandbox.
+    unit_schreiben gehaertet
+    systemctl daemon-reload
+    systemctl restart "$SERVICE" || true
+    sleep 3
+    if ! systemctl is-active --quiet "$SERVICE"; then
+        log "Gehärtete Unit startet nicht — Fallback ohne Dateisystem-Sandbox"
+        unit_schreiben einfach
+        systemctl daemon-reload
+        systemctl restart "$SERVICE"
+    fi
+}
+
+rechte_migrieren() {
+    log "Migration Rechtetrennung (v1.15.0) gestartet"
+    rechte_setzen
+    umgebung_vorlage_anlegen
+    helper_installieren
+    dienst_neu_starten
+    log "Migration Rechtetrennung abgeschlossen"
+}
 
 # ---------------------------------------------------------------------------
 # Funktionen
@@ -72,12 +217,18 @@ do_status() {
         2>/dev/null || echo "Noch kein Import")
     ip=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "—")
 
+    local hosts_hinweis="gesetzt"
+    if ! grep -qE '^EIERVERKAUF_ALLOWED_HOSTS=.+' "$UMGEBUNG_DATEI" 2>/dev/null; then
+        hosts_hinweis="NICHT gesetzt — siehe $UMGEBUNG_DATEI"
+    fi
+
     msg "Status" "Dienst:         $svc
 Version:        $version
 URL:            http://$ip:8050
 DB-Größe:       $db_size
 Datensätze:     $record_count
-Letzter Import: $last_import"
+Letzter Import: $last_import
+Host-Schutz:    $hosts_hinweis"
 }
 
 do_backup_silent() {
@@ -157,6 +308,10 @@ do_update() {
             exit 11
         fi
 
+        echo 30; echo "# Dateirechte setzen…"
+        rechte_setzen >>"$progress_log" 2>&1
+        umgebung_vorlage_anlegen
+
         echo 35; echo "# Python-Abhängigkeiten…"
         timeout 300 "$APP_DIR/venv/bin/pip" install -r "$APP_DIR/requirements.txt" -q >>"$progress_log" 2>&1
 
@@ -168,8 +323,12 @@ do_update() {
         echo 75; echo "# Frontend bauen…"
         (cd "$APP_DIR/frontend" && timeout 600 npm run build >>"$progress_log" 2>&1)
 
+        echo 85; echo "# Verwaltungsbefehl aktualisieren…"
+        rechte_setzen >>"$progress_log" 2>&1
+        helper_installieren
+
         echo 90; echo "# Dienst neu starten…"
-        systemctl restart "$SERVICE"
+        dienst_neu_starten >>"$progress_log" 2>&1
 
         echo 100; echo "# Update abgeschlossen"
     ) | (
@@ -312,27 +471,41 @@ show_menu() {
 # Dispatch
 # ---------------------------------------------------------------------------
 
-case "${1:-}" in
-    status)   do_status ;;
-    update)   do_update ;;
-    restart)  do_restart ;;
-    stop)     do_stop ;;
-    start)    do_start ;;
-    logs)     do_logs ;;
-    backup)   do_backup ;;
-    restore)  do_restore ;;
-    uninstall) do_uninstall ;;
-    "")
-        if [ "$HAS_WT" = 1 ]; then
-            show_menu
-        else
-            echo "Whiptail nicht verfügbar. Direkte Aufrufe:"
-            echo "  eierverkauf status | update | logs | backup | restore | uninstall"
-        fi
-        ;;
-    *)
-        echo "Unbekannter Befehl: $1"
-        echo "Aufrufe: status | update | restart | stop | start | logs | backup | restore | uninstall"
-        exit 1
-        ;;
-esac
+main() {
+    helper_init
+    # Altinstallationen (Symlink-Helper, App-Baum dem Dienstkonto gehörig)
+    # beim ersten Aufruf nach dem Update auf v1.15.0 automatisch umstellen.
+    if [ "$(id -u)" -eq 0 ] && migration_noetig; then
+        rechte_migrieren
+    fi
+
+    case "${1:-}" in
+        status)   do_status ;;
+        update)   do_update ;;
+        restart)  do_restart ;;
+        stop)     do_stop ;;
+        start)    do_start ;;
+        logs)     do_logs ;;
+        backup)   do_backup ;;
+        restore)  do_restore ;;
+        uninstall) do_uninstall ;;
+        "")
+            if [ "$HAS_WT" = 1 ]; then
+                show_menu
+            else
+                echo "Whiptail nicht verfügbar. Direkte Aufrufe:"
+                echo "  eierverkauf status | update | logs | backup | restore | uninstall"
+            fi
+            ;;
+        *)
+            echo "Unbekannter Befehl: $1"
+            echo "Aufrufe: status | update | restart | stop | start | logs | backup | restore | uninstall"
+            exit 1
+            ;;
+    esac
+}
+
+# Nur bei direktem Aufruf ausführen, nicht beim Sourcen (install.sh, Tests).
+if [ "${BASH_SOURCE[0]}" = "$0" ]; then
+    main "$@"
+fi

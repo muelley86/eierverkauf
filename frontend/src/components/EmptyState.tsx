@@ -34,7 +34,7 @@ export function EmptyState({
       {illustration && (
         <div
           className={cn(
-            "text-yolk/70 mb-6",
+            "text-brand-strong mb-6",
             size === "panel" ? "w-32 sm:w-40" : "w-48 sm:w-56",
           )}
           aria-hidden="true"
@@ -42,7 +42,7 @@ export function EmptyState({
           {illustration}
         </div>
       )}
-      <h3 className="font-display text-xl sm:text-2xl text-ink leading-tight tracking-tight max-w-md">
+      <h3 className="text-xl sm:text-2xl text-ink leading-tight tracking-tight max-w-md">
         {title}
       </h3>
       {description && (

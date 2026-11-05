@@ -41,19 +41,19 @@ export function ZeitraumFilter({ className }: { className?: string }) {
         <Button
           variant="outline"
           className={cn(
-            "h-11 gap-2 sm:gap-3 rounded-full border-rule bg-surface px-3 sm:px-4 text-ink hover:bg-yolk/10",
+            "h-11 gap-2 sm:gap-3 rounded-full border-rule bg-surface px-3 sm:px-4 text-ink hover:bg-brand/20",
             className,
           )}
         >
-          <span className="h-2 w-2 rounded-full bg-yolk" aria-hidden="true" />
-          <span className="font-display text-sm sm:text-base leading-none">{rangeLabel}</span>
-          <span className="hidden sm:inline font-mono text-xs text-muted-foreground tabular-nums">
+          <span className="h-2 w-2 rounded-full bg-brand" aria-hidden="true" />
+          <span className="text-sm sm:text-base leading-none">{rangeLabel}</span>
+          <span className="hidden sm:inline tabular-nums text-xs text-muted-foreground">
             {formatDatum(z.von)} – {formatDatum(z.bis)}
           </span>
           <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 space-y-3 border-rule bg-surface" align="end">
+      <PopoverContent className="w-[min(20rem,calc(100vw-2rem))] space-y-3 border-rule bg-surface" align="end">
         <div className="space-y-2">
           <Label htmlFor="zr-von" className="eyebrow">Von</Label>
           <Input

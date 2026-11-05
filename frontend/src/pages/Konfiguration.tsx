@@ -116,9 +116,9 @@ export default function Konfiguration() {
         withZeitraumFilter={false}
       />
 
-      <Panel eyebrow="Faktoren" title="Eier pro Einheit">
-        <div className="mb-6 flex items-start gap-3 rounded-md border border-yolk/40 bg-yolk/10 p-4 text-sm text-ink">
-          <Info className="h-5 w-5 shrink-0 text-yolk mt-0.5" aria-hidden="true" />
+      <Panel title="Eier pro Einheit">
+        <div className="mb-6 flex items-start gap-3 rounded-md border border-brand-strong/40 bg-brand/20 p-4 text-sm text-ink">
+          <Info className="h-5 w-5 shrink-0 text-brand-strong mt-0.5" aria-hidden="true" />
           <p>
             Der Faktor gilt <strong>nur für Positionen mit Einheit PACK</strong> (Menge zählt
             Verpackungen). Stück-Positionen (stk) zählen immer 1:1 als Eier, kg-Positionen
@@ -140,7 +140,7 @@ export default function Konfiguration() {
                   className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 rounded-lg border border-rule bg-white/40 px-4 py-3"
                 >
                   <div className="flex-1 min-w-0">
-                    <div className="font-display text-base text-ink truncate">
+                    <div className="text-base text-ink truncate">
                       {eintrag.artikel_code}
                     </div>
                     {meta.hinweis && (
@@ -158,10 +158,10 @@ export default function Konfiguration() {
                       value={werte[eintrag.artikel_code] ?? ""}
                       onChange={(e) => setWert(eintrag.artikel_code, e.target.value)}
                       placeholder="—"
-                      className="h-11 w-24 font-mono tabular-nums text-right"
+                      className="h-11 w-24 tabular-nums text-right"
                       aria-label={`Faktor für ${eintrag.artikel_code}`}
                     />
-                    <span className="text-xs font-mono uppercase tracking-wider text-muted-foreground whitespace-nowrap">
+                    <span className="text-xs tabular-nums text-muted-foreground whitespace-nowrap">
                       {meta.einheit_text}
                     </span>
                   </div>
@@ -173,7 +173,7 @@ export default function Konfiguration() {
 
         <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3">
           {hatAenderung && !speichert && (
-            <span className="text-xs font-mono uppercase tracking-wider text-muted-foreground">
+            <span className="text-xs tabular-nums text-muted-foreground">
               Ungespeicherte Änderungen
             </span>
           )}

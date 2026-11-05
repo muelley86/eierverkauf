@@ -1,6 +1,9 @@
 /* ============================================================
-   Eierverkauf — Variante A "Warm Editorial"
-   Schriftarten werden über @fontsource in main.tsx geladen (offline-fähig).
+   Eierverkauf — Design-System „Buchenhof" (seit v1.16.0)
+   Farben nach www.buchenhof.de: Hellgrün #B5D556, Anthrazit #353535/#313131.
+   Alle Farben als RGB-Kanäle (für Tailwind-Alpha `bg-brand/10`).
+   Schrift: Inter Variable, lokal via @fontsource in main.tsx (offline).
+   Diagrammfarben liest lib/chart-farben.ts zur Laufzeit aus `--chart-*`.
    ============================================================ */
 
 @tailwind base;
@@ -9,40 +12,52 @@
 
 @layer base {
   :root {
-    /* HSL-Tokens für shadcn-Kompatibilität (warm editorial) */
-    --background: 41 49% 90%;          /* #F4ECD7 Eierschale */
-    --foreground: 30 22% 8%;           /* #1A1610 Tinte */
-    --card: 42 53% 94%;                /* #FAF5E6 Karten */
-    --card-foreground: 30 22% 8%;
-    --popover: 42 53% 94%;
-    --popover-foreground: 30 22% 8%;
-    --primary: 36 71% 49%;             /* #D69826 Dotter */
-    --primary-foreground: 30 22% 8%;
-    --secondary: 41 49% 86%;
-    --secondary-foreground: 30 22% 8%;
-    --muted: 41 38% 84%;
-    --muted-foreground: 38 14% 38%;    /* #6F6552 */
-    --accent: 109 23% 40%;             /* #5A7F4F Salbei */
-    --accent-foreground: 42 53% 94%;
-    --destructive: 18 60% 44%;         /* #B5532C Brick */
-    --destructive-foreground: 42 53% 94%;
-    --border: 42 39% 81%;              /* #E4D9BB */
-    --input: 42 39% 81%;
-    --ring: 36 71% 49%;
-    --radius: 0.875rem;
+    color-scheme: light;
 
-    /* Eigene Tokens */
-    --yolk: #D69826;
-    --sage: #5A7F4F;
-    --brick: #B5532C;
-    --bg: #F4ECD7;
-    --surface: #FAF5E6;
-    --ink: #1A1610;
-    --ink-30: #B5A98C;
-    --muted-warm: #6F6552;
-    --rule: #E4D9BB;
-    --straw: #F0E6CC;
-    --loam: #8C7A5F;
+    /* Buchenhof-Grundpalette */
+    --brand: 181 213 86;            /* #B5D556 Hellgrün — Flächen, Balken, aktive Pillen */
+    --brand-strong: 94 122 18;      /* #5E7A12 — grüner Text/Icons (AA auf Weiß) */
+    --brand-soft: 240 246 222;      /* #F0F6DE — zarte grüne Hinterlegung */
+    --brand-foreground: 49 49 49;   /* Text auf Grün */
+    --chrome: 53 53 53;             /* #353535 Sidebar & Hero-Karte (Website-Kopf) */
+    --chrome-foreground: 237 237 235;
+    --canvas: 247 247 247;          /* #F7F7F7 Seitenhintergrund */
+    --surface: 255 255 255;         /* Karten */
+    --ink: 49 49 49;                /* #313131 Text */
+    --rule: 230 231 228;            /* Trennlinien */
+    --positive: 94 122 18;
+    --negative: 194 66 31;          /* #C2421F aus Website-Signalfarbe #F66035, AA */
+
+    /* Diagramme (Hex, von Recharts direkt genutzt) */
+    --chart-eier: #76981C;
+    --chart-eier-flaeche: #B5D556;
+    --chart-umsatz: #565B5B;
+    --chart-vorjahr: #A6A9A9;
+    --chart-raster: #E6E7E4;
+    --chart-text: #565B5B;
+    --chart-flaeche: #FFFFFF;
+
+    /* shadcn/ui-Semantik */
+    --background: var(--canvas);
+    --foreground: var(--ink);
+    --card: var(--surface);
+    --card-foreground: var(--ink);
+    --popover: var(--surface);
+    --popover-foreground: var(--ink);
+    --primary: var(--brand);
+    --primary-foreground: var(--brand-foreground);
+    --secondary: 240 241 238;
+    --secondary-foreground: var(--ink);
+    --muted: 240 241 238;
+    --muted-foreground: 86 91 91;   /* #565B5B */
+    --accent: var(--brand-soft);
+    --accent-foreground: var(--ink);
+    --destructive: var(--negative);
+    --destructive-foreground: 255 255 255;
+    --border: var(--rule);
+    --input: 214 216 212;
+    --ring: var(--brand-strong);
+    --radius: 0.75rem;
 
     /* Safe-Area-Insets für iOS Notch + Gesture-Bar */
     --safe-top: env(safe-area-inset-top, 0px);
@@ -50,52 +65,71 @@
     --safe-left: env(safe-area-inset-left, 0px);
     --safe-right: env(safe-area-inset-right, 0px);
 
-    --font-display: 'Manrope', system-ui, sans-serif;
-    --font-body:    'Manrope', system-ui, sans-serif;
-    --font-mono:    'JetBrains Mono', ui-monospace, monospace;
+    --font-sans: 'Inter Variable', system-ui, sans-serif;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+
+      --brand: 181 213 86;
+      --brand-strong: 197 224 122;  /* #C5E07A */
+      --brand-soft: 47 54 34;
+      --brand-foreground: 33 35 30;
+      --chrome: 20 21 22;
+      --chrome-foreground: 237 237 235;
+      --canvas: 27 28 29;
+      --surface: 36 38 40;
+      --ink: 237 237 235;
+      --rule: 54 57 60;
+      --positive: 181 213 86;
+      --negative: 255 122 87;
+
+      --chart-eier: #B5D556;
+      --chart-eier-flaeche: #B5D556;
+      --chart-umsatz: #C9CDCD;
+      --chart-vorjahr: #6B7072;
+      --chart-raster: #36393C;
+      --chart-text: #A3A8A8;
+      --chart-flaeche: #242628;
+
+      --secondary: 46 49 52;
+      --muted: 46 49 52;
+      --muted-foreground: 163 168 168;
+      --input: 70 74 78;
+      --destructive-foreground: 27 28 29;
+    }
   }
 }
 
 @layer base {
   * { @apply border-border; }
   html {
-    /* iOS-Tap-Delay reduzieren, kein blauer Tap-Highlight */
     -webkit-tap-highlight-color: transparent;
   }
   body {
     @apply bg-background text-foreground;
-    font-family: var(--font-body);
-    font-feature-settings: "ss01", "cv11";
+    font-family: var(--font-sans);
+    font-feature-settings: "cv11", "ss03";
     -webkit-font-smoothing: antialiased;
-    /* Subtile, papierige Korn-Textur als Hintergrund-Overlay (Bio-/Landwirtschafts-Charakter). */
-    background-image:
-      radial-gradient(circle at 25% 15%, rgba(214, 152, 38, 0.04) 0px, transparent 380px),
-      radial-gradient(circle at 75% 85%, rgba(90, 127, 79, 0.035) 0px, transparent 420px),
-      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' seed='3'/><feColorMatrix values='0 0 0 0 0.55  0 0 0 0 0.45  0 0 0 0 0.25  0 0 0 0.08 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
-    background-attachment: fixed;
-    background-size: auto, auto, 160px 160px;
   }
-  h1, h2, h3, .display {
-    font-family: var(--font-display);
-    font-weight: 600;
+  h1, h2, h3 {
+    font-weight: 650;
     letter-spacing: -0.02em;
   }
-  .mono, .tabular-num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 
   /* Sichtbarer, einheitlicher Fokus-Ring (Tastatur). */
   :focus-visible {
-    outline: 2px solid var(--yolk);
+    outline: 2px solid rgb(var(--brand-strong));
     outline-offset: 2px;
     border-radius: 4px;
   }
 
-  /* Touch-Targets: min. 44 px (Apple) — pauschal für Mobile-relevante Elemente. */
   button, a, [role="button"], [role="link"] {
     touch-action: manipulation;
   }
 }
 
-/* Reduced-Motion: Animationen drastisch zurückfahren ohne ganz zu deaktivieren. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -109,35 +143,33 @@
 
 /* ----- Wiederverwendbare Komponentenklassen ----- */
 @layer components {
+  /* Bereichsname über Seitentiteln — klein, Satzschreibung, Grün. */
   .eyebrow {
-    @apply text-[10px] uppercase tracking-[0.12em] text-muted-foreground font-medium;
-  }
-  .card-title-serif {
-    font-family: var(--font-display);
-    font-weight: 600;
-    @apply text-2xl md:text-3xl leading-tight;
+    @apply text-sm font-medium text-brand-strong;
   }
   .kpi-value {
-    font-family: var(--font-display);
-    font-weight: 600;
-    @apply leading-none;
-    font-variant-numeric: tabular-nums;
-    letter-spacing: -0.03em;
+    @apply leading-none font-semibold tabular-nums;
+    letter-spacing: -0.035em;
+  }
+  .delta-up,
+  .delta-down {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium tabular-nums;
   }
   .delta-up {
-    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs;
-    background: rgba(90,127,79,0.14);
-    color: var(--sage);
-    font-family: var(--font-mono);
+    @apply bg-positive/10 text-positive;
   }
   .delta-down {
-    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs;
-    background: rgba(181,83,44,0.14);
-    color: var(--brick);
-    font-family: var(--font-mono);
+    @apply bg-negative/10 text-negative;
   }
-  .nav-rail {
-    @apply absolute left-[-18px] top-2 bottom-2 w-[3px] rounded-sm;
-    background: var(--yolk);
+  /* Dunkle Anthrazit-Fläche (Hero-KPI) — Tokens lokal auf Dunkel-Werte setzen,
+     damit text-ink, delta-up/-down usw. darin lesbar bleiben (hell wie dunkel). */
+  .flaeche-dunkel {
+    --ink: 237 237 235;
+    --muted-foreground: 190 194 194;
+    --brand-strong: 197 224 122;
+    --positive: 181 213 86;
+    --negative: 255 140 110;
+    --rule: 74 77 80;
+    @apply bg-chrome text-ink;
   }
 }

@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { ZeitraumFilter } from "@/components/ZeitraumFilter";
 
 interface PageHeaderProps {
+  /** Bereichsname über dem Titel (z. B. „Kunden"). */
   eyebrow?: string;
   title: ReactNode;
   subtitle?: ReactNode;
@@ -13,15 +14,12 @@ interface PageHeaderProps {
   actions?: ReactNode;
   /** Zeitraumfilter rechts ausblenden (z. B. auf Import-Seiten). Default: sichtbar. */
   withZeitraumFilter?: boolean;
-  /**
-   * Wenn gesetzt, wird rechts ein dezenter Download-Pfeil neben dem
-   * Zeitraumfilter gerendert (Mockup-Akzent für Datenexport).
-   */
+  /** Wenn gesetzt, erscheint rechts ein Download-Button für den Datenexport. */
   exportHref?: string;
   className?: string;
 }
 
-/** Einheitlicher Editorial-Header für Seiten und Detailansichten. */
+/** Einheitlicher Seitenkopf: Titel links, Zeitraum + Export rechts (mobil darunter). */
 export function PageHeader({
   eyebrow,
   title,
@@ -33,23 +31,26 @@ export function PageHeader({
   className,
 }: PageHeaderProps) {
   return (
-    <div className={cn("mb-6 md:mb-10 flex flex-col md:flex-row md:flex-wrap md:items-start md:justify-between gap-4", className)}>
-      <div className="space-y-2 min-w-0">
+    <div
+      className={cn(
+        "mb-6 md:mb-8 flex flex-col gap-4 md:flex-row md:flex-wrap md:items-end md:justify-between",
+        className,
+      )}
+    >
+      <div className="min-w-0 space-y-1">
         {back && (
           <Link
             to={back.to}
-            className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-[0.12em] text-muted-foreground hover:text-ink transition min-h-[32px]"
+            className="mb-2 inline-flex min-h-[32px] items-center gap-1.5 text-sm text-muted-foreground transition hover:text-ink"
           >
-            <ArrowLeft className="h-3 w-3" /> {back.label}
+            <ArrowLeft className="h-4 w-4" /> {back.label}
           </Link>
         )}
         {eyebrow && <div className="eyebrow">{eyebrow}</div>}
-        <h1 className="font-display text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-ink leading-[1.05] tracking-tight break-words">
+        <h1 className="break-words text-2xl leading-tight text-ink sm:text-3xl lg:text-[2.25rem]">
           {title}
         </h1>
-        {subtitle && (
-          <p className="text-sm text-muted-foreground max-w-full md:max-w-xl pt-1">{subtitle}</p>
-        )}
+        {subtitle && <p className="max-w-xl pt-1 text-sm text-muted-foreground">{subtitle}</p>}
       </div>
       <div className="flex flex-wrap items-center gap-2 md:shrink-0">
         {actions}
@@ -57,8 +58,9 @@ export function PageHeader({
         {exportHref && (
           <a
             href={exportHref}
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-rule bg-surface text-muted-foreground hover:text-ink hover:bg-yolk/10 active:scale-95 transition"
-            aria-label="Daten exportieren"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-rule bg-surface text-muted-foreground transition hover:bg-brand/20 hover:text-ink active:scale-95"
+            aria-label="Als Excel exportieren"
+            title="Als Excel exportieren"
           >
             <Download className="h-4 w-4" />
           </a>
@@ -68,36 +70,27 @@ export function PageHeader({
   );
 }
 
-/** Karten-Wrapper im Editorial-Stil — Surface + Rule-Border. */
+/** Einziger Karten-Wrapper der App — weiße Fläche, feine Linie, große Rundung. */
 export function Panel({
   title,
-  eyebrow,
   actions,
   children,
   className,
 }: {
   title?: ReactNode;
-  eyebrow?: string;
   actions?: ReactNode;
   children: ReactNode;
   className?: string;
 }) {
   return (
-    <section
-      className={cn("rounded-xl border border-rule bg-surface", className)}
-    >
-      {(title || eyebrow || actions) && (
-        <header className="flex flex-wrap items-end justify-between gap-3 px-6 pt-5 pb-4 border-b border-rule">
-          <div>
-            {eyebrow && <div className="eyebrow mb-1">{eyebrow}</div>}
-            {title && (
-              <h3 className="font-display text-2xl text-ink leading-tight">{title}</h3>
-            )}
-          </div>
-          {actions && <div className="flex gap-2">{actions}</div>}
+    <section className={cn("min-w-0 rounded-2xl border border-rule bg-surface", className)}>
+      {(title || actions) && (
+        <header className="flex flex-wrap items-center justify-between gap-3 px-4 pt-4 sm:px-6 sm:pt-5">
+          {title && <h2 className="text-base leading-tight text-ink sm:text-lg">{title}</h2>}
+          {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
         </header>
       )}
-      <div className="p-6">{children}</div>
+      <div className="p-4 sm:p-6">{children}</div>
     </section>
   );
 }

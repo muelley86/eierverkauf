@@ -1,7 +1,11 @@
 import type { Config } from "tailwindcss";
 
+/** Farbe aus einer RGB-Kanal-Variable in index.css (unterstützt `/alpha`). */
+const farbe = (variable: string) => `rgb(var(${variable}) / <alpha-value>)`;
+
 const config: Config = {
-  darkMode: ["class"],
+  // Dunkelmodus folgt der Systemeinstellung (prefers-color-scheme).
+  darkMode: "media",
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
   theme: {
     container: {
@@ -11,54 +15,38 @@ const config: Config = {
     },
     extend: {
       colors: {
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
-        primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
+        // shadcn/ui-Semantik — Werte in index.css
+        border: farbe("--border"),
+        input: farbe("--input"),
+        ring: farbe("--ring"),
+        background: farbe("--background"),
+        foreground: farbe("--foreground"),
+        primary: { DEFAULT: farbe("--primary"), foreground: farbe("--primary-foreground") },
+        secondary: { DEFAULT: farbe("--secondary"), foreground: farbe("--secondary-foreground") },
+        destructive: { DEFAULT: farbe("--destructive"), foreground: farbe("--destructive-foreground") },
+        muted: { DEFAULT: farbe("--muted"), foreground: farbe("--muted-foreground") },
+        accent: { DEFAULT: farbe("--accent"), foreground: farbe("--accent-foreground") },
+        popover: { DEFAULT: farbe("--popover"), foreground: farbe("--popover-foreground") },
+        card: { DEFAULT: farbe("--card"), foreground: farbe("--card-foreground") },
+        // Buchenhof-Tokens (bg-brand, text-brand-strong, bg-chrome …)
+        brand: {
+          DEFAULT: farbe("--brand"),
+          strong: farbe("--brand-strong"),
+          soft: farbe("--brand-soft"),
+          foreground: farbe("--brand-foreground"),
         },
-        secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
-        },
-        destructive: {
-          DEFAULT: "hsl(var(--destructive))",
-          foreground: "hsl(var(--destructive-foreground))",
-        },
-        muted: {
-          DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))",
-        },
-        accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
-        },
-        popover: {
-          DEFAULT: "hsl(var(--popover))",
-          foreground: "hsl(var(--popover-foreground))",
-        },
-        card: {
-          DEFAULT: "hsl(var(--card))",
-          foreground: "hsl(var(--card-foreground))",
-        },
-        // Eigene Tokens, direkt nutzbar als bg-yolk, text-sage usw.
-        yolk: "#D69826",
-        sage: "#5A7F4F",
-        brick: "#B5532C",
-        surface: "#FAF5E6",
-        ink: "#1A1610",
-        rule: "#E4D9BB",
-        // Sekundäre Erd-/Stroh-Töne (ergänzend zum Hauptset)
-        straw: "#F0E6CC",   // heller als surface, für aktive Mobile-Nav, Hervorhebungen
-        loam: "#8C7A5F",    // warmes Mittelgrau für Secondary-Text (AA-konform auf surface)
+        chrome: { DEFAULT: farbe("--chrome"), foreground: farbe("--chrome-foreground") },
+        canvas: farbe("--canvas"),
+        surface: farbe("--surface"),
+        ink: farbe("--ink"),
+        rule: farbe("--rule"),
+        positive: farbe("--positive"),
+        negative: farbe("--negative"),
       },
       fontFamily: {
-        display: ["'Manrope'", "system-ui", "sans-serif"],
-        body:    ["'Manrope'", "system-ui", "sans-serif"],
-        mono:    ["'JetBrains Mono'", "ui-monospace", "monospace"],
+        sans: ["'Inter Variable'", "system-ui", "sans-serif"],
+        display: ["'Inter Variable'", "system-ui", "sans-serif"],
+        body: ["'Inter Variable'", "system-ui", "sans-serif"],
       },
       borderRadius: {
         lg: "var(--radius)",

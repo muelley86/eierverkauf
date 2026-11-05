@@ -38,7 +38,7 @@ export default function Artikel() {
         accessorKey: "artikel_code",
         header: "Artikel",
         meta: { mobilePriority: "primary" },
-        cell: (i) => <span className="font-mono text-xs">{artikelLabel(i.getValue<string>())}</span>,
+        cell: (i) => <span className="tabular-nums text-xs">{artikelLabel(i.getValue<string>())}</span>,
       },
       {
         accessorKey: "menge",
@@ -46,7 +46,7 @@ export default function Artikel() {
         sortingFn: "basic",
         meta: { mobilePriority: "secondary", mobileLabel: "Menge" },
         cell: (i) => (
-          <span className="font-mono tabular-nums">{formatZahl(i.getValue<number>(), 2)}</span>
+          <span className="tabular-nums">{formatZahl(i.getValue<number>(), 2)}</span>
         ),
       },
       {
@@ -55,7 +55,7 @@ export default function Artikel() {
         sortingFn: "basic",
         meta: { mobilePriority: "secondary", mobileLabel: "Eier" },
         cell: (i) => (
-          <span className="font-mono tabular-nums">{formatZahl(i.getValue<number>())}</span>
+          <span className="tabular-nums">{formatZahl(i.getValue<number>())}</span>
         ),
       },
       {
@@ -64,7 +64,7 @@ export default function Artikel() {
         sortingFn: "basic",
         meta: { mobilePriority: "primary" },
         cell: (i) => (
-          <span className="font-mono tabular-nums">{formatEuro(i.getValue<number>())}</span>
+          <span className="tabular-nums">{formatEuro(i.getValue<number>())}</span>
         ),
       },
       {
@@ -74,7 +74,7 @@ export default function Artikel() {
         sortingFn: "basic",
         meta: { mobilePriority: "secondary", mobileLabel: "Umsatz/Ei" },
         cell: (i) => (
-          <span className="font-mono tabular-nums">
+          <span className="tabular-nums">
             {formatCentJeEi(i.row.original.eier_umsatz, i.row.original.eier)}
           </span>
         ),
@@ -85,7 +85,7 @@ export default function Artikel() {
         sortingFn: "basic",
         meta: { mobilePriority: "secondary", mobileLabel: "Pos." },
         cell: (i) => (
-          <span className="font-mono tabular-nums text-muted-foreground">
+          <span className="tabular-nums text-muted-foreground">
             {formatZahl(i.getValue<number>())}
           </span>
         ),
@@ -101,7 +101,7 @@ export default function Artikel() {
         title="Was verkauft wurde"
         subtitle={`${daten.length} Artikel im gewählten Zeitraum.`}
       />
-      <Panel eyebrow="Tabelle" title="Vollständige Liste">
+      <Panel title="Vollständige Liste">
         {loading ? (
           <Skeleton className="h-96" />
         ) : (

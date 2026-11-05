@@ -5,6 +5,7 @@ import {
   formatEuro,
   formatVerlaufLabel,
   formatZahl,
+  kuerzeText,
 } from "./formatierung";
 
 describe("formatCentJeEi", () => {
@@ -76,5 +77,15 @@ describe("formatVerlaufLabel", () => {
 
   test("formatiert Monats-Buckets als 'Mon JJ'", () => {
     expect(formatVerlaufLabel("2025-11-15", "monat")).toBe("Nov 25");
+  });
+});
+
+describe("kuerzeText", () => {
+  test("lässt kurze Texte unverändert", () => {
+    expect(kuerzeText("EDEKA", 10)).toBe("EDEKA");
+  });
+
+  test("kürzt lange Texte auf die Maximallänge inklusive Auslassungszeichen", () => {
+    expect(kuerzeText("REWE Markt GmbH, Zweigniederlassung", 12)).toBe("REWE Markt…");
   });
 });

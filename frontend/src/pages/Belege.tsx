@@ -19,6 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TABELLE_STICKY_ERSTE_SPALTE } from "@/lib/tabelle";
 import { useZeitraum } from "@/context/ZeitraumContext";
 import {
   BelegeZeile,
@@ -92,7 +93,7 @@ export default function Belege() {
         header: "Datum",
         meta: { mobilePriority: "secondary", mobileLabel: "Datum" },
         cell: (i) => (
-          <span className="font-mono text-xs text-muted-foreground">
+          <span className="tabular-nums text-xs text-muted-foreground">
             {formatDatum(i.getValue<string>())}
           </span>
         ),
@@ -102,7 +103,7 @@ export default function Belege() {
         header: "Beleg-Nr.",
         meta: { mobilePriority: "secondary", mobileLabel: "Beleg-Nr." },
         cell: (i) => (
-          <span className="font-mono text-xs text-ink">{i.getValue<string>() ?? "—"}</span>
+          <span className="tabular-nums text-xs text-ink">{i.getValue<string>() ?? "—"}</span>
         ),
       },
       {
@@ -110,7 +111,7 @@ export default function Belege() {
         header: "Kunden-Nr.",
         meta: { mobilePriority: "secondary", mobileLabel: "Kd.-Nr." },
         cell: (i) => (
-          <span className="font-mono text-xs text-muted-foreground">
+          <span className="tabular-nums text-xs text-muted-foreground">
             {i.getValue<string>()}
           </span>
         ),
@@ -127,7 +128,7 @@ export default function Belege() {
         sortingFn: "basic",
         meta: { mobilePriority: "secondary", mobileLabel: "Pos." },
         cell: (i) => (
-          <span className="font-mono tabular-nums text-muted-foreground">
+          <span className="tabular-nums text-muted-foreground">
             {formatZahl(i.getValue<number>())}
           </span>
         ),
@@ -138,7 +139,7 @@ export default function Belege() {
         sortingFn: "basic",
         meta: { mobilePriority: "secondary", mobileLabel: "Eier" },
         cell: (i) => (
-          <span className="font-mono tabular-nums">{formatZahl(i.getValue<number>())}</span>
+          <span className="tabular-nums">{formatZahl(i.getValue<number>())}</span>
         ),
       },
       {
@@ -147,7 +148,7 @@ export default function Belege() {
         sortingFn: "basic",
         meta: { mobilePriority: "primary" },
         cell: (i) => (
-          <span className="font-mono tabular-nums text-sage">
+          <span className="tabular-nums text-positive">
             {formatEuro(i.getValue<number>())}
           </span>
         ),
@@ -159,7 +160,7 @@ export default function Belege() {
         sortingFn: "basic",
         meta: { mobilePriority: "secondary", mobileLabel: "Umsatz/Ei" },
         cell: (i) => (
-          <span className="font-mono tabular-nums">
+          <span className="tabular-nums">
             {formatCentJeEi(i.row.original.eier_umsatz, i.row.original.eier)}
           </span>
         ),
@@ -178,7 +179,7 @@ export default function Belege() {
         subtitle={`${daten.length} Belege im gewählten Zeitraum. Klick auf eine Zeile zeigt die Einzelpositionen.`}
         exportHref={exportUrl}
       />
-      <Panel eyebrow="Tabelle" title="Alle Belege">
+      <Panel title="Alle Belege">
         {loading ? (
           <Skeleton className="h-96" />
         ) : (
@@ -198,13 +199,13 @@ export default function Belege() {
             <div className="eyebrow">Beleg-Detail</div>
             <DialogTitle>
               {ausgewaehlt?.rechnungsnummer ?? "—"}{" "}
-              <span className="text-muted-foreground font-mono text-base font-normal">
+              <span className="text-muted-foreground tabular-nums text-base font-normal">
                 · {formatDatum(ausgewaehlt?.rechnungsdatum)}
               </span>
             </DialogTitle>
             <DialogDescription>
               {ausgewaehlt?.kundenname}{" "}
-              <span className="font-mono text-xs">
+              <span className="tabular-nums text-xs">
                 ({ausgewaehlt?.kundennummer})
               </span>{" "}
               · {formatZahl(ausgewaehlt?.positionen ?? 0)} Positionen ·{" "}
@@ -219,28 +220,28 @@ export default function Belege() {
             <div className="text-sm text-muted-foreground py-4">Keine Positionen gefunden.</div>
           ) : (
             <div className="overflow-hidden rounded-lg border border-rule">
-              <Table>
+              <Table className={TABELLE_STICKY_ERSTE_SPALTE}>
                 <TableHeader>
                   <TableRow className="border-rule hover:bg-transparent">
-                    <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                    <TableHead className="tabular-nums text-xs text-muted-foreground">
                       Artikel
                     </TableHead>
-                    <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                    <TableHead className="tabular-nums text-xs text-muted-foreground">
                       Beschreibung
                     </TableHead>
-                    <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground text-right">
+                    <TableHead className="tabular-nums text-xs text-muted-foreground text-right">
                       Menge
                     </TableHead>
-                    <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                    <TableHead className="tabular-nums text-xs text-muted-foreground">
                       Einheit
                     </TableHead>
-                    <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground text-right">
+                    <TableHead className="tabular-nums text-xs text-muted-foreground text-right">
                       Eier
                     </TableHead>
-                    <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground text-right">
+                    <TableHead className="tabular-nums text-xs text-muted-foreground text-right">
                       Preis
                     </TableHead>
-                    <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground text-right">
+                    <TableHead className="tabular-nums text-xs text-muted-foreground text-right">
                       Gesamt
                     </TableHead>
                   </TableRow>
@@ -252,19 +253,19 @@ export default function Belege() {
                       <TableCell className="text-xs text-muted-foreground">
                         {p.beschreibung ?? "—"}
                       </TableCell>
-                      <TableCell className="text-sm font-mono tabular-nums text-right">
+                      <TableCell className="text-sm tabular-nums text-right">
                         {formatZahl(p.menge, p.menge % 1 === 0 ? 0 : 2)}
                       </TableCell>
-                      <TableCell className="text-xs font-mono text-muted-foreground">
+                      <TableCell className="text-xs tabular-nums text-muted-foreground">
                         {einheitLabel(p.einheit, p.pack_code)}
                       </TableCell>
-                      <TableCell className="text-sm font-mono tabular-nums text-right">
+                      <TableCell className="text-sm tabular-nums text-right">
                         {p.eier_stueck === null ? "—" : formatZahl(p.eier_stueck)}
                       </TableCell>
-                      <TableCell className="text-sm font-mono tabular-nums text-right text-muted-foreground">
+                      <TableCell className="text-sm tabular-nums text-right text-muted-foreground">
                         {formatEuro(p.preis_einheit)}
                       </TableCell>
-                      <TableCell className="text-sm font-mono tabular-nums text-right text-sage">
+                      <TableCell className="text-sm tabular-nums text-right text-positive">
                         {formatEuro(p.gesamt)}
                       </TableCell>
                     </TableRow>

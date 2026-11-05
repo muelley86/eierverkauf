@@ -10,13 +10,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DataTable } from "@/components/DataTable";
 import { useZeitraum } from "@/context/ZeitraumContext";
 import { getRanking, RankingZeile } from "@/api/client";
-import { formatCentJeEi, formatEuro, formatZahl } from "@/lib/formatierung";
+import { formatCentJeEi, formatEuro, formatZahl, kuerzeText } from "@/lib/formatierung";
 import { cn } from "@/lib/utils";
-import { AXIS_TICK, CHART_FARBEN, CHART_GRID, TOOLTIP_STYLE } from "@/lib/chart-farben";
+import { useChartFarben } from "@/lib/chart-farben";
+import { useIstMobil } from "@/hooks/useIstMobil";
 
 type SortMode = "menge" | "umsatz";
 
 export default function Ranking() {
+  const { farben, tooltip, achse, raster } = useChartFarben();
+  const istMobil = useIstMobil();
   const { von, bis } = useZeitraum();
   const navigate = useNavigate();
   const [sort, setSort] = useState<SortMode>("menge");
@@ -35,7 +38,7 @@ export default function Ranking() {
 
   const top10 = useMemo(() => daten.slice(0, 10), [daten]);
   const dataKey = sort === "menge" ? "eier" : "umsatz";
-  const farbe = sort === "menge" ? CHART_FARBEN.yolk : CHART_FARBEN.sage;
+  const farbe = sort === "menge" ? farben.eierFlaeche : farben.umsatz;
 
   const columns = useMemo<ColumnDef<RankingZeile>[]>(
     () => [
@@ -44,7 +47,7 @@ export default function Ranking() {
         header: "#",
         meta: { mobilePriority: "secondary", mobileLabel: "Rang" },
         cell: (i) => (
-          <span className="font-mono text-xs text-muted-foreground tabular-nums">
+          <span className="tabular-nums text-xs text-muted-foreground">
             {String(i.row.index + 1).padStart(2, "0")}
           </span>
         ),
@@ -53,7 +56,7 @@ export default function Ranking() {
         accessorKey: "kundennummer",
         header: "Nr.",
         meta: { mobilePriority: "secondary", mobileLabel: "Nr." },
-        cell: (i) => <span className="font-mono text-xs text-muted-foreground">{i.getValue<string>()}</span>,
+        cell: (i) => <span className="tabular-nums text-xs text-muted-foreground">{i.getValue<string>()}</span>,
       },
       {
         accessorKey: "kundenname",
@@ -64,13 +67,13 @@ export default function Ranking() {
         accessorKey: "eier", header: "Eier",
         sortingFn: "basic",
         meta: { mobilePriority: "primary" },
-        cell: (i) => <span className="font-mono tabular-nums">{formatZahl(i.getValue<number>())}</span>,
+        cell: (i) => <span className="tabular-nums">{formatZahl(i.getValue<number>())}</span>,
       },
       {
         accessorKey: "umsatz", header: "Umsatz",
         sortingFn: "basic",
         meta: { mobilePriority: "secondary", mobileLabel: "Umsatz" },
-        cell: (i) => <span className="font-mono tabular-nums">{formatEuro(i.getValue<number>())}</span>,
+        cell: (i) => <span className="tabular-nums">{formatEuro(i.getValue<number>())}</span>,
       },
       {
         id: "umsatz_pro_ei",
@@ -79,7 +82,7 @@ export default function Ranking() {
         sortingFn: "basic",
         meta: { mobilePriority: "secondary", mobileLabel: "Umsatz/Ei" },
         cell: (i) => (
-          <span className="font-mono tabular-nums">
+          <span className="tabular-nums">
             {formatCentJeEi(i.row.original.eier_umsatz, i.row.original.eier)}
           </span>
         ),
@@ -102,8 +105,8 @@ export default function Ranking() {
                 type="button"
                 onClick={() => setSort(m)}
                 className={cn(
-                  "min-h-[40px] px-4 py-2 text-xs font-mono uppercase tracking-[0.1em] rounded-full transition active:scale-95",
-                  sort === m ? "bg-yolk text-ink" : "text-muted-foreground hover:text-ink",
+                  "min-h-[40px] px-4 py-2 text-xs tabular-nums rounded-full transition active:scale-95",
+                  sort === m ? "bg-brand text-brand-foreground" : "text-muted-foreground hover:text-ink",
                 )}
               >
                 {m === "menge" ? "Nach Menge" : "Nach Umsatz"}
@@ -113,30 +116,31 @@ export default function Ranking() {
         }
       />
 
-      <Panel eyebrow="Chart" title="Top 10">
+      <Panel title="Top 10">
         {loading ? (
-          <Skeleton className="h-[450px]" />
+          <Skeleton className="h-[360px] sm:h-[450px]" />
         ) : (
-          <ResponsiveContainer width="100%" height={450}>
-            <BarChart data={top10} layout="vertical" margin={{ top: 10, right: 30, left: 80, bottom: 10 }}>
-              <CartesianGrid {...CHART_GRID} horizontal={false} />
+          <ResponsiveContainer width="100%" height={istMobil ? 360 : 450}>
+            <BarChart data={top10} layout="vertical" margin={{ top: 4, right: 12, left: 0, bottom: 4 }}>
+              <CartesianGrid {...raster} horizontal={false} />
               <XAxis type="number" tickFormatter={(v: number) => formatZahl(v)}
-                stroke={CHART_FARBEN.inkMuted} tick={AXIS_TICK} />
-              <YAxis dataKey="kundenname" type="category" width={150}
-                stroke={CHART_FARBEN.inkMuted} tick={AXIS_TICK} />
+                axisLine={false} tickLine={false} tick={achse} />
+              <YAxis dataKey="kundenname" type="category" width={istMobil ? 104 : 200}
+                tickFormatter={(name: string) => kuerzeText(name, istMobil ? 11 : 28)}
+                axisLine={false} tickLine={false} tick={achse} />
               <Tooltip
                 formatter={(v: number) => sort === "menge" ? formatZahl(v) : formatEuro(v)}
-                contentStyle={TOOLTIP_STYLE}
-                labelStyle={{ color: CHART_FARBEN.ink }}
+                contentStyle={tooltip}
+                labelStyle={{ color: farben.text }}
               />
-              <Bar dataKey={dataKey} fill={farbe} radius={[0, 4, 4, 0]} cursor="pointer"
+              <Bar isAnimationActive={false} dataKey={dataKey} fill={farbe} radius={[0, 4, 4, 0]} cursor="pointer"
                 onClick={(d: RankingZeile) => navigate(`/kunden/${encodeURIComponent(d.kundennummer)}`)} />
             </BarChart>
           </ResponsiveContainer>
         )}
       </Panel>
 
-      <Panel eyebrow="Tabelle" title="Vollständige Rangliste">
+      <Panel title="Vollständige Rangliste">
         {loading ? (
           <Skeleton className="h-96" />
         ) : (

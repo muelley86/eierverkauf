@@ -108,3 +108,8 @@ export function formatVerlaufLabel(startIso: string, granularitaet: VerlaufGranu
   const tagMonat = `${tag}.${monat}.`;
   return granularitaet === "woche" ? `ab ${tagMonat}` : tagMonat;
 }
+
+/** Kürzt lange Beschriftungen (z. B. Kundennamen an Diagrammachsen) mit '…'. */
+export function kuerzeText(text: string, maxZeichen: number): string {
+  return text.length <= maxZeichen ? text : `${text.slice(0, Math.max(1, maxZeichen - 1)).trimEnd()}…`;
+}

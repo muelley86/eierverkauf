@@ -15,7 +15,6 @@ import { KPICard } from "@/components/KPICard";
 import { PageHeader, Panel } from "@/components/PageHeader";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/EmptyState";
-import { EggCarton } from "@/components/illustrations/EggCarton";
 import { Hen } from "@/components/illustrations/Hen";
 import { useZeitraum } from "@/context/ZeitraumContext";
 import {
@@ -34,31 +33,238 @@ import {
   formatVerlaufLabel,
   formatZahl,
 } from "@/lib/formatierung";
-import { AXIS_TICK, CHART_FARBEN, CHART_GRID, TOOLTIP_STYLE } from "@/lib/chart-farben";
+import { useChartFarben } from "@/lib/chart-farben";
+import { cn } from "@/lib/utils";
+
+const ANZAHL_LETZTE_IMPORTS = 4;
+const MIN_BALKEN_PROZENT = 2;
 
 // ---------------------------------------------------------------------------
 // Hilfsfunktionen
 // ---------------------------------------------------------------------------
 
 function delta(aktuell: number, vorjahr: number | undefined | null) {
-  if (vorjahr === undefined || vorjahr === null || vorjahr === 0) return null;
+  if (vorjahr === undefined || vorjahr === null || vorjahr === 0) return undefined;
   const pct = ((aktuell - vorjahr) / vorjahr) * 100;
   return {
-    wert: `${pct >= 0 ? "+" : ""}${pct.toLocaleString("de-DE", {
-      minimumFractionDigits: 1,
-      maximumFractionDigits: 1,
-    })} % vs. Vorjahr`,
+    wert: `${pct >= 0 ? "+" : ""}${formatZahl(pct, 1)} %`,
     richtung: (pct >= 0 ? "up" : "down") as "up" | "down",
   };
 }
 
+const LINK_KLASSEN = "text-sm text-muted-foreground underline-offset-4 transition hover:text-ink hover:underline";
+
 // ---------------------------------------------------------------------------
-// Komponente
+// Teilkomponenten
+// ---------------------------------------------------------------------------
+
+function KpiBand({ daten, verlauf }: { daten: DashboardResponse; verlauf: DashboardVerlauf | null }) {
+  const vj = daten.vorjahres_kpis;
+  const sparkEier = verlauf?.punkte.map((p) => p.eier) ?? [];
+  const sparkUmsatz = verlauf?.punkte.map((p) => p.umsatz) ?? [];
+  return (
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+      <KPICard
+        variant="hero"
+        titel="Verkaufte Eier (Stück)"
+        wert={formatZahl(daten.kpis.gesamt_eier)}
+        sparkline={sparkEier}
+        delta={delta(daten.kpis.gesamt_eier, vj?.gesamt_eier)}
+        hinweis={
+          formatBruttoRetouren(daten.kpis.brutto_eier, daten.kpis.retouren_eier, formatZahl) ?? undefined
+        }
+        className="lg:col-span-7"
+      />
+      <div className="grid grid-cols-2 gap-4 lg:col-span-5 lg:grid-rows-[1fr_auto]">
+        <KPICard
+          titel="Umsatz"
+          wert={formatEuro(daten.kpis.umsatz)}
+          sparkline={sparkUmsatz}
+          sparklineReihe="umsatz"
+          delta={delta(daten.kpis.umsatz, vj?.umsatz)}
+          hinweis={
+            formatBruttoRetouren(daten.kpis.brutto_umsatz, daten.kpis.retouren_umsatz, formatEuro) ??
+            undefined
+          }
+          className="col-span-2"
+        />
+        <KPICard
+          titel="Kunden"
+          wert={formatZahl(daten.kpis.anzahl_kunden)}
+          delta={delta(daten.kpis.anzahl_kunden, vj?.anzahl_kunden)}
+        />
+        <KPICard
+          titel="Positionen"
+          wert={formatZahl(daten.kpis.anzahl_positionen)}
+          delta={delta(daten.kpis.anzahl_positionen, vj?.anzahl_positionen)}
+        />
+      </div>
+    </div>
+  );
+}
+
+function Legende({ hatVorjahr }: { hatVorjahr: boolean }) {
+  return (
+    <div className="flex items-center gap-4 text-xs text-muted-foreground">
+      <span className="inline-flex items-center gap-1.5">
+        <span className="h-2.5 w-2.5 rounded-full bg-brand" /> Zeitraum
+      </span>
+      {hatVorjahr && (
+        <span className="inline-flex items-center gap-1.5">
+          <span className="inline-block w-4 border-t-2 border-dashed border-muted-foreground/60" />
+          Vorjahr
+        </span>
+      )}
+    </div>
+  );
+}
+
+function VerlaufChart({ verlauf }: { verlauf: DashboardVerlauf }) {
+  const { farben, tooltip, achse, raster } = useChartFarben();
+  const daten = verlauf.punkte.map((p) => ({
+    label: formatVerlaufLabel(p.start, verlauf.granularitaet),
+    aktuell: p.eier,
+    vorjahr: p.vorjahr_eier,
+  }));
+  return (
+    <div className="h-[240px] sm:h-[320px]">
+      <ResponsiveContainer width="100%" height="100%">
+        <ComposedChart data={daten} margin={{ top: 8, right: 4, left: -8, bottom: 0 }}>
+          <defs>
+            <linearGradient id="verlaufFlaeche" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={farben.eierFlaeche} stopOpacity={0.55} />
+              <stop offset="100%" stopColor={farben.eierFlaeche} stopOpacity={0.05} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid {...raster} vertical={false} />
+          <XAxis
+            dataKey="label"
+            tick={achse}
+            axisLine={false}
+            tickLine={false}
+            interval="preserveStartEnd"
+            minTickGap={20}
+          />
+          <YAxis
+            tickFormatter={(v: number) => formatZahl(v)}
+            tick={achse}
+            axisLine={false}
+            tickLine={false}
+            width={64}
+          />
+          <Tooltip
+            formatter={(v: number) => formatZahl(v)}
+            contentStyle={tooltip}
+            labelStyle={{ color: farben.text, fontWeight: 600 }}
+          />
+          <Line
+            type="monotone"
+            dataKey="vorjahr"
+            name="Vorjahr"
+            stroke={farben.vorjahr}
+            strokeWidth={1.5}
+            strokeDasharray="4 4"
+            dot={false}
+            isAnimationActive={false}
+          />
+          <Area
+            type="monotone"
+            dataKey="aktuell"
+            name="Zeitraum"
+            stroke={farben.eier}
+            strokeWidth={2.5}
+            fill="url(#verlaufFlaeche)"
+            isAnimationActive={false}
+          />
+        </ComposedChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+interface RanglistenEintrag {
+  schluessel: string;
+  label: string;
+  wert: number;
+  wertText: string;
+  ziel: string;
+}
+
+/** Kurze Rangliste mit Balken — Top-5 Kunden bzw. Artikel. */
+function Rangliste({ eintraege, balkenKlasse }: { eintraege: RanglistenEintrag[]; balkenKlasse: string }) {
+  const navigate = useNavigate();
+  const maximum = Math.max(1, ...eintraege.map((e) => e.wert));
+  return (
+    <ol className="space-y-4">
+      {eintraege.map((e, i) => (
+        <li key={e.schluessel}>
+          <button
+            type="button"
+            onClick={() => navigate(e.ziel)}
+            className="group block w-full space-y-1.5 text-left"
+          >
+            <span className="flex items-baseline justify-between gap-3">
+              <span className="flex min-w-0 items-baseline gap-2.5">
+                <span className="w-4 shrink-0 text-xs tabular-nums text-muted-foreground">{i + 1}</span>
+                <span className="truncate text-sm text-ink group-hover:underline">{e.label}</span>
+              </span>
+              <span className="shrink-0 text-sm font-medium tabular-nums text-ink">{e.wertText}</span>
+            </span>
+            <span className="ml-6 block h-2 overflow-hidden rounded-full bg-muted">
+              <span
+                className={cn("block h-full rounded-full", balkenKlasse)}
+                style={{ width: `${Math.max(MIN_BALKEN_PROZENT, (e.wert / maximum) * 100)}%` }}
+              />
+            </span>
+          </button>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function LetzteImports({ imports }: { imports: ImportProtokollEintrag[] }) {
+  if (imports.length === 0) {
+    return (
+      <EmptyState
+        illustration={<Hen />}
+        title="Noch keine Imports"
+        description="Laden Sie eine CSV im Bereich Import hoch, um Auswertungen zu sehen."
+        action={
+          <Link
+            to="/import"
+            className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-brand px-4 py-2 text-sm font-medium text-brand-foreground transition hover:bg-brand/90 active:scale-95"
+          >
+            CSV importieren
+          </Link>
+        }
+      />
+    );
+  }
+  return (
+    <ul className="space-y-4">
+      {imports.map((imp) => (
+        <li key={imp.id}>
+          <Link to={`/import/${imp.id}`} className="group block min-w-0">
+            <div className="text-sm text-ink group-hover:underline">
+              {formatZahl(imp.zeilen_importiert)} Zeilen importiert
+            </div>
+            <div className="truncate text-xs text-muted-foreground">
+              {formatDatum(imp.import_datum.slice(0, 10))}, {imp.dateiname}
+            </div>
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Seite
 // ---------------------------------------------------------------------------
 
 export default function Dashboard() {
   const { von, bis } = useZeitraum();
-  const navigate = useNavigate();
   const [daten, setDaten] = useState<DashboardResponse | null>(null);
   const [verlauf, setVerlauf] = useState<DashboardVerlauf | null>(null);
   const [imports, setImports] = useState<ImportProtokollEintrag[] | null>(null);
@@ -67,19 +273,15 @@ export default function Dashboard() {
   useEffect(() => {
     let abgebrochen = false;
     setLoading(true);
-    Promise.all([
-      getDashboard({ von, bis }),
-      getDashboardVerlauf({ von, bis }),
-      getImportHistorie(),
-    ])
+    Promise.all([getDashboard({ von, bis }), getDashboardVerlauf({ von, bis }), getImportHistorie()])
       .then(([d, v, i]) => {
         if (abgebrochen) return;
         setDaten(d);
         setVerlauf(v);
-        setImports(i.slice(0, 4));
+        setImports(i.slice(0, ANZAHL_LETZTE_IMPORTS));
       })
       .catch((e) => {
-        toast.error("Dashboard konnte nicht geladen werden", { description: String(e) });
+        toast.error("Übersicht konnte nicht geladen werden", { description: String(e) });
       })
       .finally(() => {
         if (!abgebrochen) setLoading(false);
@@ -89,351 +291,77 @@ export default function Dashboard() {
     };
   }, [von, bis]);
 
-  // Sparkline-Daten aus dem Verlauf des gewählten Zeitraums.
-  const sparkEier = useMemo(() => verlauf?.punkte.map((p) => p.eier) ?? [], [verlauf]);
-  const sparkUmsatz = useMemo(() => verlauf?.punkte.map((p) => p.umsatz) ?? [], [verlauf]);
-
-  // Delta-Pills aus Vorjahresvergleich (Backend liefert).
-  const vj = daten?.vorjahres_kpis;
-  const deltaEier = daten ? delta(daten.kpis.gesamt_eier, vj?.gesamt_eier) : null;
-  const deltaUmsatz = daten ? delta(daten.kpis.umsatz, vj?.umsatz) : null;
-  const deltaKunden = daten ? delta(daten.kpis.anzahl_kunden, vj?.anzahl_kunden) : null;
-  const deltaPositionen = daten ? delta(daten.kpis.anzahl_positionen, vj?.anzahl_positionen) : null;
-
-  // Hauptchart: ein Punkt je Bucket (Tag/Woche/Monat) im gewählten Zeitraum.
-  const chartDaten = useMemo(
-    () =>
-      (verlauf?.punkte ?? []).map((p) => ({
-        label: formatVerlaufLabel(p.start, verlauf?.granularitaet ?? "monat"),
-        aktuell: p.eier,
-        vorjahr: p.vorjahr_eier,
-      })),
+  const hatVorjahr = useMemo(
+    () => verlauf?.punkte.some((p) => p.vorjahr_eier !== null) ?? false,
     [verlauf],
   );
-  const hatVorjahr = chartDaten.some((d) => d.vorjahr !== null);
 
-  // Top-5-Werte mit Maximum für Balkenbreite.
-  const top5Kunden = daten?.top5_kunden ?? [];
-  const top5Artikel = daten?.top5_artikel ?? [];
-  const maxEierKunde = Math.max(1, ...top5Kunden.map((k) => k.eier));
-  const maxUmsatzArtikel = Math.max(1, ...top5Artikel.map((a) => a.umsatz));
+  const topKunden: RanglistenEintrag[] = (daten?.top5_kunden ?? []).map((k) => ({
+    schluessel: k.kundennummer,
+    label: k.kundenname,
+    wert: k.eier,
+    wertText: formatZahl(k.eier),
+    ziel: `/kunden/${encodeURIComponent(k.kundennummer)}`,
+  }));
+  const topArtikel: RanglistenEintrag[] = (daten?.top5_artikel ?? []).map((a) => ({
+    schluessel: a.artikel_code,
+    label: artikelLabel(a.artikel_code),
+    wert: a.umsatz,
+    wertText: formatEuro(a.umsatz),
+    ziel: `/artikel/${encodeURIComponent(a.artikel_code)}`,
+  }));
+  const bereit = !loading && daten !== null;
 
   return (
-    <div className="space-y-8 max-w-[1400px]">
+    <div className="max-w-[1400px] space-y-4 md:space-y-6">
       <PageHeader
-        eyebrow="Dashboard"
+        eyebrow="Buchenhof Eierverkauf"
         title="Übersicht"
-        subtitle="KPIs, Topkunden und Verlauf auf einen Blick."
         exportHref={`/api/export/excel?typ=ranking&sort=menge${von ? `&von=${von}` : ""}${bis ? `&bis=${bis}` : ""}`}
       />
 
-      {/* KPI-Bande: Hero (8/12) + rechts UMSATZ + 2× kompakt (je 4/12) */}
-      {loading || !daten ? (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          <Skeleton className="h-72 lg:col-span-8" />
-          <div className="lg:col-span-4 space-y-4">
-            <Skeleton className="h-36" />
-            <div className="grid grid-cols-2 gap-4">
-              <Skeleton className="h-28" />
-              <Skeleton className="h-28" />
-            </div>
-          </div>
-        </div>
+      {bereit ? (
+        <KpiBand daten={daten} verlauf={verlauf} />
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          <KPICard
-            variant="hero"
-            titel="Eier · Stück"
-            wert={formatZahl(daten.kpis.gesamt_eier)}
-            wertFarbe="yolk"
-            sparkline={sparkEier}
-            sparklineFarbe={CHART_FARBEN.yolk}
-            delta={deltaEier ?? undefined}
-            hinweis={
-              formatBruttoRetouren(
-                daten.kpis.brutto_eier,
-                daten.kpis.retouren_eier,
-                formatZahl,
-              ) ?? undefined
-            }
-            illustration={<EggCarton />}
-            className="lg:col-span-8"
-          />
-          <div className="lg:col-span-4 space-y-4">
-            <KPICard
-              titel="Umsatz"
-              wert={formatEuro(daten.kpis.umsatz)}
-              wertFarbe="sage"
-              sparkline={sparkUmsatz}
-              sparklineFarbe={CHART_FARBEN.sage}
-              delta={deltaUmsatz ?? undefined}
-              hinweis={
-                formatBruttoRetouren(
-                  daten.kpis.brutto_umsatz,
-                  daten.kpis.retouren_umsatz,
-                  formatEuro,
-                ) ?? undefined
-              }
-            />
-            <div className="grid grid-cols-2 gap-4">
-              <KPICard
-                titel="Kunden"
-                wert={formatZahl(daten.kpis.anzahl_kunden)}
-                delta={deltaKunden ?? undefined}
-              />
-              <KPICard
-                titel="Positionen"
-                wert={formatZahl(daten.kpis.anzahl_positionen)}
-                delta={deltaPositionen ?? undefined}
-              />
-            </div>
-          </div>
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+          <Skeleton className="h-64 rounded-2xl lg:col-span-7" />
+          <Skeleton className="h-64 rounded-2xl lg:col-span-5" />
         </div>
       )}
 
-      {/* Hauptchart + Top-5-Artikel */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:gap-6 lg:grid-cols-12">
         <Panel
           className="lg:col-span-8"
-          eyebrow="Verlauf"
-          title={
-            <>
-              Eierverkauf <span className="italic">im gewählten Zeitraum</span>
-            </>
-          }
-          actions={
-            <div className="flex items-center gap-4 text-xs font-mono text-muted-foreground">
-              <span className="inline-flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-yolk" /> Zeitraum
-              </span>
-              {hatVorjahr && (
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="inline-block w-4 border-t border-dashed border-muted-foreground" />
-                  Vorjahreszeitraum
-                </span>
-              )}
-            </div>
-          }
+          title="Eierverkauf im Zeitraum"
+          actions={<Legende hatVorjahr={hatVorjahr} />}
         >
           {loading || !verlauf ? (
-            <Skeleton className="h-[320px]" />
+            <Skeleton className="h-[240px] sm:h-[320px]" />
           ) : (
-            <ResponsiveContainer width="100%" height={320}>
-              <ComposedChart
-                data={chartDaten}
-                margin={{ top: 12, right: 12, left: 0, bottom: 12 }}
-              >
-                <defs>
-                  <linearGradient id="aktuellFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={CHART_FARBEN.yolk} stopOpacity={0.35} />
-                    <stop offset="100%" stopColor={CHART_FARBEN.yolk} stopOpacity={0.05} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid {...CHART_GRID} vertical={false} />
-                <XAxis
-                  dataKey="label"
-                  stroke={CHART_FARBEN.inkMuted}
-                  tick={AXIS_TICK}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis
-                  tickFormatter={(v: number) => formatZahl(v)}
-                  stroke={CHART_FARBEN.inkMuted}
-                  tick={AXIS_TICK}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <Tooltip
-                  formatter={(v: number) => formatZahl(v)}
-                  labelFormatter={(l) => String(l)}
-                  contentStyle={TOOLTIP_STYLE}
-                  labelStyle={{ color: CHART_FARBEN.ink }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="aktuell"
-                  stroke="none"
-                  fill="url(#aktuellFill)"
-                  isAnimationActive={false}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="vorjahr"
-                  stroke={CHART_FARBEN.inkMuted}
-                  strokeWidth={1.5}
-                  strokeDasharray="4 4"
-                  dot={false}
-                  isAnimationActive={false}
-                  name="Vorjahreszeitraum"
-                />
-                <Line
-                  type="monotone"
-                  dataKey="aktuell"
-                  stroke={CHART_FARBEN.yolk}
-                  strokeWidth={2.5}
-                  dot={{ r: 3, fill: CHART_FARBEN.yolk, stroke: CHART_FARBEN.surface, strokeWidth: 1.5 }}
-                  isAnimationActive={false}
-                  name="Zeitraum"
-                />
-              </ComposedChart>
-            </ResponsiveContainer>
+            <VerlaufChart verlauf={verlauf} />
           )}
         </Panel>
 
         <Panel
           className="lg:col-span-4"
-          eyebrow="Verteilung"
-          title={
-            <>
-              Umsatz <span className="italic">nach Verpackung</span>
-            </>
-          }
-          actions={
-            <Link
-              to="/artikel"
-              className="text-xs font-mono text-muted-foreground hover:text-ink underline decoration-rule underline-offset-4"
-            >
-              Alle Artikel →
-            </Link>
-          }
+          title="Umsatz nach Verpackung"
+          actions={<Link to="/artikel" className={LINK_KLASSEN}>Alle Artikel</Link>}
         >
-          {loading || !daten ? (
-            <Skeleton className="h-[280px]" />
-          ) : (
-            <ol className="space-y-4">
-              {top5Artikel.map((a, i) => {
-                const pct = Math.max(2, (a.umsatz / maxUmsatzArtikel) * 100);
-                return (
-                  <li
-                    key={a.artikel_code}
-                    onClick={() => navigate(`/artikel/${encodeURIComponent(a.artikel_code)}`)}
-                    className="cursor-pointer space-y-1.5 group"
-                  >
-                    <div className="flex items-baseline justify-between gap-3">
-                      <span className="flex items-baseline gap-3 min-w-0">
-                        <span className="font-mono text-[10px] text-muted-foreground tabular-nums w-5">
-                          {String(i + 1).padStart(2, "0")}
-                        </span>
-                        <span className="text-sm text-ink group-hover:text-yolk truncate">
-                          {artikelLabel(a.artikel_code)}
-                        </span>
-                      </span>
-                      <span className="font-mono text-sm tabular-nums text-ink shrink-0">
-                        {formatEuro(a.umsatz)}
-                      </span>
-                    </div>
-                    <div className="h-1.5 rounded-full bg-rule/40 overflow-hidden">
-                      <div
-                        className="h-full bg-sage rounded-full transition-all"
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                  </li>
-                );
-              })}
-            </ol>
-          )}
+          {bereit ? <Rangliste eintraege={topArtikel} balkenKlasse="bg-ink/70" /> : <Skeleton className="h-[260px]" />}
         </Panel>
       </div>
 
-      {/* Top-5-Kunden + Aktivität */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:gap-6 lg:grid-cols-12">
         <Panel
           className="lg:col-span-8"
-          eyebrow="Top 5"
-          title={
-            <>
-              Kunden <span className="italic">nach Eiermenge</span>
-            </>
-          }
-          actions={
-            <Link
-              to="/ranking"
-              className="text-xs font-mono text-muted-foreground hover:text-ink underline decoration-rule underline-offset-4"
-            >
-              Vollständige Rangliste →
-            </Link>
-          }
+          title="Top-Kunden nach Eiern"
+          actions={<Link to="/ranking" className={LINK_KLASSEN}>Ganze Rangliste</Link>}
         >
-          {loading || !daten ? (
-            <Skeleton className="h-[260px]" />
-          ) : (
-            <ol className="space-y-4">
-              {top5Kunden.map((k, i) => {
-                const pct = Math.max(2, (k.eier / maxEierKunde) * 100);
-                return (
-                  <li
-                    key={k.kundennummer}
-                    onClick={() => navigate(`/kunden/${encodeURIComponent(k.kundennummer)}`)}
-                    className="cursor-pointer space-y-1.5 group"
-                  >
-                    <div className="flex items-baseline justify-between gap-3">
-                      <span className="flex items-baseline gap-3 min-w-0">
-                        <span className="font-mono text-[10px] text-muted-foreground tabular-nums w-5">
-                          {String(i + 1).padStart(2, "0")}
-                        </span>
-                        <span className="text-sm text-ink group-hover:text-yolk truncate">
-                          {k.kundenname}
-                        </span>
-                      </span>
-                      <span className="font-mono text-sm tabular-nums text-ink shrink-0">
-                        {formatZahl(k.eier)}
-                      </span>
-                    </div>
-                    <div className="h-2 rounded-full bg-rule/40 overflow-hidden">
-                      <div
-                        className="h-full bg-yolk rounded-full transition-all"
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                  </li>
-                );
-              })}
-            </ol>
-          )}
+          {bereit ? <Rangliste eintraege={topKunden} balkenKlasse="bg-brand" /> : <Skeleton className="h-[260px]" />}
         </Panel>
 
-        <Panel className="lg:col-span-4" eyebrow="Aktivität" title="Letzte Imports">
-          {loading || !imports ? (
-            <Skeleton className="h-[260px]" />
-          ) : imports.length === 0 ? (
-            <EmptyState
-              illustration={<Hen />}
-              title="Noch keine Imports"
-              description="Laden Sie eine CSV im Bereich Import hoch, um Auswertungen zu sehen."
-              action={
-                <Link
-                  to="/import"
-                  className="inline-flex items-center gap-2 rounded-full bg-yolk text-ink px-4 py-2 text-sm font-medium hover:bg-yolk/90 active:scale-95 transition min-h-[44px]"
-                >
-                  Zum Import
-                </Link>
-              }
-            />
-          ) : (
-            <ul className="space-y-5">
-              {imports.map((imp) => (
-                <li key={imp.id} className="flex gap-3">
-                  <span
-                    className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-sage"
-                    aria-hidden="true"
-                  />
-                  <Link
-                    to={`/import/${imp.id}`}
-                    className="block min-w-0 flex-1 hover:text-yolk transition"
-                  >
-                    <div className="text-sm text-ink">
-                      {formatZahl(imp.zeilen_importiert)} Zeilen importiert
-                    </div>
-                    <div className="font-mono text-xs text-muted-foreground truncate">
-                      {formatDatum(imp.import_datum.slice(0, 10))} · {imp.dateiname}
-                    </div>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
+        <Panel className="lg:col-span-4" title="Letzte Imports">
+          {loading || !imports ? <Skeleton className="h-[200px]" /> : <LetzteImports imports={imports} />}
         </Panel>
       </div>
     </div>

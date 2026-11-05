@@ -92,7 +92,7 @@ export function DataTable<TData>({
                 setGlobalFilter(e.target.value);
               }
             }}
-            className="pl-9 h-11 bg-surface border-rule font-mono text-xs"
+            className="pl-9 h-11 bg-surface border-rule tabular-nums text-xs"
           />
         </div>
       )}
@@ -109,7 +109,7 @@ export function DataTable<TData>({
                   return (
                     <TableHead
                       key={header.id}
-                      className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground bg-background/40"
+                      className="tabular-nums text-xs text-muted-foreground bg-background/40"
                     >
                       {header.isPlaceholder ? null : (
                         <button
@@ -120,8 +120,8 @@ export function DataTable<TData>({
                           className={`flex items-center gap-1 ${sortable ? "cursor-pointer select-none hover:text-ink transition" : ""}`}
                         >
                           {flexRender(header.column.columnDef.header, header.getContext())}
-                          {sortDir === "asc" && <ArrowUp className="h-3 w-3 text-yolk" />}
-                          {sortDir === "desc" && <ArrowDown className="h-3 w-3 text-yolk" />}
+                          {sortDir === "asc" && <ArrowUp className="h-3 w-3 text-brand-strong" />}
+                          {sortDir === "desc" && <ArrowDown className="h-3 w-3 text-brand-strong" />}
                         </button>
                       )}
                     </TableHead>
@@ -142,7 +142,7 @@ export function DataTable<TData>({
                 <TableRow
                   key={row.id}
                   onClick={onRowClick ? () => onRowClick(row.original) : undefined}
-                  className={`border-rule ${onRowClick ? "cursor-pointer hover:bg-yolk/5 transition" : ""}`}
+                  className={`border-rule ${onRowClick ? "cursor-pointer hover:bg-brand/10 transition" : ""}`}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id} className="text-sm">
@@ -185,39 +185,37 @@ export function DataTable<TData>({
                 onClick={onRowClick ? () => onRowClick(row.original) : undefined}
                 disabled={!onRowClick}
                 className={cn(
-                  "w-full text-left rounded-lg border border-rule bg-surface p-4 space-y-3 transition",
+                  "w-full text-left rounded-xl border border-rule bg-surface p-4 space-y-3 transition",
                   onRowClick
-                    ? "hover:border-yolk hover:bg-yolk/[0.03] active:scale-[0.99] cursor-pointer"
+                    ? "hover:border-brand-strong hover:bg-brand/[0.03] active:scale-[0.99] cursor-pointer"
                     : "cursor-default",
                 )}
               >
                 {primaries.length > 0 && (
                   <div className="flex items-start justify-between gap-3">
                     {primaries[0] && (
-                      <div className="min-w-0 flex-1 font-display text-base text-ink leading-tight break-words">
+                      <div className="min-w-0 flex-1 text-base text-ink leading-tight break-words">
                         {flexRender(primaries[0].cell.column.columnDef.cell, primaries[0].cell.getContext())}
                       </div>
                     )}
                     {primaries[1] && (
-                      <div className="shrink-0 max-w-[45%] font-mono text-sm tabular-nums text-ink text-right break-words">
+                      <div className="shrink-0 max-w-[45%] tabular-nums text-sm text-ink text-right break-words">
                         {flexRender(primaries[1].cell.column.columnDef.cell, primaries[1].cell.getContext())}
                       </div>
                     )}
                   </div>
                 )}
                 {secondaries.length > 0 && (
-                  <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+                  <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5 min-[480px]:grid-cols-3">
                     {secondaries.map(({ cell, meta }) => {
                       const headerNode = cell.column.columnDef.header;
                       const label =
                         meta.mobileLabel ??
                         (typeof headerNode === "string" ? headerNode : cell.column.id);
                       return (
-                        <div key={cell.id} className="flex justify-between gap-2 min-w-0">
-                          <dt className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground truncate max-w-[45%] shrink-0">
-                            {label}
-                          </dt>
-                          <dd className="min-w-0 font-mono text-xs text-ink tabular-nums text-right break-words">
+                        <div key={cell.id} className="min-w-0">
+                          <dt className="truncate text-xs text-muted-foreground">{label}</dt>
+                          <dd className="min-w-0 break-words text-sm tabular-nums text-ink">
                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
                           </dd>
                         </div>
@@ -233,8 +231,8 @@ export function DataTable<TData>({
 
       {/* Pagination — touch-fest */}
       <div className="flex items-center justify-between gap-3">
-        <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-          {table.getState().pagination.pageIndex + 1} / {Math.max(table.getPageCount(), 1)} · {table.getFilteredRowModel().rows.length} Zeilen
+        <span className="tabular-nums text-xs text-muted-foreground">
+          {table.getState().pagination.pageIndex + 1} / {Math.max(table.getPageCount(), 1)} ({table.getFilteredRowModel().rows.length} Zeilen)
         </span>
         <div className="flex gap-2">
           <Button

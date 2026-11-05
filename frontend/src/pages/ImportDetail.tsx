@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { TABELLE_STICKY_ERSTE_SPALTE } from "@/lib/tabelle";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -52,15 +53,15 @@ export default function ImportDetail() {
       <PageHeader
         back={{ to: "/import", label: "Zur Importhistorie" }}
         eyebrow="Import"
-        title={<span className="font-mono text-2xl">{detail.dateiname}</span>}
+        title={<span className="tabular-nums text-2xl">{detail.dateiname}</span>}
       />
 
-      <Panel eyebrow="Zusammenfassung" title="Kennzahlen">
+      <Panel title="Kennzahlen">
         <dl className="grid grid-cols-1 md:grid-cols-2 gap-y-3 text-sm">
           <dt className="eyebrow self-center">Import-Datum</dt>
-          <dd className="font-mono text-xs">{detail.import_datum}</dd>
+          <dd className="tabular-nums text-xs">{detail.import_datum}</dd>
           <dt className="eyebrow self-center">Datumsbereich</dt>
-          <dd className="font-mono text-xs">{detail.datumsbereich ?? "—"}</dd>
+          <dd className="tabular-nums text-xs">{detail.datumsbereich ?? "—"}</dd>
           <dt className="eyebrow self-center">Importiert</dt>
           <dd><Badge variant="success">{detail.zeilen_importiert}</Badge></dd>
           <dt className="eyebrow self-center">Übersprungen</dt>
@@ -73,7 +74,7 @@ export default function ImportDetail() {
       {aelterer && (
         <Panel>
           <p className="text-sm text-muted-foreground">
-            <AlertTriangle className="mb-1 mr-1 inline h-4 w-4 text-yolk" />
+            <AlertTriangle className="mb-1 mr-1 inline h-4 w-4 text-brand-strong" />
             Dieser Import wurde mit einer älteren App-Version (vor v1.0.3) erstellt.
             Detail-Daten pro Zeile stehen erst für neue Importe zur Verfügung — die Zähler oben sind weiterhin korrekt.
           </p>
@@ -99,7 +100,7 @@ export default function ImportDetail() {
       {detail.zeilen_fehlerhaft === 0 && detail.zeilen_uebersprungen === 0 && (
         <Panel>
           <p className="text-center text-sm text-muted-foreground py-6">
-            <FileSpreadsheet className="mb-1 inline h-4 w-4 text-sage mr-1" />
+            <FileSpreadsheet className="mb-1 inline h-4 w-4 text-positive mr-1" />
             Vollständig fehlerfrei — alle {detail.zeilen_importiert} Zeilen importiert.
           </p>
         </Panel>
@@ -119,22 +120,22 @@ function ProtokollPanel({
     return <Panel><p className="text-center text-sm text-muted-foreground py-6">{leerHinweis}</p></Panel>;
   }
   return (
-    <Panel eyebrow="Tabelle" title={title}>
+    <Panel title={title}>
       <div className="overflow-x-auto">
-        <Table>
+        <Table className={TABELLE_STICKY_ERSTE_SPALTE}>
           <TableHeader>
             <TableRow className="border-rule">
-              <TableHead className="w-24 font-mono text-[10px] uppercase tracking-[0.12em]">CSV-Zeile</TableHead>
-              <TableHead className="w-1/3 font-mono text-[10px] uppercase tracking-[0.12em]">Grund</TableHead>
-              <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Rohdaten</TableHead>
+              <TableHead className="w-24 tabular-nums text-xs">CSV-Zeile</TableHead>
+              <TableHead className="w-1/3 tabular-nums text-xs">Grund</TableHead>
+              <TableHead className="tabular-nums text-xs">Rohdaten</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {zeilen.map((z) => (
               <TableRow key={z.csv_zeile} className="border-rule">
-                <TableCell className="font-mono tabular-nums">{z.csv_zeile}</TableCell>
+                <TableCell className="tabular-nums">{z.csv_zeile}</TableCell>
                 <TableCell className="text-sm">{z.grund}</TableCell>
-                <TableCell className="font-mono text-xs text-muted-foreground">{z.rohdaten}</TableCell>
+                <TableCell className="tabular-nums text-xs text-muted-foreground">{z.rohdaten}</TableCell>
               </TableRow>
             ))}
           </TableBody>

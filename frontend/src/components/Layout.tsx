@@ -1,7 +1,6 @@
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import {
   BarChart3,
-  Diamond,
   LayoutDashboard,
   ListOrdered,
   Menu,
@@ -10,16 +9,12 @@ import {
   Receipt,
   Settings,
   Upload,
+  Users,
 } from "lucide-react";
 import { ReactNode, useEffect, useState } from "react";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import wortmarke from "@/assets/buchenhof-wortmarke.png";
 
 interface NavItem {
   to: string;
@@ -27,157 +22,124 @@ interface NavItem {
   icon: ReactNode;
 }
 
+const ICON = "h-5 w-5 shrink-0";
+
 const NAV_ITEMS: NavItem[] = [
-  { to: "/", label: "Übersicht", icon: <LayoutDashboard className="h-5 w-5" /> },
-  { to: "/kunden", label: "Kunden", icon: <Diamond className="h-5 w-5" /> },
-  { to: "/artikel", label: "Artikel", icon: <Package className="h-5 w-5" /> },
-  { to: "/ranking", label: "Ranking", icon: <ListOrdered className="h-5 w-5" /> },
-  { to: "/belege", label: "Belege", icon: <Receipt className="h-5 w-5" /> },
-  { to: "/jahresvergleich", label: "Jahresvergleich", icon: <BarChart3 className="h-5 w-5" /> },
-  { to: "/import", label: "Import", icon: <Upload className="h-5 w-5" /> },
-  { to: "/konfiguration", label: "Konfiguration", icon: <Settings className="h-5 w-5" /> },
+  { to: "/", label: "Übersicht", icon: <LayoutDashboard className={ICON} /> },
+  { to: "/kunden", label: "Kunden", icon: <Users className={ICON} /> },
+  { to: "/artikel", label: "Artikel", icon: <Package className={ICON} /> },
+  { to: "/ranking", label: "Ranking", icon: <ListOrdered className={ICON} /> },
+  { to: "/belege", label: "Belege", icon: <Receipt className={ICON} /> },
+  { to: "/jahresvergleich", label: "Jahresvergleich", icon: <BarChart3 className={ICON} /> },
+  { to: "/import", label: "Import", icon: <Upload className={ICON} /> },
+  { to: "/konfiguration", label: "Konfiguration", icon: <Settings className={ICON} /> },
 ];
 
-// Auf <md zeigt die Bottom-Nav die ersten 4 + "Mehr"-Sheet (mit dem Rest).
+// Unter md: die ersten 4 Bereiche als Tabs unten, der Rest im „Mehr"-Sheet.
 const PRIMARY_MOBILE = NAV_ITEMS.slice(0, 4);
 const SECONDARY_MOBILE = NAV_ITEMS.slice(4);
 
-/** Sauber gezeichnete Ei-Silhouette mit warmem Dotter-Glanz. */
-function EggMark({ className = "" }: { className?: string }) {
+/** Buchenhof-Wortmarke (weiße Schrift, für die Anthrazit-Fläche) + App-Name. */
+function Marke({ kompakt = false }: { kompakt?: boolean }) {
   return (
-    <svg viewBox="0 0 28 28" className={className} aria-hidden="true">
-      <ellipse cx="14" cy="15.5" rx="9.5" ry="11.5" fill="#FAF5E6" stroke="#1A1610" strokeWidth="1.2" />
-      <ellipse cx="14" cy="16" rx="5.2" ry="6.2" fill="#D69826" />
-      <ellipse cx="12.2" cy="13.5" rx="1.6" ry="2.1" fill="#F4ECD7" opacity="0.6" />
-    </svg>
-  );
-}
-
-/** Logo-Lockup mit Schriftzug — für Sidebar & Top-Bar wiederverwendbar. */
-function LogoLockup({ compact = false }: { compact?: boolean }) {
-  return (
-    <div className="flex items-center gap-3">
-      <EggMark className={compact ? "h-7 w-7" : "h-8 w-8"} />
-      <div className="leading-tight">
-        <div className="font-display italic text-xl text-ink">Kerba</div>
-        {!compact && <div className="eyebrow">Bio-Ei GbR</div>}
-      </div>
+    <div className={cn("flex flex-col", kompakt ? "gap-0.5" : "gap-2")}>
+      <img
+        src={wortmarke}
+        alt="Buchenhof"
+        className={cn("w-auto", kompakt ? "h-6" : "h-9")}
+        width={1181}
+        height={236}
+      />
+      <span className={cn("text-chrome-foreground/65", kompakt ? "text-[11px]" : "text-xs")}>
+        Eierverkauf · Kerba Bio-Ei GbR
+      </span>
     </div>
   );
 }
 
-/** Desktop-Sidebar: ab lg sichtbar, 240 px Breite, sticky. */
+/** Navigationsliste auf Anthrazit — Sidebar (lg+) und Drawer (md–lg) teilen sie. */
+function ChromeNav({ onNavigate }: { onNavigate?: () => void }) {
+  return (
+    <nav className="space-y-1 px-3" aria-label="Hauptnavigation">
+      {NAV_ITEMS.map((item) => (
+        <NavLink
+          key={item.to}
+          to={item.to}
+          end={item.to === "/"}
+          onClick={onNavigate}
+          className={({ isActive }) =>
+            cn(
+              "flex min-h-[44px] items-center gap-3 rounded-xl px-3.5 text-sm transition",
+              isActive
+                ? "bg-brand font-semibold text-brand-foreground"
+                : "text-chrome-foreground/75 hover:bg-white/[0.06] hover:text-chrome-foreground",
+            )
+          }
+        >
+          {item.icon}
+          <span>{item.label}</span>
+        </NavLink>
+      ))}
+    </nav>
+  );
+}
+
+/** Desktop-Sidebar ab lg: Anthrazit wie der Kopf von buchenhof.de. */
 function DesktopSidebar() {
   return (
-    <aside className="hidden lg:flex w-[240px] shrink-0 flex-col border-r border-rule sticky top-0 h-screen">
-      <div className="px-6 pt-8 pb-10">
-        <LogoLockup />
+    <aside className="sticky top-0 hidden h-screen w-[248px] shrink-0 flex-col overflow-y-auto bg-chrome lg:flex">
+      <div className="px-6 pb-8 pt-7">
+        <Marke />
       </div>
-      <nav className="px-3 pb-6 space-y-1 overflow-y-auto">
-        {NAV_ITEMS.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.to === "/"}
-            className={({ isActive }) =>
-              cn(
-                "relative flex items-center gap-3 rounded-md px-4 py-3 text-sm transition min-h-[44px]",
-                "active:scale-[0.99]",
-                isActive
-                  ? "bg-yolk/10 text-ink font-medium"
-                  : "text-muted-foreground hover:bg-yolk/5 hover:text-ink",
-              )
-            }
-          >
-            {({ isActive }) => (
-              <>
-                {isActive && (
-                  <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-sm bg-yolk" aria-hidden="true" />
-                )}
-                <span className="shrink-0">{item.icon}</span>
-                <span className="flex-1">{item.label}</span>
-              </>
-            )}
-          </NavLink>
-        ))}
-      </nav>
+      <ChromeNav />
     </aside>
   );
 }
 
-/** Mobile/Tablet-Top-Bar: sticky, 56 px, mit Hamburger (Drawer). */
+/** Kopfzeile unter lg. Hamburger nur md–lg; darunter navigiert die Tab-Leiste. */
 function MobileTopBar({ onMenuOpen }: { onMenuOpen: () => void }) {
   return (
     <header
-      className="lg:hidden sticky top-0 z-30 h-14 flex items-center justify-between gap-3 px-4 border-b border-rule bg-surface/95 backdrop-blur"
+      className="sticky top-0 z-30 flex items-center gap-2 bg-chrome px-4 lg:hidden"
       style={{ paddingTop: "var(--safe-top)" }}
     >
       <button
         type="button"
         onClick={onMenuOpen}
-        className="inline-flex items-center justify-center h-11 w-11 rounded-md text-ink hover:bg-yolk/10 active:scale-95 transition"
+        className="-ml-2 hidden h-11 w-11 items-center justify-center rounded-lg text-chrome-foreground transition hover:bg-white/10 md:inline-flex"
         aria-label="Menü öffnen"
       >
         <Menu className="h-5 w-5" />
       </button>
-      <LogoLockup compact />
-      <span className="h-11 w-11" aria-hidden="true" />
+      <div className="flex h-14 items-center">
+        <Marke kompakt />
+      </div>
     </header>
   );
 }
 
-/** Drawer-Inhalt: identisch zur Desktop-Sidebar, in Sheet eingebettet. */
-function DrawerNav({ onNavigate }: { onNavigate: () => void }) {
+const TAB_KLASSEN =
+  "flex min-h-[60px] w-full flex-col items-center justify-center gap-1 pb-1.5 pt-2 text-[11px] font-medium transition active:scale-95";
+
+/** Icon mit grüner Pille, wenn aktiv. */
+function TabIcon({ aktiv, children }: { aktiv: boolean; children: ReactNode }) {
   return (
-    <div className="flex flex-col h-full">
-      <SheetHeader>
-        <SheetTitle className="sr-only">Navigation</SheetTitle>
-        <LogoLockup />
-      </SheetHeader>
-      <nav className="px-3 py-4 space-y-1 overflow-y-auto flex-1">
-        {NAV_ITEMS.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.to === "/"}
-            onClick={onNavigate}
-            className={({ isActive }) =>
-              cn(
-                "relative flex items-center gap-3 rounded-md px-4 py-3 text-sm transition min-h-[48px]",
-                "active:scale-[0.99]",
-                isActive
-                  ? "bg-yolk/10 text-ink font-medium"
-                  : "text-muted-foreground hover:bg-yolk/5 hover:text-ink",
-              )
-            }
-          >
-            {({ isActive }) => (
-              <>
-                {isActive && (
-                  <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-sm bg-yolk" aria-hidden="true" />
-                )}
-                <span className="shrink-0">{item.icon}</span>
-                <span className="flex-1">{item.label}</span>
-              </>
-            )}
-          </NavLink>
-        ))}
-      </nav>
-    </div>
+    <span
+      className={cn(
+        "flex h-7 w-12 items-center justify-center rounded-full transition",
+        aktiv && "bg-brand text-brand-foreground",
+      )}
+    >
+      {children}
+    </span>
   );
 }
 
-/** Bottom-Tab-Bar: nur <md, 4 Primaer-Tabs + "Mehr"-Sheet. */
-function MobileBottomNav({
-  onMoreOpen,
-  moreActive,
-}: {
-  onMoreOpen: () => void;
-  moreActive: boolean;
-}) {
+/** Untere Tab-Leiste: nur unter md, 4 Bereiche + „Mehr". */
+function MobileBottomNav({ onMoreOpen, moreActive }: { onMoreOpen: () => void; moreActive: boolean }) {
   return (
     <nav
-      className="md:hidden fixed inset-x-0 bottom-0 z-30 border-t border-rule bg-surface/95 backdrop-blur"
+      className="fixed inset-x-0 bottom-0 z-30 border-t border-rule bg-surface/95 backdrop-blur md:hidden"
       style={{ paddingBottom: "var(--safe-bottom)" }}
       aria-label="Hauptnavigation"
     >
@@ -188,19 +150,12 @@ function MobileBottomNav({
               to={item.to}
               end={item.to === "/"}
               className={({ isActive }) =>
-                cn(
-                  "relative flex flex-col items-center justify-center gap-1 min-h-[56px] py-2 text-[10px] uppercase tracking-wider font-mono transition",
-                  "active:scale-95",
-                  isActive ? "text-yolk" : "text-muted-foreground",
-                )
+                cn(TAB_KLASSEN, isActive ? "text-ink" : "text-muted-foreground")
               }
             >
               {({ isActive }) => (
                 <>
-                  {isActive && (
-                    <span className="absolute top-0 left-1/2 -translate-x-1/2 h-[2px] w-8 rounded-full bg-yolk" aria-hidden="true" />
-                  )}
-                  {item.icon}
+                  <TabIcon aktiv={isActive}>{item.icon}</TabIcon>
                   <span>{item.label}</span>
                 </>
               )}
@@ -211,17 +166,12 @@ function MobileBottomNav({
           <button
             type="button"
             onClick={onMoreOpen}
-            className={cn(
-              "relative flex flex-col items-center justify-center gap-1 w-full min-h-[56px] py-2 text-[10px] uppercase tracking-wider font-mono transition",
-              "active:scale-95",
-              moreActive ? "text-yolk" : "text-muted-foreground",
-            )}
+            className={cn(TAB_KLASSEN, moreActive ? "text-ink" : "text-muted-foreground")}
             aria-label="Weitere Bereiche"
           >
-            {moreActive && (
-              <span className="absolute top-0 left-1/2 -translate-x-1/2 h-[2px] w-8 rounded-full bg-yolk" aria-hidden="true" />
-            )}
-            <MoreHorizontal className="h-5 w-5" />
+            <TabIcon aktiv={moreActive}>
+              <MoreHorizontal className={ICON} />
+            </TabIcon>
             <span>Mehr</span>
           </button>
         </li>
@@ -235,12 +185,9 @@ export function Layout() {
   const [moreOpen, setMoreOpen] = useState(false);
   const location = useLocation();
 
-  // Routen, die unter "Mehr" sitzen — fuer Highlight-Logik.
-  const moreActive = SECONDARY_MOBILE.some((it) =>
-    location.pathname.startsWith(it.to),
-  );
+  const moreActive = SECONDARY_MOBILE.some((it) => location.pathname.startsWith(it.to));
 
-  // Beim Routenwechsel offene Sheets schliessen (Drawer + Mehr).
+  // Beim Routenwechsel offene Sheets schließen (Drawer + Mehr).
   useEffect(() => {
     setDrawerOpen(false);
     setMoreOpen(false);
@@ -250,31 +197,34 @@ export function Layout() {
     <div className="flex min-h-dvh bg-background">
       <DesktopSidebar />
 
-      <div className="flex flex-1 min-w-0 flex-col">
-        {/* Mobile/Tablet-Top-Bar mit Hamburger -> Drawer */}
-        <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-          <MobileTopBar onMenuOpen={() => setDrawerOpen(true)} />
-          <SheetTrigger className="sr-only">Menü</SheetTrigger>
-          <SheetContent side="left" className="p-0 w-72">
-            <DrawerNav onNavigate={() => setDrawerOpen(false)} />
-          </SheetContent>
-        </Sheet>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <MobileTopBar onMenuOpen={() => setDrawerOpen(true)} />
 
-        <main className="flex-1 px-4 sm:px-6 md:px-8 lg:px-10 py-6 md:py-8 pb-24 md:pb-8 overflow-y-auto min-w-0">
+        <main className="min-w-0 flex-1 px-4 pb-28 pt-6 sm:px-6 md:px-8 md:pb-10 md:pt-8 lg:px-10">
           <Outlet />
         </main>
       </div>
 
-      {/* Bottom-Nav nur unter md (<768) */}
+      {/* Drawer (md–lg): gleiche Anthrazit-Navigation wie die Sidebar */}
+      <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
+        <SheetContent side="left" className="w-72 border-none bg-chrome p-0 text-chrome-foreground">
+          <SheetHeader className="px-6 pb-6 pt-7 text-left">
+            <SheetTitle className="sr-only">Navigation</SheetTitle>
+            <Marke />
+          </SheetHeader>
+          <ChromeNav onNavigate={() => setDrawerOpen(false)} />
+        </SheetContent>
+      </Sheet>
+
       <MobileBottomNav onMoreOpen={() => setMoreOpen(true)} moreActive={moreActive} />
 
-      {/* "Mehr"-Sheet (Bottom) mit Sekundaer-Items */}
+      {/* „Mehr"-Sheet mit den übrigen Bereichen */}
       <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
-        <SheetContent side="bottom" className="rounded-t-2xl">
+        <SheetContent side="bottom" className="rounded-t-3xl">
           <SheetHeader>
             <SheetTitle>Weitere Bereiche</SheetTitle>
           </SheetHeader>
-          <div className="px-4 py-4 grid grid-cols-1 gap-1">
+          <div className="grid grid-cols-1 gap-1 px-2 py-4">
             {SECONDARY_MOBILE.map((item) => (
               <NavLink
                 key={item.to}
@@ -282,11 +232,8 @@ export function Layout() {
                 onClick={() => setMoreOpen(false)}
                 className={({ isActive }) =>
                   cn(
-                    "flex items-center gap-3 rounded-md px-4 py-3 text-sm min-h-[48px] transition",
-                    "active:scale-[0.99]",
-                    isActive
-                      ? "bg-yolk/10 text-ink font-medium"
-                      : "text-ink hover:bg-yolk/5",
+                    "flex min-h-[48px] items-center gap-3 rounded-xl px-4 text-sm transition",
+                    isActive ? "bg-brand font-semibold text-brand-foreground" : "text-ink hover:bg-brand/15",
                   )
                 }
               >

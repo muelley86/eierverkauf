@@ -21,9 +21,9 @@ export function ChartToggle({ render, initial = "bar" }: ChartToggleProps) {
             type="button"
             onClick={() => setModus(m)}
             className={cn(
-              "px-4 py-1.5 text-xs font-mono uppercase tracking-[0.1em] rounded-full transition",
+              "px-4 py-1.5 text-xs tabular-nums rounded-full transition",
               modus === m
-                ? "bg-yolk text-ink"
+                ? "bg-brand text-brand-foreground"
                 : "text-muted-foreground hover:text-ink",
             )}
           >

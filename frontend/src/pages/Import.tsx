@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { TABELLE_STICKY_ERSTE_SPALTE } from "@/lib/tabelle";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader, Panel } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
@@ -147,18 +148,18 @@ export default function Import() {
         subtitle="Semikolon-getrennt, UTF-8-BOM. Kopfzeile wird automatisch erkannt."
       />
 
-      <Panel eyebrow="Upload" title="Datei wählen">
+      <Panel title="Datei wählen">
         <div
           {...getRootProps()}
           className={`flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 sm:p-12 transition cursor-pointer ${
             isDragActive
-              ? "border-yolk bg-yolk/10 shadow-[inset_0_0_0_2px_rgba(214,152,38,0.25)]"
-              : "border-rule hover:border-yolk/60 hover:bg-yolk/5"
+              ? "border-brand-strong bg-brand/20 ring-2 ring-inset ring-brand/40"
+              : "border-rule hover:border-brand-strong/60 hover:bg-brand/10"
           }`}
         >
           <input {...getInputProps()} />
-          <UploadCloud className={`h-10 w-10 mb-3 ${isDragActive ? "text-yolk" : "text-muted-foreground"}`} />
-          <p className="font-display text-lg sm:text-xl text-ink text-center">
+          <UploadCloud className={`h-10 w-10 mb-3 ${isDragActive ? "text-brand-strong" : "text-muted-foreground"}`} />
+          <p className="text-lg sm:text-xl text-ink text-center">
             {isDragActive ? "Loslassen zum Hochladen…" : "Datei hierher ziehen"}
           </p>
           <p className="mt-1 text-sm text-muted-foreground text-center">oder tippen zum Auswählen</p>
@@ -166,16 +167,16 @@ export default function Import() {
         {datei && (
           <div className="mt-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-lg border border-rule bg-background/40 px-4 py-3">
             <div className="flex items-center gap-3 text-sm min-w-0">
-              <FileSpreadsheet className="h-4 w-4 text-yolk shrink-0" />
-              <span className="font-mono truncate">{datei.name}</span>
-              <Badge variant="outline" className="border-rule font-mono text-[10px] shrink-0">
+              <FileSpreadsheet className="h-4 w-4 text-brand-strong shrink-0" />
+              <span className="tabular-nums truncate">{datei.name}</span>
+              <Badge variant="outline" className="border-rule tabular-nums text-xs shrink-0">
                 {(datei.size / 1024).toFixed(1)} KB
               </Badge>
             </div>
             <Button
               onClick={importieren}
               disabled={loading || importiert}
-              className="bg-yolk text-ink hover:bg-yolk/90 w-full sm:w-auto"
+              className="bg-brand text-brand-foreground hover:bg-brand/90 w-full sm:w-auto"
             >
               {importiert ? "Importiert" : loading ? "Verarbeite…" : "Importieren"}
             </Button>
@@ -184,13 +185,13 @@ export default function Import() {
       </Panel>
 
       {vorschau && (
-        <Panel eyebrow="Vorschau" title={`Erste ${vorschau.anzahl} Zeilen`}>
+        <Panel title={`Erste ${vorschau.anzahl} Zeilen`}>
           <div className="overflow-x-auto">
-            <Table>
+            <Table className={TABELLE_STICKY_ERSTE_SPALTE}>
               <TableHeader>
                 <TableRow className="border-rule">
                   {Object.keys(vorschau.zeilen[0] ?? {}).map((k) => (
-                    <TableHead key={k} className="font-mono text-[10px] uppercase tracking-[0.12em]">{k}</TableHead>
+                    <TableHead key={k} className="tabular-nums text-xs">{k}</TableHead>
                   ))}
                 </TableRow>
               </TableHeader>
@@ -198,7 +199,7 @@ export default function Import() {
                 {vorschau.zeilen.map((zeile, idx) => (
                   <TableRow key={idx} className="border-rule">
                     {Object.keys(zeile).map((k) => (
-                      <TableCell key={k} className="font-mono text-xs">{String(zeile[k] ?? "")}</TableCell>
+                      <TableCell key={k} className="tabular-nums text-xs">{String(zeile[k] ?? "")}</TableCell>
                     ))}
                   </TableRow>
                 ))}
@@ -209,15 +210,15 @@ export default function Import() {
       )}
 
       {protokoll && (
-        <Panel eyebrow="Protokoll" title="Ergebnis">
+        <Panel title="Ergebnis">
           <div className="space-y-5">
             {protokoll.header_warnungen?.length > 0 && (
-              <div className="rounded-lg border border-yolk/40 bg-yolk/10 p-4">
+              <div className="rounded-lg border border-brand-strong/40 bg-brand/20 p-4">
                 <div className="mb-2 flex items-center gap-2 text-sm font-medium text-ink">
-                  <Info className="h-4 w-4 text-yolk" />
+                  <Info className="h-4 w-4 text-brand-strong" />
                   Header-Warnungen
                 </div>
-                <ul className="space-y-1 text-xs text-muted-foreground font-mono">
+                <ul className="space-y-1 text-xs text-muted-foreground tabular-nums">
                   {protokoll.header_warnungen.map((w, i) => <li key={i}>• {w}</li>)}
                 </ul>
               </div>
@@ -226,12 +227,12 @@ export default function Import() {
             <dl className="grid grid-cols-1 md:grid-cols-2 gap-y-2 text-sm">
               <dt className="eyebrow self-center">Datei</dt>
               <dd>
-                <Link to={`/import/${protokoll.import_id}`} className="text-yolk hover:underline font-mono">
+                <Link to={`/import/${protokoll.import_id}`} className="text-brand-strong hover:underline tabular-nums">
                   {protokoll.dateiname}
                 </Link>
               </dd>
               <dt className="eyebrow self-center">Datumsbereich</dt>
-              <dd className="font-mono text-xs">{protokoll.datumsbereich}</dd>
+              <dd className="tabular-nums text-xs">{protokoll.datumsbereich}</dd>
               <dt className="eyebrow self-center">Importiert</dt>
               <dd><Badge variant="success">{protokoll.zeilen_importiert}</Badge></dd>
               <dt className="eyebrow self-center">Übersprungen</dt>
@@ -241,8 +242,8 @@ export default function Import() {
             </dl>
 
             {protokoll.fehler_details.length > 0 && (
-              <div className="rounded-lg border border-brick/30 bg-brick/5 p-4">
-                <div className="mb-2 flex items-center gap-2 text-sm font-medium text-brick">
+              <div className="rounded-lg border border-negative/30 bg-negative/5 p-4">
+                <div className="mb-2 flex items-center gap-2 text-sm font-medium text-negative">
                   <AlertTriangle className="h-4 w-4" />
                   Fehlerprotokoll
                   {protokoll.zeilen_fehlerhaft > protokoll.fehler_details.length && (
@@ -251,7 +252,7 @@ export default function Import() {
                     </span>
                   )}
                 </div>
-                <ul className="space-y-1 font-mono text-xs">
+                <ul className="space-y-1 tabular-nums text-xs">
                   {protokoll.fehler_details.map((z, i) => <li key={i}>{z}</li>)}
                 </ul>
               </div>
@@ -260,7 +261,7 @@ export default function Import() {
         </Panel>
       )}
 
-      <Panel eyebrow="Historie" title="Frühere Importe">
+      <Panel title="Frühere Importe">
         {historie.length === 0 ? (
           <EmptyState
             illustration={<Hen />}
@@ -271,31 +272,31 @@ export default function Import() {
           <>
             {/* Tablet/Desktop: klassische Tabelle */}
             <div className="hidden md:block">
-              <Table>
+              <Table className={TABELLE_STICKY_ERSTE_SPALTE}>
                 <TableHeader>
                   <TableRow className="border-rule">
-                    <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Datum</TableHead>
-                    <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Datei</TableHead>
-                    <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Zeitraum</TableHead>
-                    <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Importiert</TableHead>
-                    <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Übersprungen</TableHead>
-                    <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Fehlerhaft</TableHead>
+                    <TableHead className="tabular-nums text-xs">Datum</TableHead>
+                    <TableHead className="tabular-nums text-xs">Datei</TableHead>
+                    <TableHead className="tabular-nums text-xs">Zeitraum</TableHead>
+                    <TableHead className="tabular-nums text-xs">Importiert</TableHead>
+                    <TableHead className="tabular-nums text-xs">Übersprungen</TableHead>
+                    <TableHead className="tabular-nums text-xs">Fehlerhaft</TableHead>
                     <TableHead className="w-12" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {historie.map((h) => (
                     <TableRow key={h.id} className="border-rule">
-                      <TableCell className="font-mono text-xs">{h.import_datum}</TableCell>
+                      <TableCell className="tabular-nums text-xs">{h.import_datum}</TableCell>
                       <TableCell>
-                        <Link to={`/import/${h.id}`} className="text-yolk hover:underline font-mono">
+                        <Link to={`/import/${h.id}`} className="text-brand-strong hover:underline tabular-nums">
                           {h.dateiname}
                         </Link>
                       </TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">{h.datumsbereich ?? "—"}</TableCell>
-                      <TableCell className="font-mono tabular-nums">{h.zeilen_importiert}</TableCell>
-                      <TableCell className="font-mono tabular-nums text-muted-foreground">{h.zeilen_uebersprungen}</TableCell>
-                      <TableCell className={`font-mono tabular-nums ${h.zeilen_fehlerhaft > 0 ? "text-brick" : "text-muted-foreground"}`}>
+                      <TableCell className="tabular-nums text-xs text-muted-foreground">{h.datumsbereich ?? "—"}</TableCell>
+                      <TableCell className="tabular-nums">{h.zeilen_importiert}</TableCell>
+                      <TableCell className="tabular-nums text-muted-foreground">{h.zeilen_uebersprungen}</TableCell>
+                      <TableCell className={`tabular-nums tabular-nums ${h.zeilen_fehlerhaft > 0 ? "text-negative" : "text-muted-foreground"}`}>
                         {h.zeilen_fehlerhaft}
                       </TableCell>
                       <TableCell>
@@ -313,7 +314,7 @@ export default function Import() {
                           {loeschtId === h.id || h.wird_geloescht ? (
                             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                           ) : (
-                            <Trash2 className="h-4 w-4 text-brick" />
+                            <Trash2 className="h-4 w-4 text-negative" />
                           )}
                         </Button>
                       </TableCell>
@@ -333,7 +334,7 @@ export default function Import() {
                   <div className="flex items-start justify-between gap-3">
                     <Link
                       to={`/import/${h.id}`}
-                      className="min-w-0 flex-1 font-mono text-sm text-yolk hover:underline truncate"
+                      className="min-w-0 flex-1 tabular-nums text-sm text-brand-strong hover:underline truncate"
                     >
                       {h.dateiname}
                     </Link>
@@ -341,7 +342,7 @@ export default function Import() {
                       type="button"
                       onClick={() => loeschen(h.id)}
                       disabled={loeschtId !== null || h.wird_geloescht}
-                      className="shrink-0 inline-flex items-center justify-center h-11 w-11 rounded-md text-brick hover:bg-brick/10 active:scale-95 transition disabled:pointer-events-none disabled:opacity-50"
+                      className="shrink-0 inline-flex items-center justify-center h-11 w-11 rounded-md text-negative hover:bg-negative/10 active:scale-95 transition disabled:pointer-events-none disabled:opacity-50"
                       aria-label={
                         loeschtId === h.id || h.wird_geloescht
                           ? `Import ${h.dateiname} wird gelöscht`
@@ -355,21 +356,21 @@ export default function Import() {
                       )}
                     </button>
                   </div>
-                  <div className="font-mono text-[11px] text-muted-foreground">
+                  <div className="tabular-nums text-[11px] text-muted-foreground">
                     {formatDatum(h.import_datum.slice(0, 10))} · {h.datumsbereich ?? "—"}
                   </div>
                   <dl className="grid grid-cols-3 gap-2 text-center">
                     <div>
                       <dt className="eyebrow">Importiert</dt>
-                      <dd className="font-mono tabular-nums text-sm text-ink">{h.zeilen_importiert}</dd>
+                      <dd className="tabular-nums text-sm text-ink">{h.zeilen_importiert}</dd>
                     </div>
                     <div>
                       <dt className="eyebrow">Übersprungen</dt>
-                      <dd className="font-mono tabular-nums text-sm text-muted-foreground">{h.zeilen_uebersprungen}</dd>
+                      <dd className="tabular-nums text-sm text-muted-foreground">{h.zeilen_uebersprungen}</dd>
                     </div>
                     <div>
                       <dt className="eyebrow">Fehlerhaft</dt>
-                      <dd className={`font-mono tabular-nums text-sm ${h.zeilen_fehlerhaft > 0 ? "text-brick" : "text-muted-foreground"}`}>
+                      <dd className={`tabular-nums tabular-nums text-sm ${h.zeilen_fehlerhaft > 0 ? "text-negative" : "text-muted-foreground"}`}>
                         {h.zeilen_fehlerhaft}
                       </dd>
                     </div>

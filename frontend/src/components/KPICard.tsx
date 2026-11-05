@@ -1,45 +1,41 @@
-import { ReactNode } from "react";
-import { Area, AreaChart, Line, ResponsiveContainer } from "recharts";
+import { ReactNode, useId } from "react";
+import { Area, AreaChart, ResponsiveContainer } from "recharts";
 import { cn } from "@/lib/utils";
-import { CHART_FARBEN } from "@/lib/chart-farben";
+import { useChartFarben } from "@/lib/chart-farben";
 
 interface KPICardProps {
   titel: string;
   wert: ReactNode;
   hinweis?: string;
+  /** Prozentänderung zum Vorjahr; „zum Vorjahr" ergänzt die Karte selbst. */
   delta?: { wert: string; richtung: "up" | "down" | "flat" };
+  /** `hero` = dunkle Anthrazit-Karte mit grünem Wert (eine pro Seite). */
   variant?: "hero" | "default";
-  /** Farbton der großen Wert-Zahl. */
-  wertFarbe?: "ink" | "yolk" | "sage";
-  /** Daten-Array für eine kleine Sparkline (Index = X, value = Y). */
+  /** Farbton der Wert-Zahl. */
+  wertFarbe?: "ink" | "brand";
+  /** Werte für die Verlaufslinie am unteren Kartenrand (ab 2 Punkten sichtbar). */
   sparkline?: number[];
-  /** Strich-/Flächenfarbe der Sparkline. Default richtet sich nach `wertFarbe`. */
-  sparklineFarbe?: string;
-  /** Optionale Illustration (SVG-Komponente), die als Wasserzeichen rechts oben sitzt (Hero). */
-  illustration?: ReactNode;
+  /** Welche Diagrammfarbe die Verlaufslinie nutzt. */
+  sparklineReihe?: "eier" | "umsatz";
   className?: string;
 }
 
+const MIN_SPARKLINE_PUNKTE = 2;
+
 const FARB_KLASSEN: Record<NonNullable<KPICardProps["wertFarbe"]>, string> = {
   ink: "text-ink",
-  yolk: "text-yolk",
-  sage: "text-sage",
+  brand: "text-brand-strong",
 };
 
-const FARB_HEX: Record<NonNullable<KPICardProps["wertFarbe"]>, string> = {
-  ink: CHART_FARBEN.ink,
-  yolk: CHART_FARBEN.yolk,
-  sage: CHART_FARBEN.sage,
-};
-
-/** Mini-Area-Chart ohne Achsen — reines visuelles Verlaufssignal. */
+/** Achsenlose Fläche als reines Verlaufssignal, volle Kartenbreite. */
 function Sparkline({ data, color }: { data: number[]; color: string }) {
+  const verlaufId = useId().replace(/:/g, "");
   const series = data.map((wert, i) => ({ i, wert }));
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <AreaChart data={series} margin={{ top: 4, right: 0, left: 0, bottom: 4 }}>
+      <AreaChart data={series} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
         <defs>
-          <linearGradient id={`spark-${color.replace("#", "")}`} x1="0" y1="0" x2="0" y2="1">
+          <linearGradient id={verlaufId} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={color} stopOpacity={0.35} />
             <stop offset="100%" stopColor={color} stopOpacity={0} />
           </linearGradient>
@@ -47,20 +43,24 @@ function Sparkline({ data, color }: { data: number[]; color: string }) {
         <Area
           type="monotone"
           dataKey="wert"
-          stroke="none"
-          fill={`url(#spark-${color.replace("#", "")})`}
-          isAnimationActive={false}
-        />
-        <Line
-          type="monotone"
-          dataKey="wert"
           stroke={color}
-          strokeWidth={1.5}
-          dot={false}
+          strokeWidth={1.75}
+          fill={`url(#${verlaufId})`}
           isAnimationActive={false}
         />
       </AreaChart>
     </ResponsiveContainer>
+  );
+}
+
+function DeltaPille({ delta, kompakt }: { delta: NonNullable<KPICardProps["delta"]>; kompakt: boolean }) {
+  const runter = delta.richtung === "down";
+  return (
+    <span className={cn("self-start whitespace-nowrap", runter ? "delta-down" : "delta-up")}>
+      <span aria-hidden="true">{runter ? "▾" : "▴"}</span> {delta.wert}
+      {/* Kleine Karten auf dem Handy: nur die Prozentzahl, damit die Pille nicht umbricht. */}
+      <span className={cn(kompakt && "sr-only sm:not-sr-only")}> zum Vorjahr</span>
+    </span>
   );
 }
 
@@ -72,107 +72,49 @@ export function KPICard({
   variant = "default",
   wertFarbe = "ink",
   sparkline,
-  sparklineFarbe,
-  illustration,
+  sparklineReihe = "eier",
   className,
 }: KPICardProps) {
+  const { farben } = useChartFarben();
   const isHero = variant === "hero";
-  const farbeHex = sparklineFarbe ?? FARB_HEX[wertFarbe];
+  const zeigeSparkline = (sparkline?.length ?? 0) >= MIN_SPARKLINE_PUNKTE;
+  const linienFarbe =
+    sparklineReihe === "umsatz" ? farben.umsatz : isHero ? farben.eierFlaeche : farben.eier;
 
-  // Hero-Variante: großer Wert links, optionale Illustration rechts oben, Sparkline schwebt unten rechts.
-  if (isHero) {
-    return (
-      <div
-        className={cn(
-          "relative rounded-xl border border-rule bg-surface p-6 sm:p-8 flex flex-col md:col-span-2 lg:col-span-2 overflow-hidden",
-          className,
-        )}
-      >
-        <span className="eyebrow">{titel}</span>
+  return (
+    <div
+      className={cn(
+        "relative flex flex-col overflow-hidden rounded-2xl",
+        isHero ? "flaeche-dunkel border border-rule" : "border border-rule bg-surface",
+        className,
+      )}
+    >
+      <div className={cn("flex flex-col gap-2", isHero ? "p-6 sm:p-8" : "p-5")}>
+        <span className="text-sm font-medium text-muted-foreground">{titel}</span>
         <div
           className={cn(
-            "mt-4 sm:mt-6 kpi-value leading-none text-[64px] sm:text-[88px] md:text-[112px]",
-            FARB_KLASSEN[wertFarbe],
+            "kpi-value break-words",
+            isHero
+              ? "mt-2 text-[clamp(2.75rem,10vw,6.5rem)] text-brand-strong"
+              : "text-3xl sm:text-4xl",
+            !isHero && FARB_KLASSEN[wertFarbe],
           )}
         >
           {wert}
         </div>
-        {/* pr reserviert die Ecke der absolut positionierten Sparkline, sonst läuft der Hinweis darunter. */}
-        <div
-          className={cn(
-            "mt-4 sm:mt-6 flex items-center gap-3 flex-wrap",
-            sparkline && sparkline.length > 1 && "pr-32 sm:pr-48",
-          )}
-        >
-          {delta && (
-            <span className={delta.richtung === "down" ? "delta-down" : "delta-up"}>
-              {delta.richtung === "down" ? "▾" : "▴"} {delta.wert}
-            </span>
-          )}
-          {hinweis && <span className="text-xs text-muted-foreground">{hinweis}</span>}
-        </div>
-        {illustration && (
-          <div
-            className={cn(
-              "absolute top-6 right-6 w-24 sm:w-32 pointer-events-none opacity-30 hidden sm:block",
-              FARB_KLASSEN[wertFarbe],
-            )}
-            aria-hidden="true"
-          >
-            {illustration}
-          </div>
-        )}
-        {sparkline && sparkline.length > 1 && (
-          <div
-            className="absolute bottom-6 right-6 h-12 sm:h-14 w-32 sm:w-48 pointer-events-none opacity-80"
-            aria-hidden="true"
-          >
-            <Sparkline data={sparkline} color={farbeHex} />
+        {(delta || hinweis) && (
+          <div className={cn("flex flex-wrap items-center gap-x-3 gap-y-1", isHero && "mt-2")}>
+            {delta && <DeltaPille delta={delta} kompakt={!isHero} />}
+            {hinweis && <span className="text-xs text-muted-foreground tabular-nums">{hinweis}</span>}
           </div>
         )}
       </div>
-    );
-  }
-
-  // Default-Variante: Wert + Delta links, Sparkline (falls vorhanden) absolut in der rechten unteren Ecke.
-  return (
-    <div
-      className={cn(
-        "relative rounded-xl border border-rule bg-surface p-5 sm:p-6 flex flex-col gap-2 sm:gap-3 overflow-hidden",
-        className,
-      )}
-    >
-      <span className="eyebrow">{titel}</span>
-      <div className={cn("kpi-value text-4xl sm:text-5xl md:text-6xl", FARB_KLASSEN[wertFarbe])}>
-        {wert}
-      </div>
-      {delta && (
-        <span
-          className={cn(
-            "self-start",
-            delta.richtung === "down" ? "delta-down" : "delta-up",
-          )}
-        >
-          {delta.richtung === "down" ? "▾" : "▴"} {delta.wert}
-        </span>
-      )}
-      {hinweis && (
-        <p
-          className={cn(
-            "text-sm text-muted-foreground leading-snug",
-            // pr reserviert die Ecke der absolut positionierten Sparkline.
-            sparkline && sparkline.length > 1 && "pr-28",
-          )}
-        >
-          {hinweis}
-        </p>
-      )}
-      {sparkline && sparkline.length > 1 && (
+      {zeigeSparkline && sparkline && (
         <div
-          className="absolute bottom-4 right-4 h-10 w-28 pointer-events-none opacity-80"
+          className={cn("mt-auto w-full pointer-events-none", isHero ? "h-20 sm:h-24" : "h-10")}
           aria-hidden="true"
         >
-          <Sparkline data={sparkline} color={farbeHex} />
+          <Sparkline data={sparkline} color={linienFarbe} />
         </div>
       )}
     </div>

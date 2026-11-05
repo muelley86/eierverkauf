@@ -13,6 +13,7 @@ import { Select } from "@/components/ui/select";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { TABELLE_STICKY_ERSTE_SPALTE } from "@/lib/tabelle";
 import { ChartToggle } from "@/components/ChartToggle";
 import { PageHeader, Panel } from "@/components/PageHeader";
 import {
@@ -21,9 +22,10 @@ import {
 } from "@/api/client";
 import { useZeitraum } from "@/context/ZeitraumContext";
 import { formatCentJeEi, formatEuro, formatMonat, formatZahl, monatsKurz } from "@/lib/formatierung";
-import { AXIS_TICK, CHART_FARBEN, CHART_GRID, TOOLTIP_STYLE } from "@/lib/chart-farben";
+import { useChartFarben } from "@/lib/chart-farben";
 
 export default function KundenDetail() {
+  const { farben, tooltip, achse, raster } = useChartFarben();
   const params = useParams<{ nr: string }>();
   const nr = params.nr ?? "";
   const { von, bis } = useZeitraum();
@@ -91,27 +93,27 @@ export default function KundenDetail() {
         </TabsList>
 
         <TabsContent value="monatsverlauf" className="space-y-6 mt-6">
-          <Panel eyebrow="Chart" title="Eier pro Monat">
+          <Panel title="Eier pro Monat">
             {loadingTop ? <Skeleton className="h-[350px]" /> : (
               <ChartToggle render={(modus) => (
                 <ResponsiveContainer width="100%" height={350}>
                   {modus === "bar" ? (
                     <BarChart data={monateChart} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
-                      <CartesianGrid {...CHART_GRID} vertical={false} />
-                      <XAxis dataKey="monatLabel" stroke={CHART_FARBEN.inkMuted} tick={AXIS_TICK} />
-                      <YAxis tickFormatter={(v: number) => formatZahl(v)} stroke={CHART_FARBEN.inkMuted} tick={AXIS_TICK} />
-                      <Tooltip formatter={(v: number) => formatZahl(v)} contentStyle={TOOLTIP_STYLE} />
-                      <Bar dataKey="eier" fill={CHART_FARBEN.yolk} radius={[4, 4, 0, 0]} />
-                      <Brush dataKey="monatLabel" height={20} stroke={CHART_FARBEN.yolk} fill={CHART_FARBEN.surface} />
+                      <CartesianGrid {...raster} vertical={false} />
+                      <XAxis dataKey="monatLabel" stroke={farben.text} tick={achse} />
+                      <YAxis tickFormatter={(v: number) => formatZahl(v)} stroke={farben.text} tick={achse} />
+                      <Tooltip formatter={(v: number) => formatZahl(v)} contentStyle={tooltip} />
+                      <Bar isAnimationActive={false} maxBarSize={56} dataKey="eier" fill={farben.eierFlaeche} radius={[4, 4, 0, 0]} />
+                      <Brush dataKey="monatLabel" height={20} stroke={farben.eier} fill={farben.flaeche} />
                     </BarChart>
                   ) : (
                     <LineChart data={monateChart} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
-                      <CartesianGrid {...CHART_GRID} vertical={false} />
-                      <XAxis dataKey="monatLabel" stroke={CHART_FARBEN.inkMuted} tick={AXIS_TICK} />
-                      <YAxis tickFormatter={(v: number) => formatZahl(v)} stroke={CHART_FARBEN.inkMuted} tick={AXIS_TICK} />
-                      <Tooltip formatter={(v: number) => formatZahl(v)} contentStyle={TOOLTIP_STYLE} />
-                      <Line type="monotone" dataKey="eier" stroke={CHART_FARBEN.yolk} strokeWidth={2} dot={{ fill: CHART_FARBEN.yolk, r: 3 }} />
-                      <Brush dataKey="monatLabel" height={20} stroke={CHART_FARBEN.yolk} fill={CHART_FARBEN.surface} />
+                      <CartesianGrid {...raster} vertical={false} />
+                      <XAxis dataKey="monatLabel" stroke={farben.text} tick={achse} />
+                      <YAxis tickFormatter={(v: number) => formatZahl(v)} stroke={farben.text} tick={achse} />
+                      <Tooltip formatter={(v: number) => formatZahl(v)} contentStyle={tooltip} />
+                      <Line isAnimationActive={false} type="monotone" dataKey="eier" stroke={farben.eier} strokeWidth={2} dot={{ fill: farben.eier, r: 3 }} />
+                      <Brush dataKey="monatLabel" height={20} stroke={farben.eier} fill={farben.flaeche} />
                     </LineChart>
                   )}
                 </ResponsiveContainer>
@@ -119,26 +121,26 @@ export default function KundenDetail() {
             )}
           </Panel>
 
-          <Panel eyebrow="Tabelle" title="Detailwerte">
-            <div className="-mx-6 px-6 overflow-x-auto">
-              <Table>
+          <Panel title="Detailwerte">
+            <div className="-mx-4 px-4 sm:-mx-6 sm:px-6 overflow-x-auto">
+              <Table className={TABELLE_STICKY_ERSTE_SPALTE}>
                 <TableHeader>
                   <TableRow className="border-rule">
-                    <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Monat</TableHead>
-                    <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Eier</TableHead>
-                    <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Umsatz</TableHead>
-                    <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Umsatz/Ei</TableHead>
-                    <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Positionen</TableHead>
+                    <TableHead className="tabular-nums text-xs">Monat</TableHead>
+                    <TableHead className="tabular-nums text-xs">Eier</TableHead>
+                    <TableHead className="tabular-nums text-xs">Umsatz</TableHead>
+                    <TableHead className="tabular-nums text-xs">Umsatz/Ei</TableHead>
+                    <TableHead className="tabular-nums text-xs">Positionen</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {monate.map((m) => (
                     <TableRow key={m.monat} className="border-rule">
                       <TableCell>{formatMonat(m.monat)}</TableCell>
-                      <TableCell className="font-mono tabular-nums">{formatZahl(m.eier)}</TableCell>
-                      <TableCell className="font-mono tabular-nums">{formatEuro(m.umsatz)}</TableCell>
-                      <TableCell className="font-mono tabular-nums">{formatCentJeEi(m.eier_umsatz, m.eier)}</TableCell>
-                      <TableCell className="font-mono tabular-nums text-muted-foreground">{formatZahl(m.positionen ?? 0)}</TableCell>
+                      <TableCell className="tabular-nums">{formatZahl(m.eier)}</TableCell>
+                      <TableCell className="tabular-nums">{formatEuro(m.umsatz)}</TableCell>
+                      <TableCell className="tabular-nums">{formatCentJeEi(m.eier_umsatz, m.eier)}</TableCell>
+                      <TableCell className="tabular-nums text-muted-foreground">{formatZahl(m.positionen ?? 0)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -149,7 +151,6 @@ export default function KundenDetail() {
 
         <TabsContent value="jahresvergleich" className="space-y-6 mt-6">
           <Panel
-            eyebrow="Chart"
             title={`${jahr} vs. ${jahr - 1}`}
             actions={
               <Select value={String(jahr)} onChange={(e) => setJahr(Number(e.target.value))} className="w-32 border-rule">
@@ -163,41 +164,41 @@ export default function KundenDetail() {
                   data={vergleich.map((v) => ({ ...v, monatLabel: monatsKurz(v.monat) }))}
                   margin={{ top: 10, right: 12, left: 0, bottom: 0 }}
                 >
-                  <CartesianGrid {...CHART_GRID} vertical={false} />
-                  <XAxis dataKey="monatLabel" stroke={CHART_FARBEN.inkMuted} tick={AXIS_TICK} />
-                  <YAxis tickFormatter={(v: number) => formatZahl(v)} stroke={CHART_FARBEN.inkMuted} tick={AXIS_TICK} />
-                  <Tooltip formatter={(v: number) => formatZahl(v)} contentStyle={TOOLTIP_STYLE} />
-                  <Bar dataKey="jahr" name={String(jahr)} fill={CHART_FARBEN.yolk} radius={[4, 4, 0, 0]} />
-                  <Line type="monotone" dataKey="vorjahr" name={String(jahr - 1)} stroke={CHART_FARBEN.vorjahr} strokeWidth={2} dot={{ fill: CHART_FARBEN.vorjahr, r: 3 }} />
+                  <CartesianGrid {...raster} vertical={false} />
+                  <XAxis dataKey="monatLabel" stroke={farben.text} tick={achse} />
+                  <YAxis tickFormatter={(v: number) => formatZahl(v)} stroke={farben.text} tick={achse} />
+                  <Tooltip formatter={(v: number) => formatZahl(v)} contentStyle={tooltip} />
+                  <Bar isAnimationActive={false} maxBarSize={56} dataKey="jahr" name={String(jahr)} fill={farben.eierFlaeche} radius={[4, 4, 0, 0]} />
+                  <Line isAnimationActive={false} type="monotone" dataKey="vorjahr" name={String(jahr - 1)} stroke={farben.vorjahr} strokeWidth={2} dot={{ fill: farben.vorjahr, r: 3 }} />
                 </ComposedChart>
               </ResponsiveContainer>
             )}
           </Panel>
 
-          <Panel eyebrow="Tabelle" title="Differenz">
-            <div className="-mx-6 px-6 overflow-x-auto">
-              <Table>
+          <Panel title="Differenz">
+            <div className="-mx-4 px-4 sm:-mx-6 sm:px-6 overflow-x-auto">
+              <Table className={TABELLE_STICKY_ERSTE_SPALTE}>
                 <TableHeader>
                   <TableRow className="border-rule">
-                    <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Monat</TableHead>
-                    <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Eier {jahr}</TableHead>
-                    <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Eier {jahr - 1}</TableHead>
-                    <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Δ</TableHead>
-                    <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Umsatz {jahr}</TableHead>
-                    <TableHead className="font-mono text-[10px] uppercase tracking-[0.12em]">Δ €</TableHead>
+                    <TableHead className="tabular-nums text-xs">Monat</TableHead>
+                    <TableHead className="tabular-nums text-xs">Eier {jahr}</TableHead>
+                    <TableHead className="tabular-nums text-xs">Eier {jahr - 1}</TableHead>
+                    <TableHead className="tabular-nums text-xs">Δ</TableHead>
+                    <TableHead className="tabular-nums text-xs">Umsatz {jahr}</TableHead>
+                    <TableHead className="tabular-nums text-xs">Δ €</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {vergleich.map((v) => (
                     <TableRow key={v.monat} className="border-rule">
                       <TableCell>{monatsKurz(v.monat)}</TableCell>
-                      <TableCell className="font-mono tabular-nums">{formatZahl(v.jahr)}</TableCell>
-                      <TableCell className="font-mono tabular-nums">{formatZahl(v.vorjahr)}</TableCell>
-                      <TableCell className={`font-mono tabular-nums font-medium ${v.differenz > 0 ? "text-sage" : v.differenz < 0 ? "text-brick" : ""}`}>
+                      <TableCell className="tabular-nums">{formatZahl(v.jahr)}</TableCell>
+                      <TableCell className="tabular-nums">{formatZahl(v.vorjahr)}</TableCell>
+                      <TableCell className={`tabular-nums tabular-nums font-medium ${v.differenz > 0 ? "text-positive" : v.differenz < 0 ? "text-negative" : ""}`}>
                         {v.differenz > 0 ? "+" : ""}{formatZahl(v.differenz)}
                       </TableCell>
-                      <TableCell className="font-mono tabular-nums">{formatEuro(v.jahr_umsatz)}</TableCell>
-                      <TableCell className={`font-mono tabular-nums font-medium ${v.differenz_umsatz > 0 ? "text-sage" : v.differenz_umsatz < 0 ? "text-brick" : ""}`}>
+                      <TableCell className="tabular-nums">{formatEuro(v.jahr_umsatz)}</TableCell>
+                      <TableCell className={`tabular-nums tabular-nums font-medium ${v.differenz_umsatz > 0 ? "text-positive" : v.differenz_umsatz < 0 ? "text-negative" : ""}`}>
                         {v.differenz_umsatz > 0 ? "+" : ""}{formatEuro(v.differenz_umsatz)}
                       </TableCell>
                     </TableRow>

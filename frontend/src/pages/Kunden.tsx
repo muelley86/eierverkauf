@@ -38,7 +38,7 @@ export default function Kunden() {
         header: "Nr.",
         meta: { mobilePriority: "secondary", mobileLabel: "Nr." },
         cell: (i) => (
-          <span className="font-mono text-xs text-muted-foreground">
+          <span className="tabular-nums text-xs text-muted-foreground">
             {i.getValue<string>()}
           </span>
         ),
@@ -55,7 +55,7 @@ export default function Kunden() {
         sortingFn: "basic",
         meta: { mobilePriority: "secondary", mobileLabel: "Eier" },
         cell: (i) => (
-          <span className="font-mono tabular-nums">{formatZahl(i.getValue<number>())}</span>
+          <span className="tabular-nums">{formatZahl(i.getValue<number>())}</span>
         ),
       },
       {
@@ -64,7 +64,7 @@ export default function Kunden() {
         sortingFn: "basic",
         meta: { mobilePriority: "primary" },
         cell: (i) => (
-          <span className="font-mono tabular-nums">{formatEuro(i.getValue<number>())}</span>
+          <span className="tabular-nums">{formatEuro(i.getValue<number>())}</span>
         ),
       },
       {
@@ -74,7 +74,7 @@ export default function Kunden() {
         sortingFn: "basic",
         meta: { mobilePriority: "secondary", mobileLabel: "Umsatz/Ei" },
         cell: (i) => (
-          <span className="font-mono tabular-nums">
+          <span className="tabular-nums">
             {formatCentJeEi(i.row.original.eier_umsatz, i.row.original.eier)}
           </span>
         ),
@@ -85,7 +85,7 @@ export default function Kunden() {
         sortingFn: "basic",
         meta: { mobilePriority: "secondary", mobileLabel: "Pos." },
         cell: (i) => (
-          <span className="font-mono tabular-nums text-muted-foreground">
+          <span className="tabular-nums text-muted-foreground">
             {formatZahl(i.getValue<number>())}
           </span>
         ),
@@ -95,7 +95,7 @@ export default function Kunden() {
         header: "Letzter Kauf",
         meta: { mobilePriority: "secondary", mobileLabel: "Letzter Kauf" },
         cell: (i) => (
-          <span className="font-mono text-xs text-muted-foreground">
+          <span className="tabular-nums text-xs text-muted-foreground">
             {formatDatum(i.getValue<string | null>())}
           </span>
         ),
@@ -111,7 +111,7 @@ export default function Kunden() {
         title="Wer hat bestellt"
         subtitle={`${daten.length} Kunden im gewählten Zeitraum.`}
       />
-      <Panel eyebrow="Tabelle" title="Vollständige Liste">
+      <Panel title="Vollständige Liste">
         {loading ? (
           <Skeleton className="h-96" />
         ) : (

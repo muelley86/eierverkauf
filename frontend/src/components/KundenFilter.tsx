@@ -55,8 +55,9 @@ function KundenZeile({ kunde, aktiv, onToggle }: { kunde: KundeOption; aktiv: bo
         >
           {aktiv && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
         </span>
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm text-ink">{kunde.kundenname}</span>
+        <span className="min-w-0 flex-1 py-1.5" title={kunde.kundenname}>
+          {/* Zwei Zeilen: bei Filialen steht das Unterscheidende am Ende („… Filiale 2154/GLN …"). */}
+          <span className="line-clamp-2 break-words text-sm leading-snug text-ink">{kunde.kundenname}</span>
           <span className="block text-xs tabular-nums text-muted-foreground">{kunde.kundennummer}</span>
         </span>
       </button>
@@ -93,18 +94,19 @@ export function KundenFilter({ className }: { className?: string }) {
         <Button
           variant="outline"
           className={cn(
-            "h-11 max-w-[16rem] gap-2 rounded-full px-3 text-ink sm:px-4",
+            "h-11 min-w-0 max-w-full gap-2 rounded-full px-3 text-ink sm:max-w-[20rem] sm:px-4",
             aktiv ? "border-brand bg-brand/20 hover:bg-brand/30" : "border-rule bg-surface hover:bg-brand/20",
             className,
           )}
           aria-label={`Kundenfilter: ${kundenFilterLabel(kunden, liste)}`}
+          title={kundenFilterLabel(kunden, liste)}
         >
           <Users className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-          <span className="truncate text-sm leading-none sm:text-base">{kundenFilterLabel(kunden, liste)}</span>
+          <span className="truncate text-sm leading-none">{kundenFilterLabel(kunden, liste)}</span>
           <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[min(22rem,calc(100vw-2rem))] space-y-3 border-rule bg-surface p-3" align="end">
+      <PopoverContent className="w-[min(26rem,calc(100vw-2rem))] space-y-3 border-rule bg-surface p-3" align="end">
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input

@@ -66,7 +66,7 @@ export function ZeitraumFilter({ className }: { className?: string }) {
           )}
         >
           <span className="h-2 w-2 rounded-full bg-brand" aria-hidden="true" />
-          <span className="text-sm sm:text-base leading-none">{rangeLabel}</span>
+          <span className="text-sm leading-none">{rangeLabel}</span>
           <span className="hidden sm:inline tabular-nums text-xs text-muted-foreground">
             {formatDatum(z.von)} – {formatDatum(z.bis)}
           </span>

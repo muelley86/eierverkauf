@@ -7,6 +7,15 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Geändert
+- **Filter mit langen Kundennamen besser lesbar.** In der Kundenauswahl stehen
+  Namen jetzt auf bis zu zwei Zeilen statt auf einer gekürzt — so lassen sich
+  z. B. die REWE-Filialen unterscheiden, deren Unterscheidungsmerkmal
+  (Filiale, Inhaber, GLN) am Ende steht. Die Auswahl ist breiter, der volle
+  Name erscheint als Tooltip. Die Schaltflächen „Kunden" und „Zeitraum"
+  nutzen einheitlich 14 px; die Kunden-Schaltfläche darf breiter werden und
+  zeigt so mehr vom gewählten Namen.
+
 ## [1.16.0] - 2026-11-05
 
 Neues Erscheinungsbild im Corporate Design von [buchenhof.de](https://www.buchenhof.de),

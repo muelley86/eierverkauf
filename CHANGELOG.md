@@ -888,8 +888,8 @@ hochladen.
 
 [Unreleased]: https://github.com/muelley86/eierverkauf/compare/v1.16.1...HEAD
 [1.16.1]: https://github.com/muelley86/eierverkauf/compare/v1.16.0...v1.16.1
-[1.16.0]: https://github.com/muelley86/eierverkauf/compare/21a187dd02c22a681df835472df59c90031c640b...v1.16.0
-[1.15.0]: https://github.com/muelley86/eierverkauf/compare/v1.14.0...21a187dd02c22a681df835472df59c90031c640b
+[1.16.0]: https://github.com/muelley86/eierverkauf/compare/v1.15.0...v1.16.0
+[1.15.0]: https://github.com/muelley86/eierverkauf/compare/v1.14.0...v1.15.0
 [1.14.0]: https://github.com/muelley86/eierverkauf/compare/v1.13.0...v1.14.0
 [1.13.0]: https://github.com/muelley86/eierverkauf/compare/v1.12.2...v1.13.0
 [1.12.2]: https://github.com/muelley86/eierverkauf/compare/v1.12.1...v1.12.2
@@ -913,10 +913,10 @@ hochladen.
 [1.2.2]: https://github.com/muelley86/eierverkauf/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/muelley86/eierverkauf/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/muelley86/eierverkauf/compare/v1.1.0...v1.2.0
-[1.1.0]: https://github.com/muelley86/eierverkauf/compare/ac8a49cef95c9797b60a060ad06f59f0e7d87663...v1.1.0
-[1.0.5]: https://github.com/muelley86/eierverkauf/compare/2f36baa96b39cc75575a5e17a7e6ad7d8bbd1282...ac8a49cef95c9797b60a060ad06f59f0e7d87663
-[1.0.4]: https://github.com/muelley86/eierverkauf/compare/9e6a55def4fc88fbcf1f7a146229e43883b61f7a...2f36baa96b39cc75575a5e17a7e6ad7d8bbd1282
-[1.0.3]: https://github.com/muelley86/eierverkauf/compare/9e726a3bfad23a32699bd708312e945cdc5e212b...9e6a55def4fc88fbcf1f7a146229e43883b61f7a
-[1.0.2]: https://github.com/muelley86/eierverkauf/compare/0277f7ce0f3e0ad68bbec67d0442c0d00856a75e...9e726a3bfad23a32699bd708312e945cdc5e212b
-[1.0.1]: https://github.com/muelley86/eierverkauf/compare/6f9fb3745a33dbbb71a83c0738e30718497fafe1...0277f7ce0f3e0ad68bbec67d0442c0d00856a75e
-[1.0.0]: https://github.com/muelley86/eierverkauf/commit/6f9fb3745a33dbbb71a83c0738e30718497fafe1
+[1.1.0]: https://github.com/muelley86/eierverkauf/compare/v1.0.5...v1.1.0
+[1.0.5]: https://github.com/muelley86/eierverkauf/compare/v1.0.4...v1.0.5
+[1.0.4]: https://github.com/muelley86/eierverkauf/compare/v1.0.3...v1.0.4
+[1.0.3]: https://github.com/muelley86/eierverkauf/compare/v1.0.2...v1.0.3
+[1.0.2]: https://github.com/muelley86/eierverkauf/compare/v1.0.1...v1.0.2
+[1.0.1]: https://github.com/muelley86/eierverkauf/compare/v1.0.0...v1.0.1
+[1.0.0]: https://github.com/muelley86/eierverkauf/releases/tag/v1.0.0

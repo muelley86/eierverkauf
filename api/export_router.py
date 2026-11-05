@@ -20,9 +20,9 @@ ExportTyp = Literal[
     "kunde_monate", "artikel_monate", "jahresvergleich", "zeitraumvergleich",
 ]
 
-# Export-Typen, deren Seiten den Kundenfilter anbieten.
+# Export-Typen, deren Seiten den Kundenfilter anbieten („ranking" = Export der Übersicht).
 TYPEN_MIT_KUNDENFILTER = frozenset(
-    {"kunden", "artikel", "belege", "jahresvergleich", "zeitraumvergleich"}
+    {"kunden", "artikel", "belege", "jahresvergleich", "zeitraumvergleich", "ranking"}
 )
 
 
@@ -38,7 +38,7 @@ def _daten_laden(typ: str, von: Optional[str], bis: Optional[str],
     if typ == "artikel":
         return queries.artikel_uebersicht(von, bis, kunden)
     if typ == "ranking":
-        return queries.ranking(von, bis, sort)
+        return queries.ranking(von, bis, sort, kunden)
     if typ == "belege":
         return queries.belege_uebersicht(von, bis, kunden)
     if typ == "kunde_monate":

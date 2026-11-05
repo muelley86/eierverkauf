@@ -20,6 +20,7 @@ def _iso(d: Optional[date]) -> Optional[str]:
 def dashboard(
     von: Optional[date] = Query(None),
     bis: Optional[date] = Query(None),
+    kunden: list[str] = Depends(kunden_param),
 ) -> dict:
     """Dashboard-Antwort inkl. Vorjahresvergleich für Delta-Pills.
 
@@ -27,21 +28,22 @@ def dashboard(
     verschobenen Zeitraum. Liefert das Frontend in den KPI-Karten als
     „↗ +X % vs. Vorjahr"-Pill. Bei fehlendem Zeitraum-Filter (komplettem
     Datensatz) ist ``vorjahres_kpis`` ``None`` — eine sinnvolle Verschiebung
-    ist dort nicht möglich.
+    ist dort nicht möglich. ``kunden`` beschränkt alle Teile (inkl. Vorjahr)
+    auf diese Kundennummern.
     """
-    aktuell = queries.dashboard_kpis(_iso(von), _iso(bis))
+    aktuell = queries.dashboard_kpis(_iso(von), _iso(bis), kunden)
     vj_von, vj_bis = verlauf.ein_jahr_zurueck(von), verlauf.ein_jahr_zurueck(bis)
     # Nur vergleichen, wenn jede gesetzte Grenze auch verschiebbar ist.
     verschiebbar = (von is None or vj_von is not None) and (bis is None or vj_bis is not None)
     vorjahres_kpis = (
-        queries.dashboard_kpis(_iso(vj_von), _iso(vj_bis))
+        queries.dashboard_kpis(_iso(vj_von), _iso(vj_bis), kunden)
         if (vj_von or vj_bis) and verschiebbar else None
     )
     return {
         "kpis": aktuell,
         "vorjahres_kpis": vorjahres_kpis,
-        "top5_kunden": queries.top5_kunden(_iso(von), _iso(bis)),
-        "top5_artikel": queries.top5_artikel(_iso(von), _iso(bis)),
+        "top5_kunden": queries.top5_kunden(_iso(von), _iso(bis), kunden),
+        "top5_artikel": queries.top5_artikel(_iso(von), _iso(bis), kunden),
     }
 
 
@@ -134,8 +136,9 @@ def ranking(
     von: Optional[date] = Query(None),
     bis: Optional[date] = Query(None),
     sort: Literal["menge", "umsatz"] = "menge",
+    kunden: list[str] = Depends(kunden_param),
 ) -> list[dict]:
-    return queries.ranking(_iso(von), _iso(bis), sort)
+    return queries.ranking(_iso(von), _iso(bis), sort, kunden)
 
 
 @router.get("/jahresvergleich")

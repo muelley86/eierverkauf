@@ -127,3 +127,24 @@ def test_pdf_html_nennt_kundenfilter_maskiert():
     html = baue_pdf_html("belege", "2026-01-01", "2026-12-31", [],
                          filter_hinweis="Kunden: <b>Anna</b>")
     assert "Kunden: &lt;b&gt;Anna&lt;/b&gt;" in html
+
+
+def test_dashboard_mit_kundenfilter_kpis_vorjahr_und_top5(drei_kunden):
+    body = drei_kunden.get(f"/api/dashboard?{ZR}&kunden=10001&kunden=10002").json()
+    assert body["kpis"]["gesamt_eier"] == 300
+    assert body["kpis"]["anzahl_kunden"] == 2
+    assert body["vorjahres_kpis"]["gesamt_eier"] == 30
+    assert [k["kundenname"] for k in body["top5_kunden"]] == ["Bert", "Anna"]
+    assert {a["artikel_code"] for a in body["top5_artikel"]} == {"Lose 20", "Lose 180"}
+
+
+def test_dashboard_ohne_kundenfilter_unveraendert(drei_kunden):
+    assert drei_kunden.get(f"/api/dashboard?{ZR}").json()["kpis"]["gesamt_eier"] == 700
+
+
+def test_export_ranking_der_uebersicht_mit_kundenfilter(drei_kunden):
+    antwort = drei_kunden.get(f"/api/export/excel?typ=ranking&sort=menge&{ZR}&kunden=15.100.008")
+    ws = load_workbook(BytesIO(antwort.content)).active
+    assert "Carla" in ws.cell(row=1, column=1).value
+    zeilen = [z for z in ws.iter_rows(min_row=4, values_only=True) if z[0]]
+    assert len(zeilen) == 1

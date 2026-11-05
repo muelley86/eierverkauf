@@ -44,7 +44,9 @@ def _row_to_dict(row) -> dict:
 # Dashboard
 # ---------------------------------------------------------------------------
 
-def dashboard_kpis(von: Optional[str], bis: Optional[str]) -> dict:
+def dashboard_kpis(
+    von: Optional[str], bis: Optional[str], kunden: Optional[Sequence[str]] = None
+) -> dict:
     """KPI-Kacheln: Gesamteier, Umsatz, Anzahl Kunden, Anzahl Positionen.
 
     Die Summen sind Netto (Retouren/Gutschriften stehen als negative
@@ -52,7 +54,7 @@ def dashboard_kpis(von: Optional[str], bis: Optional[str]) -> dict:
     der Warenwirtschaft werden Brutto und Retouren zusätzlich ausgewiesen —
     je Kennzahl gilt: brutto + retouren = netto (retouren sind negativ).
     """
-    wh, params = _zeitraum_filter(von, bis)
+    wh, params = _zeitraum_filter(von, bis, kunden=kunden)
     sql = f"""
         SELECT
             COALESCE(SUM(eier_stueck), 0)              AS gesamt_eier,
@@ -74,8 +76,10 @@ def dashboard_kpis(von: Optional[str], bis: Optional[str]) -> dict:
         conn.close()
 
 
-def top5_kunden(von: Optional[str], bis: Optional[str]) -> list[dict]:
-    wh, params = _zeitraum_filter(von, bis)
+def top5_kunden(
+    von: Optional[str], bis: Optional[str], kunden: Optional[Sequence[str]] = None
+) -> list[dict]:
+    wh, params = _zeitraum_filter(von, bis, kunden=kunden)
     sql = f"""
         SELECT kundennummer, kundenname,
                COALESCE(SUM(eier_stueck), 0) AS eier,
@@ -93,8 +97,10 @@ def top5_kunden(von: Optional[str], bis: Optional[str]) -> list[dict]:
         conn.close()
 
 
-def top5_artikel(von: Optional[str], bis: Optional[str]) -> list[dict]:
-    wh, params = _zeitraum_filter(von, bis)
+def top5_artikel(
+    von: Optional[str], bis: Optional[str], kunden: Optional[Sequence[str]] = None
+) -> list[dict]:
+    wh, params = _zeitraum_filter(von, bis, kunden=kunden)
     sql = f"""
         SELECT artikel_code,
                COALESCE(SUM(eier_stueck), 0) AS eier,
@@ -304,8 +310,10 @@ def beleg_positionen(rechnungsnummer: str, rechnungsdatum: str) -> list[dict]:
 # Ranking & Jahresvergleich
 # ---------------------------------------------------------------------------
 
-def ranking(von: Optional[str], bis: Optional[str], sort: str = "menge") -> list[dict]:
-    wh, params = _zeitraum_filter(von, bis)
+def ranking(
+    von: Optional[str], bis: Optional[str], sort: str = "menge", kunden: Optional[Sequence[str]] = None
+) -> list[dict]:
+    wh, params = _zeitraum_filter(von, bis, kunden=kunden)
     order_col = "umsatz" if sort == "umsatz" else "eier"
     sql = f"""
         SELECT kundennummer, kundenname,

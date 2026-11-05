@@ -17,10 +17,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/EmptyState";
 import { Hen } from "@/components/illustrations/Hen";
 import { useZeitraum } from "@/context/ZeitraumContext";
+import { useKundenFilter } from "@/context/KundenFilterContext";
 import {
   DashboardResponse,
   ZeitraumVerlauf,
   ImportProtokollEintrag,
+  exportExcelUrl,
   getDashboard,
   getVerlauf,
   getImportHistorie,
@@ -265,6 +267,7 @@ function LetzteImports({ imports }: { imports: ImportProtokollEintrag[] }) {
 
 export default function Dashboard() {
   const { von, bis } = useZeitraum();
+  const { kunden } = useKundenFilter();
   const [daten, setDaten] = useState<DashboardResponse | null>(null);
   const [verlauf, setVerlauf] = useState<ZeitraumVerlauf | null>(null);
   const [imports, setImports] = useState<ImportProtokollEintrag[] | null>(null);
@@ -273,7 +276,7 @@ export default function Dashboard() {
   useEffect(() => {
     let abgebrochen = false;
     setLoading(true);
-    Promise.all([getDashboard({ von, bis }), getVerlauf({ von, bis }), getImportHistorie()])
+    Promise.all([getDashboard({ von, bis, kunden }), getVerlauf({ von, bis, kunden }), getImportHistorie()])
       .then(([d, v, i]) => {
         if (abgebrochen) return;
         setDaten(d);
@@ -289,7 +292,7 @@ export default function Dashboard() {
     return () => {
       abgebrochen = true;
     };
-  }, [von, bis]);
+  }, [von, bis, kunden]);
 
   const hatVorjahr = useMemo(
     () => verlauf?.punkte.some((p) => p.vorjahr_eier !== null) ?? false,
@@ -317,7 +320,8 @@ export default function Dashboard() {
       <PageHeader
         eyebrow="Buchenhof Eierverkauf"
         title="Übersicht"
-        exportHref={`/api/export/excel?typ=ranking&sort=menge${von ? `&von=${von}` : ""}${bis ? `&bis=${bis}` : ""}`}
+        withKundenFilter
+        exportHref={exportExcelUrl({ typ: "ranking", sort: "menge", von, bis, kunden })}
       />
 
       {bereit ? (

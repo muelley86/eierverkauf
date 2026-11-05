@@ -36,13 +36,14 @@ filtern.
   mehr aus.
 
 ### Hinzugefügt
-- **Kundenfilter mit Mehrfachauswahl** auf Belege, Kunden, Artikel,
-  Zeitraumvergleich und Jahresvergleich: Pille „Alle Kunden" oben rechts neben
+- **Kundenfilter mit Mehrfachauswahl** auf Übersicht, Belege, Kunden,
+  Artikel, Zeitraumvergleich und Jahresvergleich: Pille „Alle Kunden" oben rechts neben
   dem Zeitraum, mit Suche nach Name oder Kundennummer. Die Auswahl gilt für
-  alle fünf Seiten gleichzeitig, bleibt nach dem Neuladen erhalten und wirkt
+  alle sechs Seiten gleichzeitig, bleibt nach dem Neuladen erhalten und wirkt
   auch auf den Excel- und PDF-Export (gewählte Kunden stehen im Titel).
-  Ohne Auswahl werden wie bisher alle Kunden ausgewertet. Übersicht und Ranking
-  bleiben ungefiltert. API: wiederholbarer Parameter `kunden`
+  Auf der Übersicht folgen Kennzahlen, Vorjahres-Deltas, Grafik, Top-5 und
+  der Excel-Export dem Filter. Ohne Auswahl werden wie bisher alle Kunden
+  ausgewertet. Das Ranking bleibt ungefiltert. API: wiederholbarer Parameter `kunden`
   (`?kunden=10001&kunden=10002`, höchstens 500) und neuer Endpoint
   `GET /api/kundenauswahl`.
 - **Seite „Zeitraumvergleich"** (über dem Jahresvergleich): vergleicht den oben

@@ -7,6 +7,8 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.16.1] - 2026-11-05
+
 ### Geändert
 - **Filter mit langen Kundennamen besser lesbar.** In der Kundenauswahl stehen
   Namen jetzt auf bis zu zwei Zeilen statt auf einer gekürzt — so lassen sich
